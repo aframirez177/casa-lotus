@@ -1,0 +1,13 @@
+{
+  "name": "casa-lotus-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node serve.mjs",
+    "build": "node scripts/build.mjs",
+    "preview": "ROOT=dist PORT=5174 node serve.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

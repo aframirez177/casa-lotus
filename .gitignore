@@ -1,0 +1,22 @@
+# Build output (GitHub Actions builds it on every deploy)
+dist/
+node_modules/
+
+# Internal work pages: they stay on the local machine, never in this public repo
+src/auditoria/
+src/exploraciones/
+src/assets/css/exploracion-*.css
+src/assets/images/demo-stretch.webp
+src/assets/images/logo-blanco.png
+
+# Secrets, just in case one ever appears
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# System
+.DS_Store
+Thumbs.db
+*.log
