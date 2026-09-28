@@ -92,35 +92,30 @@
 <main id="contenido">
 
   <!-- ─────────────────────────── HERO ─────────────────────────── -->
-  <section class="hero" id="inicio" data-bg="paper">
+  <section class="hero" id="inicio" data-bg="paper" data-silk-host>
+    <!-- silk: ribbons hanging from the ceiling, flowing toward the hand (assets/js/silk.js) -->
+    <canvas class="silk silk--back" data-silk="back" aria-hidden="true"></canvas>
+    <canvas class="silk silk--front" data-silk="front" aria-hidden="true"></canvas>
     <div class="hero__grid wrap">
       <div class="hero__copy">
-        <p class="eyebrow" data-reveal>Yoga · Pilates · Stretch aéreo</p>
         <h1 class="display hero__title" data-split>Suelta el peso.</h1>
-        <p class="lead hero__lead" data-reveal>Una casa en Bogotá con siete columpios para practicar en suspensión. Grupos de máximo siete personas y una profesora pendiente de ti.</p>
+        <p class="lead hero__lead" data-reveal>Yoga, pilates y stretch aéreo en Bogotá.</p>
         <div class="hero__actions" data-reveal>
           <a class="btn btn--primary" data-wa="WEB-HERO" data-magnetic data-cursor="Reservar" href="https://wa.me/573128720888"><span class="dot" aria-hidden="true"></span>Reserva tu clase de prueba</a>
-          <a class="btn btn--ghost" href="#horarios" data-magnetic>Ver horarios</a>
-        </div>
-      </div>
-      <div class="hero__mark" data-lotus aria-hidden="true">
-        <div class="lotus-static" data-lotus-static>
-          <svg class="lotus-static__halo" viewBox="-60 -60 985 883"><use href="#lotus-base"/><use href="#lotus-petalo-izq"/><use href="#lotus-petalo-der"/><use href="#lotus-centro"/></svg>
-          <svg class="lotus-static__mark" viewBox="-60 -60 985 883"><use href="#lotus-base"/><use href="#lotus-petalo-izq"/><use href="#lotus-petalo-der"/><use href="#lotus-centro"/></svg>
         </div>
       </div>
     </div>
-    <ul class="facts wrap" data-reveal>
-      <li><strong>7</strong><span>columpios</span></li>
-      <li><strong>7</strong><span>personas máximo por clase</span></li>
-      <li><strong>AÉREO®</strong><span>centro autorizado</span></li>
-    </ul>
   </section>
 
   <!-- ─────────────────────────── MANIFIESTO ─────────────────────────── -->
   <section class="manifesto" id="manifiesto" data-bg="paper">
     <div class="wrap">
       <p class="manifesto__text" data-words>La tela sostiene tu peso para que tu cuerpo pueda soltar. Invertirte alivia la tensión, la respiración baja el ritmo y, en grupos de máximo siete, siempre hay alguien pendiente de ti.</p>
+      <ul class="facts" data-reveal>
+        <li><strong>7</strong><span>columpios</span></li>
+        <li><strong>7</strong><span>personas máximo por clase</span></li>
+        <li><strong>AÉREO®</strong><span>centro autorizado</span></li>
+      </ul>
     </div>
   </section>
 
@@ -428,6 +423,7 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/ScrollTrigger.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/SplitText.min.js" defer></script>
+<script src="assets/js/silk.js" defer></script>
 <script src="assets/js/main.js" defer></script>
 </body>
 </html>

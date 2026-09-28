@@ -152,11 +152,11 @@
     return gsap.from(el, { y: 26, opacity: 0, filter: "blur(8px)", duration: 1.2, ease: "expo.out", clearProps: "filter", ...vars });
   };
 
-  // hero: the mark is still (it only fades in); the words arrive around it
+  // hero: the silk fades in while it unfurls from the ceiling (silk.js); the words arrive after
   const intro = gsap.timeline({ defaults: { ease: "expo.out" }, delay: 0.1 });
-  intro.from("[data-lotus-static]", { opacity: 0, duration: 1.6, ease: "sine.out" }, 0)
-    .add(() => splitIn($(".hero__title")), 0.25)
-    .add(() => $$(".hero [data-reveal]").forEach((el, i) => riseIn(el, { delay: 0.25 + i * 0.12 })), 0.45);
+  intro.from(".silk", { opacity: 0, duration: 2.2, ease: "sine.out", stagger: 0.25 }, 0)
+    .add(() => splitIn($(".hero__title")), 0.45)
+    .add(() => $$(".hero [data-reveal]").forEach((el, i) => riseIn(el, { delay: 0.3 + i * 0.14 })), 0.6);
   gsap.to(".hero__copy", { y: -80, opacity: 0.2, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1 } });
 
   atmosphere();
@@ -276,22 +276,31 @@
     const orbs = $$(".orb", scene).map((o) => ({ el: o, s: $(".orb__s", o), d: $(".orb__d", o), depth: +o.dataset.depth }));
     orbs.forEach((o) => o.el.style.setProperty("--depth", o.depth));
 
-    // drift: slow, each on its own period, bigger and faster when near
-    orbs.forEach((o, i) => {
-      const r = (a, b) => a + Math.random() * (b - a);
-      gsap.to(o.d, { x: () => r(-9, 9) * innerWidth / 100 * (0.5 + o.depth), y: () => r(-7, 7) * innerHeight / 100 * (0.5 + o.depth),
-        scale: r(0.85, 1.25), duration: r(14, 26) - o.depth * 6, ease: "sine.inOut", yoyo: true, repeat: -1, delay: -i * 3 });
-    });
+    // time only breathes, barely: scroll is what moves the light
+    orbs.forEach((o, i) => gsap.to(o.d, { scale: 1.06, duration: 9 + i * 1.7, ease: "sine.inOut", yoyo: true, repeat: -1, delay: -i * 2 }));
 
-    // scroll: each layer rides its own wave, near ones travel further; speed stretches them like liquid
-    const setters = orbs.map((o) => ({ y: gsap.quickTo(o.s, "y", { duration: 1.2, ease: "power3.out" }), sy: gsap.quickTo(o.s, "scaleY", { duration: 0.8, ease: "power3.out" }), o }));
-    ScrollTrigger.create({ start: 0, end: "max", onUpdate: (self) => {
-      const v = Math.min(Math.abs(self.getVelocity()) / 4000, 0.35);
-      setters.forEach(({ y, sy, o }, i) => {
-        y(Math.sin(self.progress * Math.PI * (3 + i) + i) * innerHeight * 0.22 * (0.3 + o.depth));
-        sy(1 + v * o.depth);
-      });
-    } });
+    // scroll: each orb travels its own slow curve through the page, stretching and turning
+    // a little as it goes (an ellipse that turns reads as an organic shape, not a circle).
+    // Near orbs travel further. Everything is eased, so it trails the scroll like light in water.
+    const TAU = Math.PI * 2;
+    const tracks = orbs.map((o, i) => ({
+      o, f1: 0.8 + i * 0.23, f2: 0.6 + i * 0.19, f3: 1.1 + i * 0.17, p1: i * 1.9, p2: i * 2.7, p3: i * 0.8,
+      x: gsap.quickTo(o.s, "x", { duration: 2.4, ease: "power3.out" }),
+      y: gsap.quickTo(o.s, "y", { duration: 2.4, ease: "power3.out" }),
+      r: gsap.quickTo(o.s, "rotation", { duration: 2.8, ease: "power3.out" }),
+      sx: gsap.quickTo(o.s, "scaleX", { duration: 2.4, ease: "power3.out" }),
+      sy: gsap.quickTo(o.s, "scaleY", { duration: 2.4, ease: "power3.out" }),
+    }));
+    const flow = (p, v = 0) => tracks.forEach((t) => {
+      const reach = 0.35 + t.o.depth * 0.65;
+      t.x(Math.sin(p * TAU * t.f1 + t.p1) * innerWidth * 0.07 * reach);
+      t.y(Math.cos(p * TAU * t.f2 + t.p2) * innerHeight * 0.1 * reach);
+      t.r(Math.sin(p * TAU * t.f3 + t.p3) * 24);
+      t.sx(1 + 0.16 * Math.sin(p * TAU * t.f3 + t.p1));
+      t.sy(1 + 0.16 * Math.cos(p * TAU * t.f1 + t.p2) + v * t.o.depth);
+    });
+    flow(0);
+    ScrollTrigger.create({ start: 0, end: "max", onUpdate: (self) => flow(self.progress, Math.min(Math.abs(self.getVelocity()) / 9000, 0.12)) });
 
     // the hand tilts the whole scene; depth turns that tilt into parallax
     if (fine) {
