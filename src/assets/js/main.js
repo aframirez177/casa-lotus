@@ -201,7 +201,7 @@
     const sheets = PAPER.map(() => ({ h: 0, R: 0 }));   // h: hole radius · R: outer radius (px)
     // every disc follows the same curve from its own birth: R = unit·A·(e^(age/T) − 1). Its speed only
     // ever rises, so no disc waits for the others; the gap between births sets the rings' width.
-    const A = 0.35, T = 0.5, GAP = 0.22;
+    const A = 0.35, T = 0.44, GAP = 0.19;
     const clock = { t: 0 };
     let cx = 0, cy = 0, unit = 0, cover = 0, last = "";
     const place = () => {
@@ -251,7 +251,7 @@
     addEventListener("resize", place);
     const age = (r) => T * Math.log1p(r / A);                        // age at which a disc reaches r·unit
     const covered = (PAPER.length - 1) * GAP + age((cover / unit) * 1.02);   // the lime reaches the corners
-    const start = land - 0.4, open = start + covered - 0.55, reveal = 1.5, swap = start + age(1.2);
+    const start = land - 0.4, open = start + covered - 0.5, reveal = 1.3, swap = start + age(1.2);
     gsap.ticker.add(paint);   // repaints only when a radius or the crossing actually moved
     intro.eventCallback("onComplete", () => { gsap.ticker.remove(paint); removeEventListener("scroll", place); removeEventListener("resize", place); });
     intro.to(fly, { strokeDashoffset: -leadLen, duration: flight, ease: "power2.out" }, t0)  // enters with momentum, settles as it lands
@@ -261,9 +261,9 @@
       // one empty disc opens from the centre through every sheet at once: only the lime edge is seen
       .to(sheets, { h: () => cover + 24, duration: reveal, ease: "power2.inOut" }, open)   // starts as the lime lands, no pause
       .set(veil, { display: "none" }, open + reveal + 0.05)   // past the screen's corners: drop the layer
-      .to(".lotus-draw__shadow", { opacity: 0.16, duration: 1.4, ease: "sine.out" }, open + 0.7)
+      .to(".lotus-draw__shadow", { opacity: 0.16, duration: 1.4, ease: "sine.out" }, open + 0.6)
       .fromTo(".lotus-part--petal", { opacity: 0, y: 34, scale: 0.8, transformOrigin: "50% 100%" },
-        { opacity: 1, y: 0, scale: 1, duration: 1.5, ease: "expo.out", stagger: 0.12, immediateRender: false }, open + 0.45);
+        { opacity: 1, y: 0, scale: 1, duration: 1.5, ease: "expo.out", stagger: 0.12, immediateRender: false }, open + 0.4);
     if (root.classList.contains("dev")) window.__intro = intro; // local QA: frame-by-frame review
   } } catch (err) {
     gsap.set(".lotus-part", { opacity: 1 }); gsap.set(".ribbon-fly", { display: "none" });
