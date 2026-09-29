@@ -65,7 +65,7 @@ for (const file of files.filter((f) => [".html", ".css"].includes(extname(f)))) 
   const text = await readFile(file, "utf8");
   const rel = relative(WEB, file);
   const refs = extname(file) === ".html"
-    ? [...text.matchAll(/\s(?:src|href)="([^"]+)"/g)].map((m) => m[1])
+    ? [...text.matchAll(/\s(?:src|href|poster|data-src|data-video|data-poster|data-captions)="([^"]+)"/g)].map((m) => m[1])
     : [...text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map((m) => m[1]);
 
   for (const ref of refs) {

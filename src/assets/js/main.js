@@ -106,8 +106,50 @@
     if (!e.target.closest("a")) $(".link-arrow", card)?.click();
   }));
 
-  // swings sway one after another
-  $$(".swings").forEach((s) => $$("i", s).forEach((i, n) => i.style.setProperty("--n", n)));
+  // swings sway one after another; the first data-taken ones show as booked
+  $$(".swings").forEach((s) => $$("i", s).forEach((i, n) => {
+    i.style.setProperty("--n", n);
+    i.classList.toggle("is-taken", n < (+s.dataset.taken || 0));
+  }));
+
+  /* ── Video viewer ──────────────────────────────────────────
+     Testimonials play with sound only when someone taps them: nothing downloads before that. */
+  const viewer = $("[data-viewer]");
+  if (viewer?.showModal) {
+    const vv = $("video", viewer);
+    const open = (el) => {
+      $$("track", vv).forEach((t) => t.remove());
+      vv.poster = el.dataset.poster;
+      vv.src = el.dataset.video;
+      if (el.dataset.captions) {
+        const t = Object.assign(document.createElement("track"), { kind: "captions", srclang: "es", label: "Español", src: el.dataset.captions, default: true });
+        vv.append(t);
+      }
+      viewer.showModal();
+      lenis?.stop();
+      vv.play().catch(() => {});
+      window.dispatchEvent(new CustomEvent("casalotus:video", { detail: { ref: el.dataset.ref } }));
+    };
+    $$("[data-video]").forEach((el) => el.addEventListener("click", () => open(el)));
+    $("[data-viewer-close]", viewer).addEventListener("click", () => viewer.close());
+    viewer.addEventListener("click", (e) => { if (e.target === viewer) viewer.close(); });
+    viewer.addEventListener("close", () => { vv.pause(); vv.removeAttribute("src"); vv.load(); lenis?.start(); });
+  }
+
+  /* ── Studio video ──────────────────────────────────────────
+     Nothing downloads until a clip nears the screen; it plays only while visible. With reduced
+     motion or data saver the poster stays and no video loads. */
+  const clips = $$("video[data-src]");
+  const saveData = navigator.connection?.saveData;
+  if (clips.length && !reduce && !saveData && "IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => entries.forEach(({ target: v, isIntersecting }) => {
+      if (isIntersecting) {
+        if (!v.getAttribute("src")) v.src = v.dataset.src;
+        v.play().catch(() => {});
+      } else if (!v.paused) v.pause();
+    }), { rootMargin: "120px 0px" });
+    clips.forEach((v) => io.observe(v));
+  }
 
   /* ── Motion ─────────────────────────────────────────────── */
   const hasGsap = window.gsap && window.ScrollTrigger;
@@ -285,7 +327,7 @@
 
   // images open from a soft inset and settle
   $$("[data-media]").forEach((m) => {
-    const img = $("img", m);
+    const img = $("img, video", m);
     gsap.fromTo(m, { clipPath: "inset(14% 10% 6% 10% round 36px)" }, { clipPath: "inset(0% 0% 0% 0% round 22px)", duration: 1.6, ease: "expo.out", scrollTrigger: { trigger: m, start: "top 85%", once: true } });
     // the photo rests at 1.1× so a ±4% parallax never shows an empty edge inside its frame
     gsap.fromTo(img, { yPercent: -4 }, { yPercent: 4, ease: "none", scrollTrigger: { trigger: m, start: "top bottom", end: "bottom top", scrub: true } });
@@ -294,6 +336,13 @@
 
   // section heads sit on their own layer and drift slower than the content
   $$("[data-float]").forEach((h) => gsap.fromTo(h, { y: 70 }, { y: -40, ease: "none", scrollTrigger: { trigger: h.parentElement, start: "top bottom", end: "bottom top", scrub: 1.2 } }));
+
+  // la sala: the clips hang at different depths and swing a little as the page passes
+  $$(".sala__clip").forEach((c, i) => {
+    const depth = [0.6, 1, 0.75, 1.15, 0.7, 0.9][i % 6], side = i % 2 ? -1 : 1;
+    gsap.fromTo(c, { y: 44 * depth, rotation: 0.9 * side }, { y: -44 * depth, rotation: -0.9 * side, ease: "none",
+      scrollTrigger: { trigger: ".sala", start: "top bottom", end: "bottom top", scrub: 1 } });
+  });
 
   // manifesto: words light up as you read
   const words = $("[data-words]");

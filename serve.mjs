@@ -34,7 +34,19 @@ createServer(async (req, res) => {
   try {
     if ((await stat(file)).isDirectory()) file = join(file, "index.html");
     const body = await readFile(file);
-    res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream", "cache-control": "no-store" });
+    const head = { "content-type": TYPES[extname(file)] ?? "application/octet-stream", "cache-control": "no-store", "accept-ranges": "bytes" };
+    // Safari only plays video from a server that answers byte ranges (206), as GitHub Pages does
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || "");
+    if (range) {
+      const size = body.length;
+      let start = range[1] === "" ? size - Number(range[2]) : Number(range[1]);
+      let end = range[1] !== "" && range[2] !== "" ? Math.min(Number(range[2]), size - 1) : size - 1;
+      if (start < 0) start = 0;
+      if (start > end || start >= size) return res.writeHead(416, { "content-range": `bytes */${size}` }).end();
+      res.writeHead(206, { ...head, "content-range": `bytes ${start}-${end}/${size}`, "content-length": end - start + 1 });
+      return res.end(body.subarray(start, end + 1));
+    }
+    res.writeHead(200, { ...head, "content-length": body.length });
     res.end(body);
   } catch {
     res.writeHead(404, { "content-type": "text/plain" }).end("404");

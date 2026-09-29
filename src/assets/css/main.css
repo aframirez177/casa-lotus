@@ -235,6 +235,8 @@ html.motion-off .ribbon-fly { display: none; }
 .swings i::before { content: ""; position: absolute; left: 50%; top: 0; width: 1px; height: 12px; background: color-mix(in srgb, var(--navy) 45%, transparent); }
 .swings i::after { content: ""; position: absolute; left: 0; bottom: 0; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--navy); }
 .slot:hover .swings i { animation: sway 1.4s var(--ease-out) both; animation-delay: calc(var(--n, 0) * 60ms); }
+/* a booked swing is filled; the count comes from the bookings (data-taken), never written by hand */
+.swings i.is-taken::after { background: var(--navy); }
 @keyframes sway { 0% { transform: rotate(0); } 25% { transform: rotate(14deg); } 50% { transform: rotate(-9deg); } 75% { transform: rotate(4deg); } 100% { transform: rotate(0); } }
 .slot__go { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--navy); background: no-repeat center / 18px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23165472' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8h10M9 4l4 4-4 4'/%3E%3C/svg%3E"); transition: background-color var(--d-base), transform var(--d-base) var(--ease-out); }
 .slot:hover .slot__go { background-color: var(--lime); border-color: var(--lime); transform: rotate(-45deg); }
@@ -273,11 +275,80 @@ html.motion-off .ribbon-fly { display: none; }
 
 /* ── Method ─────────────────────────────────────────────── */
 .method__grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--gap-xl); align-items: center; }
-.method__frame { overflow: hidden; border-radius: var(--r-l); aspect-ratio: 4 / 5; }
-.method__frame img { width: 100%; height: 100%; object-fit: cover; }
+.method__frame { overflow: hidden; border-radius: var(--r-l); aspect-ratio: 3 / 4; background: var(--mist); }
+.method__frame img, .method__frame video { display: block; width: 100%; height: 100%; object-fit: cover; }
 /* every animated photo lives in a frame that clips it: a clip-path hides overflow on screen, but
    phones still count it and widen the page (the "slight zoom on load" bug) */
 [data-media] { overflow: hidden; }
+/* la sala: six clips hung from the top of the section at different heights, like the swings */
+.sala__reel { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(12px, 1.6vw, 28px);
+  width: min(var(--max), 100% - 2 * var(--gutter)); margin-inline: auto; padding-top: 3rem; }
+.sala__clip { position: relative; margin: 0; transform-origin: 50% -3rem; }
+.sala__clip:nth-child(6n+1) { margin-top: 0; }
+.sala__clip:nth-child(6n+2) { margin-top: 5.5rem; }
+.sala__clip:nth-child(6n+3) { margin-top: 1.5rem; }
+.sala__clip:nth-child(6n+4) { margin-top: 7rem; }
+.sala__clip:nth-child(6n+5) { margin-top: 2.5rem; }
+.sala__clip:nth-child(6n+6) { margin-top: 4rem; }
+/* the strap: a hairline from the rig down to the clip */
+.sala__clip::before { content: ""; position: absolute; left: 50%; bottom: 100%; width: 1px; height: 100vh; max-height: calc(3rem + var(--drop, 0rem));
+  background: linear-gradient(to top, color-mix(in srgb, var(--navy) 40%, transparent), transparent); }
+.sala__clip:nth-child(6n+2)::before { --drop: 5.5rem; } .sala__clip:nth-child(6n+3)::before { --drop: 1.5rem; }
+.sala__clip:nth-child(6n+4)::before { --drop: 7rem; } .sala__clip:nth-child(6n+5)::before { --drop: 2.5rem; }
+.sala__clip:nth-child(6n+6)::before { --drop: 4rem; }
+.sala__clip video { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: cover; border-radius: var(--r-m); background: var(--mist);
+  box-shadow: 0 24px 50px -30px rgb(22 84 114 / .45); }
+@media (max-width: 860px) {
+  /* phones: a row you swipe, snapping clip by clip, inside its own box (no page overflow) */
+  .sala__reel { display: flex; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
+    width: 100%; padding: 3rem 16px 1rem; scroll-padding-inline: 16px; }
+  .sala__reel::-webkit-scrollbar { display: none; }
+  .sala__clip { flex: 0 0 56%; scroll-snap-align: start; }
+}
+/* play mark shared by every tap-to-watch video */
+.play { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 1; display: grid; place-items: center; width: 64px; aspect-ratio: 1;
+  border-radius: 50%; background: var(--lime); box-shadow: 0 14px 34px -12px rgb(14 58 78 / .55); transition: scale var(--d-base) var(--ease-out); }
+.play::before { content: ""; margin-left: 5px; border-left: 17px solid var(--navy); border-block: 11px solid transparent; }
+/* first class: her video, one tap from the price */
+.clip-note { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 1.1rem; align-items: center; max-width: 440px; padding: .6rem 1.2rem .6rem .6rem;
+  border: 0; border-radius: var(--r-l); background: rgb(255 255 255 / .6); color: var(--ink); text-align: left; font: inherit; cursor: pointer;
+  box-shadow: 0 18px 40px -30px rgb(22 84 114 / .5); transition: background-color var(--d-base), box-shadow var(--d-base); }
+.clip-note:hover { background: var(--white); box-shadow: var(--shadow-soft); }
+.clip-note:hover .play { scale: 1.08; }
+.clip-note__thumb { position: relative; display: block; aspect-ratio: 9 / 16; border-radius: calc(var(--r-l) - .6rem); overflow: hidden; background: var(--mist); }
+.clip-note__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.clip-note__thumb .play { width: 40px; }
+.clip-note__thumb .play::before { margin-left: 3px; border-left-width: 11px; border-block-width: 7px; }
+.clip-note__text { display: grid; gap: .35rem; font-size: var(--t-small); line-height: 1.45; }
+.clip-note__text strong { font: 400 1.15rem/1.25 var(--font-display); color: var(--navy); }
+.clip-note__time { margin-top: .25rem; color: var(--teal); font-weight: 600; font-size: .8125rem; letter-spacing: .04em; }
+/* testimonials: three portrait videos, quote underneath */
+.stories__row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap-l); align-items: start; }
+.stories__row > :nth-child(2) { margin-top: var(--gap-l); }
+.story { display: grid; gap: 1.1rem; margin: 0; }
+.story__open { position: relative; display: block; width: 100%; padding: 0; border: 0; aspect-ratio: 9 / 16; border-radius: var(--r-l); overflow: hidden;
+  background: var(--mist); cursor: pointer; box-shadow: var(--shadow-soft); }
+.story__open img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.4s var(--ease-out); }
+.story__open::after { content: ""; position: absolute; inset: 55% 0 0; background: linear-gradient(to top, rgb(14 58 78 / .55), transparent); pointer-events: none; }
+.story__open:hover img { transform: scale(1.04); }
+.story__open:hover .play { scale: 1.08; }
+.story__time { position: absolute; left: 1.1rem; bottom: 1rem; z-index: 1; color: var(--white); font-size: .8125rem; font-weight: 600; letter-spacing: .06em; }
+.story__quote { font: 400 clamp(1.1rem, .95rem + .5vw, 1.4rem)/1.3 var(--font-display); color: var(--navy); max-width: 24ch; }
+@media (max-width: 860px) {
+  .stories__row { display: flex; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none;
+    margin-inline: calc(-1 * var(--gutter)); padding: .5rem var(--gutter) 1rem; scroll-padding-inline: var(--gutter); gap: 1rem; }
+  .stories__row::-webkit-scrollbar { display: none; }
+  .stories__row > .story { flex: 0 0 68%; scroll-snap-align: start; }
+  .stories__row > :nth-child(2) { margin-top: 0; }
+}
+/* the viewer: one portrait video over a navy veil */
+.viewer { width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; }
+.viewer[open] { display: grid; place-items: center; }
+.viewer::backdrop { background: rgb(14 58 78 / .86); }
+.viewer__video { display: block; height: min(86vh, 86svh); max-width: 92vw; aspect-ratio: 9 / 16; border-radius: var(--r-l); background: #000; object-fit: contain; }
+.viewer__close { position: fixed; top: max(16px, env(safe-area-inset-top)); right: 16px; width: 48px; aspect-ratio: 1; border: 0; border-radius: 50%; background: var(--white); cursor: pointer; }
+.viewer__close::before, .viewer__close::after { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 2px; background: var(--navy); translate: -50% -50%; rotate: 45deg; }
+.viewer__close::after { rotate: -45deg; }
 .method__media figcaption { margin-top: .9rem; color: var(--muted); font-size: var(--t-small); }
 .method__copy { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap-m); justify-items: start; }
 .seal { display: inline-flex; align-items: center; min-height: 64px; padding: 0 1.25rem; border-radius: var(--r-m); border: 1px dashed color-mix(in srgb, var(--navy) 35%, transparent); color: var(--muted); font-size: var(--t-small); }
