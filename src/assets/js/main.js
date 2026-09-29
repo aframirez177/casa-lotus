@@ -162,7 +162,7 @@
     .add(() => splitIn($(".hero__title")), 0.35)
     .add(() => $$(".hero [data-reveal]").forEach((el, i) => riseIn(el, { delay: 0.3 + i * 0.14 })), 0.5);
   const fly = $(".ribbon-fly"), measure = $(".ribbon-measure"), mark = $("[data-lotus-draw]");
-  if (fly && measure && mark) {
+  try { if (fly && measure && mark) {
     // The infinity's centreline was measured on the real shape and smoothed (data-centre).
     // The lead-in is one cubic Bézier that starts beyond the top-right corner of *this* screen
     // and arrives on the exact tangent of the infinity, so there is no kink where they meet.
@@ -176,8 +176,9 @@
       }
       return d;
     };
-    const inv = mark.getScreenCTM().inverse();
-    const toMark = (x, y) => { const q = new DOMPoint(x, y).matrixTransform(inv); return [q.x, q.y]; };
+    // screen → mark coordinates with the inverse CTM, written out (works in every Safari)
+    const m = mark.getScreenCTM().inverse();
+    const toMark = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
     const S = toMark(innerWidth + 40, -40), J = centre[0];
     const tx = centre[1][0] - J[0], ty = centre[1][1] - J[1], tl = Math.hypot(tx, ty);
     const reach = Math.hypot(J[0] - S[0], J[1] - S[1]);
@@ -203,6 +204,9 @@
       .fromTo(".lotus-part--petal", { opacity: 0, y: 46, scale: 0.7, transformOrigin: "50% 100%" },
         { opacity: 1, y: 0, scale: 1, duration: 1.6, ease: "expo.out", stagger: 0.16 }, land + 0.35);
     if (root.classList.contains("dev")) window.__intro = intro; // local QA: frame-by-frame review
+  } } catch (err) {
+    gsap.set(".lotus-part", { opacity: 1 }); gsap.set(".ribbon-fly", { display: "none" });
+    gsap.set(".lotus-draw__halo", { opacity: 0.85 }); gsap.set(".lotus-draw__shadow", { opacity: 0.16 });
   }
   gsap.to(".hero__copy", { y: -80, opacity: 0.2, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1 } });
 
