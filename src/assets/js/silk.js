@@ -2,7 +2,8 @@
 // Ribbons of fabric hang from the ceiling, like the swings, and flow through the air.
 // Each ribbon is a Verlet rope pinned at the top: a slow wind keeps it alive, the hand drags
 // it along as it moves, and scrolling gives it inertia. Two canvases give depth: the back one
-// is blurred (far), the front one sharp (near). No dependencies.
+// is blurred (far), the front one sharp (near).
+// No dependencies.
 (() => {
   const host = document.querySelector("[data-silk-host]");
   const canvases = [...document.querySelectorAll("[data-silk]")];
@@ -65,6 +66,7 @@
     });
   }
 
+  /* ── Physics ─────────────────────────────────────────── */
   function simulate(rb) {
     const { pts, seg } = rb;
     for (let i = 1; i < N; i++) {
@@ -72,7 +74,7 @@
       const vx = (p.x - p.px) * 0.965, vy = (p.y - p.py) * 0.965;
       p.px = p.x; p.py = p.y;
       // a slow flow field: the silk breathes on its own
-      const wx = Math.sin(p.y * 0.006 + env.t * 0.7 + rb.ph) * 0.2 + Math.sin(env.t * 0.31 + rb.ph * 2) * 0.14;
+      const wx = Math.sin(p.y * 0.006 + env.t * 0.7 + rb.ph) * 0.2 + Math.sin(env.t * 0.27 + rb.ph * 2) * 0.24;
       const wy = Math.cos(p.x * 0.005 + env.t * 0.5 + rb.ph) * 0.05;
       // the hand: movement nearby drags the fabric along, and the whole ribbon leans toward it
       let hx = 0, hy = 0;
@@ -84,7 +86,7 @@
       p.x += vx + (wx + hx) * f;
       p.y += vy + 0.32 + wy + hy * f + env.sv * f * 0.06;
     }
-    for (let k = 0; k < 6; k++) {
+    for (let k = 0; k < 8; k++) {
       pts[0].x = rb.ax; pts[0].y = rb.ay;
       for (let i = 1; i < N; i++) {
         const a = pts[i - 1], b = pts[i];
@@ -95,43 +97,53 @@
     }
   }
 
+  /* ── Silk drawing ───────────────────────────────────── */
   // smooth curve through a list of points (quadratic through midpoints)
-  function trace(ctx, P, start) {
-    if (start) ctx.moveTo(P[0][0], P[0][1]); else ctx.lineTo(P[0][0], P[0][1]);
+  function trace(path, P, start) {
+    if (start) path.moveTo(P[0][0], P[0][1]); else path.lineTo(P[0][0], P[0][1]);
     for (let i = 1; i < P.length - 1; i++) {
-      const mx = (P[i][0] + P[i + 1][0]) / 2, my = (P[i][1] + P[i + 1][1]) / 2;
-      ctx.quadraticCurveTo(P[i][0], P[i][1], mx, my);
+      path.quadraticCurveTo(P[i][0], P[i][1], (P[i][0] + P[i + 1][0]) / 2, (P[i][1] + P[i + 1][1]) / 2);
     }
-    ctx.lineTo(P[P.length - 1][0], P[P.length - 1][1]);
+    path.lineTo(P[P.length - 1][0], P[P.length - 1][1]);
   }
 
+  // draws one ribbon: body with a gradient along its length, then sheen and shade on its edges
   function draw(ctx, rb) {
     const { pts } = rb;
-    const left = [], right = [], face = [];
+    const left = [], right = [], face = [], widths = new Array(N), normals = new Array(N);
     for (let i = 0; i < N; i++) {
       const p = pts[i], a = pts[Math.max(0, i - 1)], b = pts[Math.min(N - 1, i + 1)];
       let tx = b.x - a.x, ty = b.y - a.y;
       const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
       const f = i / (N - 1);
       // the fabric turns as it falls: its visible width follows the twist, which reads as depth
-      const c = Math.cos(rb.ph + f * 5.4 + env.t * 0.45 + (p.x - p.px) * 0.05);
+      const swing = Math.max(-0.6, Math.min(0.6, (p.x - p.px) * 0.05));
+      const c = Math.cos(rb.ph + f * 5.4 + env.t * 0.45 + swing);
       const taper = Math.min(1, 0.14 + f * 3.4) * (1 - f * 0.32); // gathered at the rigging, open below
-      const w = rb.w * env.scale * taper * (0.2 + 0.8 * Math.abs(c));
-      left.push([p.x - ty * w, p.y + tx * w]);
-      right.push([p.x + ty * w, p.y - tx * w]);
+      widths[i] = rb.w * env.scale * taper * (0.2 + 0.8 * Math.abs(c));
+      normals[i] = [-ty, tx];
       face.push(c);
     }
+    // silk never has a jagged edge: average each width with its neighbours
+    for (let i = 0; i < N; i++) {
+      const w = (widths[Math.max(0, i - 1)] + 2 * widths[i] + widths[Math.min(N - 1, i + 1)]) / 4;
+      const p = pts[i], [nx, ny] = normals[i];
+      left.push([p.x + nx * w, p.y + ny * w]);
+      right.push([p.x - nx * w, p.y - ny * w]);
+    }
+    const outline = new Path2D();
+    trace(outline, left, true);
+    trace(outline, right.slice().reverse(), false);
+    outline.closePath();
+
     const top = pts[0], bot = pts[N - 1];
     const g = ctx.createLinearGradient(top.x, top.y, bot.x, bot.y);
     g.addColorStop(0, `rgba(${RGB[rb.c]},${rb.a * 0.3})`);
     g.addColorStop(0.35, `rgba(${RGB[rb.c]},${rb.a})`);
     g.addColorStop(1, `rgba(${RGB[rb.c]},${rb.a * 0.5})`);
-    ctx.beginPath();
-    trace(ctx, left, true);
-    trace(ctx, right.slice().reverse(), false);
-    ctx.closePath();
     ctx.fillStyle = g;
-    ctx.fill();
+    ctx.fill(outline);
+
     // sheen on the edge that faces the light, shade on the other: silk, not paper
     ctx.lineWidth = 1.1;
     for (let i = 0; i < N - 1; i++) {
@@ -146,6 +158,7 @@
     }
   }
 
+  /* ── Frame ──────────────────────────────────────────── */
   function render() {
     layers.forEach(({ ctx, ribbons }) => {
       ctx.clearRect(0, 0, env.W, env.H);
@@ -184,7 +197,8 @@
     const r = host.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
     if (y < -80 || y > r.height + 80) { env.px = null; lastX = null; return; }
-    if (lastX !== null) { env.pvx += (x - lastX - env.pvx) * 0.5; env.pvy += (y - lastY - env.pvy) * 0.5; }
+    const clamp = (v) => Math.max(-18, Math.min(18, v));
+    if (lastX !== null) { env.pvx += (clamp(x - lastX) - env.pvx) * 0.5; env.pvy += (clamp(y - lastY) - env.pvy) * 0.5; }
     env.px = x; env.py = y; lastX = x; lastY = y;
     // the layers shift by depth: far silk moves less than near silk
     layers.forEach((L) => {
@@ -201,7 +215,8 @@
 
   function loop(now) {
     if (!visible || document.hidden) { running = false; return; }
-    acc += Math.min(0.1, (now - prev) / 1000);
+    const dt = Math.min(0.1, (now - prev) / 1000);
+    acc += dt;
     prev = now;
     const ds = scrollY - lastScroll; lastScroll = scrollY;
     env.sv += (ds - env.sv) * 0.2;

@@ -152,11 +152,18 @@
     return gsap.from(el, { y: 26, opacity: 0, filter: "blur(8px)", duration: 1.2, ease: "expo.out", clearProps: "filter", ...vars });
   };
 
-  // hero: the silk fades in while it unfurls from the ceiling (silk.js); the words arrive after
+  // hero: the silk fades in as it unfurls (silk.js). The mark is laid in like a ribbon: the
+  // infinity travels its whole length, end to end, then the three petals loop in. After that
+  // it stays still; the mark never animates again.
   const intro = gsap.timeline({ defaults: { ease: "expo.out" }, delay: 0.1 });
   intro.from(".silk", { opacity: 0, duration: 2.2, ease: "sine.out", stagger: 0.25 }, 0)
-    .add(() => splitIn($(".hero__title")), 0.45)
-    .add(() => $$(".hero [data-reveal]").forEach((el, i) => riseIn(el, { delay: 0.3 + i * 0.14 })), 0.6);
+    .add(() => splitIn($(".hero__title")), 0.35)
+    .add(() => $$(".hero [data-reveal]").forEach((el, i) => riseIn(el, { delay: 0.3 + i * 0.14 })), 0.5)
+    .to(".ribbon--base", { strokeDashoffset: 0, duration: 2.3, ease: "power2.inOut" }, 0.3)
+    .to(".ribbon--centro", { strokeDashoffset: 0, duration: 1.25, ease: "power2.inOut" }, 1.75)
+    .to(".ribbon--izq", { strokeDashoffset: 0, duration: 1.05, ease: "power2.inOut" }, 2.0)
+    .to(".ribbon--der", { strokeDashoffset: 0, duration: 1.05, ease: "power2.inOut" }, 2.12)
+    .to(".lotus-draw__halo", { opacity: 0.85, duration: 1.8, ease: "sine.out" }, 2.5);
   gsap.to(".hero__copy", { y: -80, opacity: 0.2, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1 } });
 
   atmosphere();
