@@ -106,7 +106,6 @@
         </div>
       </div>
       <div class="hero__mark" aria-hidden="true">
-        <svg class="lotus-draw__halo" viewBox="-60 -60 985 883"><use href="#lotus-base"/><use href="#lotus-petalo-izq"/><use href="#lotus-petalo-der"/><use href="#lotus-centro"/></svg>
         <svg class="lotus-draw__shadow" viewBox="-60 -60 985 883"><use href="#lotus-base"/><use href="#lotus-petalo-izq"/><use href="#lotus-petalo-der"/><use href="#lotus-centro"/></svg>
         <!-- entrance: a navy ribbon, as wide as the mark's stroke, flies in from off-screen and winds into the
              infinity (path built at runtime from data-centre so it always starts beyond the screen edge). -->
@@ -118,9 +117,6 @@
           <use class="lotus-part lotus-part--petal" href="#lotus-petalo-izq"/>
           <use class="lotus-part lotus-part--petal" href="#lotus-petalo-der"/>
         </svg>
-        <!-- the glow: when the ribbon lands it lights up, hides the handover, and the petals bloom out of it -->
-        <i class="lotus-glow" aria-hidden="true"></i>
-        <i class="lotus-ripple" aria-hidden="true"></i>
       </div>
     </div>
   </section>
@@ -335,8 +331,8 @@
   <!-- ─────────────────────────── MÉTODO ─────────────────────────── -->
   <section class="section method" id="metodo" data-bg="paper">
     <div class="wrap method__grid">
-      <figure class="method__media" data-media>
-        <img src="assets/images/demo-mural-pavo.webp" alt="Alumna en el columpio frente al mural del pavo real de Casa Lotus" loading="lazy" width="352" height="885">
+      <figure class="method__media">
+        <div class="method__frame" data-media><img src="assets/images/demo-mural-pavo.webp" alt="Alumna en el columpio frente al mural del pavo real de Casa Lotus" loading="lazy" width="352" height="885"></div>
         <figcaption>El mural del pavo real, en la sala.</figcaption>
       </figure>
       <div class="method__copy">
@@ -437,6 +433,9 @@
   <span>Clase de prueba <strong>$25.000</strong></span><span class="mobile-cta__go">Reservar</span>
 </a>
 
+<!-- paper veil: when the ribbon lands, six paper discs stack up on the infinity's crossing, grow until they
+     cover the screen, then open from the centre (a hole through each sheet) and reveal the page. JS paints it. -->
+<div class="paper-veil" aria-hidden="true"></div>
 <script src="assets/vendor/lenis.min.js" defer></script>
 <script src="assets/vendor/gsap.min.js" defer></script>
 <script src="assets/vendor/ScrollTrigger.min.js" defer></script>

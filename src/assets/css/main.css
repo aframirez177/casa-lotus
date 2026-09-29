@@ -3,6 +3,7 @@
 /* ── Reset & base ───────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { overflow-x: clip; }
 body {
   margin: 0; background: var(--paper); color: var(--ink);
   font: 400 var(--t-body)/var(--lh-body) var(--font-sans);
@@ -131,19 +132,15 @@ section[id] { scroll-margin-top: 88px; }
 .lotus-draw { fill: currentColor; }
 /* the shadow is a static, pre-blurred layer that only fades: no filter re-renders while the ribbon moves */
 .lotus-draw__shadow { fill: var(--navy); filter: blur(14px); opacity: .16; transform: translateY(3.4%); }
-.lotus-draw__halo { fill: var(--c-multinivel); filter: blur(38px); opacity: .85; transform: translateY(4%) scale(1.04); }
 /* the ribbon that flies in: same width as the mark's stroke (70 units), round ends */
-.lotus-glow { position: absolute; left: 50%; top: 72%; width: 210%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; pointer-events: none; opacity: 0;
-  background: radial-gradient(closest-side, rgb(255 255 255 / 1) 0%, rgb(255 255 255 / .95) 24%, rgb(255 255 255 / .7) 38%, rgb(178 212 224 / .45) 56%, rgb(210 243 162 / .16) 74%, rgb(178 212 224 / .05) 88%, transparent 100%); will-change: transform, opacity; }
-.lotus-ripple { position: absolute; left: 50%; top: 72%; width: 92%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; pointer-events: none; opacity: 0;
-  border: 1.5px solid rgb(255 255 255 / .9); box-shadow: 0 0 28px rgb(178 212 224 / .55), inset 0 0 22px rgb(178 212 224 / .35); will-change: transform, opacity; }
-html.motion-off .lotus-glow, html.motion-off .lotus-ripple { display: none; }
-@media (max-width: 860px) { .lotus-glow { width: 160%; } .lotus-ripple { width: 80%; } } /* generous, without washing the headline below */
+/* paper veil: one fixed layer painted as a single radial gradient (JS rebuilds the stops every frame), so the
+   discs stay crisp at any size and cost one repaint. Above the header, under the grain (the paper gets its tooth). */
+.paper-veil { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+html.motion-off .paper-veil { display: none; }
 .ribbon-fly { fill: none; stroke: currentColor; stroke-width: 70; stroke-linecap: round; stroke-linejoin: round; }
 .ribbon-measure { display: none; }
-html.js .ribbon-fly, html.js .lotus-part, html.js .lotus-draw__halo, html.js .lotus-draw__shadow { opacity: 0; }   /* until the entrance starts */
+html.js .ribbon-fly, html.js .lotus-part, html.js .lotus-draw__shadow { opacity: 0; }   /* until the entrance starts */
 html.motion-off .lotus-part { opacity: 1; }
-html.motion-off .lotus-draw__halo { opacity: .85; }
 html.motion-off .lotus-draw__shadow { opacity: .16; }
 html.motion-off .ribbon-fly { display: none; }
 
@@ -276,7 +273,11 @@ html.motion-off .ribbon-fly { display: none; }
 
 /* ── Method ─────────────────────────────────────────────── */
 .method__grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--gap-xl); align-items: center; }
-.method__media img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--r-l); }
+.method__frame { overflow: hidden; border-radius: var(--r-l); aspect-ratio: 4 / 5; }
+.method__frame img { width: 100%; height: 100%; object-fit: cover; }
+/* every animated photo lives in a frame that clips it: a clip-path hides overflow on screen, but
+   phones still count it and widen the page (the "slight zoom on load" bug) */
+[data-media] { overflow: hidden; }
 .method__media figcaption { margin-top: .9rem; color: var(--muted); font-size: var(--t-small); }
 .method__copy { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap-m); justify-items: start; }
 .seal { display: inline-flex; align-items: center; min-height: 64px; padding: 0 1.25rem; border-radius: var(--r-m); border: 1px dashed color-mix(in srgb, var(--navy) 35%, transparent); color: var(--muted); font-size: var(--t-small); }

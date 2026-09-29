@@ -190,23 +190,84 @@
     const total = fly.getTotalLength(), inf = measure.getTotalLength(), leadLen = total - inf;
     gsap.set(fly, { strokeDasharray: `${inf} ${total + inf}`, strokeDashoffset: inf, opacity: 1 });
 
-    // landing, told as one gesture: the ribbon turns to light, the light condenses into the mark
-    // (a slow crossfade, so no edge ever jumps), a ripple leaves, and the glow settles into the halo
+    // landing, in paper: four discs are born one after another on the infinity's crossing (palest
+    // first, lime on top) and all keep growing, never pausing, until the lime covers the screen. The
+    // real mark takes over from the ribbon under them. Then one empty disc opens from the centre
+    // through all four and the page shows through it with the logo in the middle. Four discs, one hole.
     const t0 = 0.1, flight = 2.3, land = t0 + flight;
+    const veil = $(".paper-veil");
+    const PAPER = ["#D6E1E6", "#B2D4E0", "#B7DFC5", "#D2F3A2"];   // bottom → top: line, sky, mint, lime (tokens.css)
+    const rgb = PAPER.map((hx) => [1, 3, 5].map((k) => parseInt(hx.slice(k, k + 2), 16)));
+    const sheets = PAPER.map(() => ({ h: 0, R: 0 }));   // h: hole radius · R: outer radius (px)
+    // every disc follows the same curve from its own birth: R = unit·A·(e^(age/T) − 1). Its speed only
+    // ever rises, so no disc waits for the others; the gap between births sets the rings' width.
+    const A = 0.35, T = 0.5, GAP = 0.22;
+    const clock = { t: 0 };
+    let cx = 0, cy = 0, unit = 0, cover = 0, last = "";
+    const place = () => {
+      const r = mark.getBoundingClientRect();
+      cx = r.left + r.width / 2; cy = r.top + r.height * 0.755;   // the infinity's crossing
+      unit = r.width / 2;
+      cover = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy)) + 48;
+    };
+    place();
+    const f = (n) => Math.round(n * 10) / 10;
+    const shade = (i, a) => i < 0 ? `rgb(22 84 114/${a})`
+      : `rgb(${rgb[i].map((v, k) => Math.round(v + ([22, 84, 114][k] - v) * a)).join(" ")})`;
+    // one radial gradient: concentric sheets are a function of the radius alone. Where a sheet's edge
+    // lies on the sheet below it gets a soft contact shade; a second gradient, shifted down, is the
+    // cast shadow on the page (outside the stack and at the top of the hole).
+    const paint = () => {
+      sheets.forEach((s, i) => { const age = clock.t - i * GAP; s.R = age > 0 ? unit * A * Math.expm1(age / T) : 0; });
+      const on = sheets.filter((s) => s.R - s.h > 0.5);
+      if (!on.length) { if (last) { veil.style.background = ""; last = ""; } return; }
+      const xs = [...new Set([0, ...on.flatMap((s) => [s.h, s.R])])].sort((a, b) => a - b);
+      const segs = [];
+      for (let k = 0; k < xs.length; k++) {
+        const a = xs[k], b = k + 1 < xs.length ? xs[k + 1] : Infinity, mid = b === Infinity ? a + 1 : (a + b) / 2;
+        let top = -1;
+        for (let i = sheets.length - 1; i >= 0; i--) if (sheets[i].h <= mid && mid < sheets[i].R) { top = i; break; }
+        if (segs.length && segs[segs.length - 1].top === top) segs[segs.length - 1].b = b;
+        else segs.push({ a, b, top });
+      }
+      const stops = [];
+      segs.forEach((s, k) => {
+        const prev = segs[k - 1], next = segs[k + 1], a = s.a, b = s.b === Infinity ? s.a + 1 : s.b;
+        const w = Math.min(12, (b - a) * 0.45), A = 0.13, paper = s.top >= 0;
+        const inL = paper && prev && prev.top > s.top, inR = paper && next && next.top > s.top;
+        stops.push(`${shade(s.top, inL ? A : 0)} ${f(k ? a + 0.4 : a)}px`);
+        if (inL) stops.push(`${shade(s.top, A * 0.35)} ${f(a + w * 0.4)}px`, `${shade(s.top, 0)} ${f(a + w)}px`);
+        if (inR) stops.push(`${shade(s.top, 0)} ${f(b - w)}px`, `${shade(s.top, A * 0.35)} ${f(b - w * 0.4)}px`);
+        if (s.b !== Infinity) stops.push(`${shade(s.top, inR ? A : 0)} ${f(b - 0.4)}px`);
+      });
+      const h0 = Math.min(...on.map((s) => s.h)), R1 = Math.max(...on.map((s) => s.R)), bl = 6, SA = 0.18;
+      const cast = h0 > 0
+        ? `transparent ${f(Math.max(0, h0 - bl))}px, rgb(22 84 114/${SA}) ${f(h0 + bl)}px, rgb(22 84 114/${SA}) ${f(R1 - bl)}px, transparent ${f(R1 + bl)}px`
+        : `rgb(22 84 114/${SA}) ${f(Math.max(0, R1 - bl))}px, transparent ${f(R1 + bl)}px`;
+      const bg = `radial-gradient(circle at ${f(cx)}px ${f(cy)}px, ${stops.join(", ")}), radial-gradient(circle at ${f(cx)}px ${f(cy + 8)}px, ${cast})`;
+      if (bg !== last) { veil.style.background = bg; last = bg; }
+    };
+    addEventListener("scroll", place, { passive: true });
+    addEventListener("resize", place);
+    const age = (r) => T * Math.log1p(r / A);                        // age at which a disc reaches r·unit
+    const covered = (PAPER.length - 1) * GAP + age((cover / unit) * 1.02);   // the lime reaches the corners
+    const start = land - 0.4, open = start + covered - 0.55, reveal = 1.5, swap = start + age(1.2);
+    gsap.ticker.add(paint);   // repaints only when a radius or the crossing actually moved
+    intro.eventCallback("onComplete", () => { gsap.ticker.remove(paint); removeEventListener("scroll", place); removeEventListener("resize", place); });
     intro.to(fly, { strokeDashoffset: -leadLen, duration: flight, ease: "power2.out" }, t0)  // enters with momentum, settles as it lands
-      .to(fly, { stroke: "#F4FAFC", duration: 0.5, ease: "sine.in" }, land - 0.45)
-      .fromTo(".lotus-glow", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1.06, duration: 0.8, ease: "sine.inOut", immediateRender: false }, land - 0.65)
-      .to(".lotus-part--base", { opacity: 1, duration: 0.9, ease: "sine.inOut" }, land - 0.05)
-      .to(fly, { opacity: 0, duration: 0.8, ease: "sine.inOut" }, land)
-      .fromTo(".lotus-ripple", { opacity: 0.8, scale: 0.6 }, { opacity: 0, scale: 2.6, duration: 1.8, ease: "power2.out", immediateRender: false }, land + 0.05)
-      .to(".lotus-glow", { opacity: 0, scale: 1.5, duration: 1.9, ease: "power2.inOut" }, land + 0.15)
-      .to([".lotus-draw__halo", ".lotus-draw__shadow"], { opacity: (i) => (i ? 0.16 : 0.85), duration: 1.8, ease: "sine.inOut" }, land + 0.1)
-      .fromTo(".lotus-part--petal", { opacity: 0, y: 46, scale: 0.7, transformOrigin: "50% 100%" },
-        { opacity: 1, y: 0, scale: 1, duration: 1.6, ease: "expo.out", stagger: 0.16 }, land + 0.35);
+      .to(clock, { t: covered + 0.5, duration: covered + 0.5, ease: "none" }, start)
+      .set(".lotus-part--base", { opacity: 1 }, swap)   // the first disc now covers the whole infinity
+      .set(fly, { opacity: 0 }, swap)
+      // one empty disc opens from the centre through every sheet at once: only the lime edge is seen
+      .to(sheets, { h: () => cover + 24, duration: reveal, ease: "power2.inOut" }, open)   // starts as the lime lands, no pause
+      .set(veil, { display: "none" }, open + reveal + 0.05)   // past the screen's corners: drop the layer
+      .to(".lotus-draw__shadow", { opacity: 0.16, duration: 1.4, ease: "sine.out" }, open + 0.7)
+      .fromTo(".lotus-part--petal", { opacity: 0, y: 34, scale: 0.8, transformOrigin: "50% 100%" },
+        { opacity: 1, y: 0, scale: 1, duration: 1.5, ease: "expo.out", stagger: 0.12, immediateRender: false }, open + 0.45);
     if (root.classList.contains("dev")) window.__intro = intro; // local QA: frame-by-frame review
   } } catch (err) {
     gsap.set(".lotus-part", { opacity: 1 }); gsap.set(".ribbon-fly", { display: "none" });
-    gsap.set(".lotus-draw__halo", { opacity: 0.85 }); gsap.set(".lotus-draw__shadow", { opacity: 0.16 });
+    gsap.set(".lotus-draw__shadow", { opacity: 0.16 }); gsap.set(".paper-veil", { display: "none" });
   }
   gsap.to(".hero__copy", { y: -80, opacity: 0.2, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1 } });
 
@@ -226,8 +287,9 @@
   $$("[data-media]").forEach((m) => {
     const img = $("img", m);
     gsap.fromTo(m, { clipPath: "inset(14% 10% 6% 10% round 36px)" }, { clipPath: "inset(0% 0% 0% 0% round 22px)", duration: 1.6, ease: "expo.out", scrollTrigger: { trigger: m, start: "top 85%", once: true } });
-    gsap.fromTo(img, { yPercent: -6 }, { yPercent: 6, ease: "none", scrollTrigger: { trigger: m, start: "top bottom", end: "bottom top", scrub: true } });
-    gsap.fromTo(img, { filter: "blur(16px)", scale: 1.18 }, { filter: "blur(0px)", scale: 1.04, duration: 2, ease: "expo.out", clearProps: "filter", scrollTrigger: { trigger: m, start: "top 85%", once: true } });
+    // the photo rests at 1.1× so a ±4% parallax never shows an empty edge inside its frame
+    gsap.fromTo(img, { yPercent: -4 }, { yPercent: 4, ease: "none", scrollTrigger: { trigger: m, start: "top bottom", end: "bottom top", scrub: true } });
+    gsap.fromTo(img, { filter: "blur(14px)", scale: 1.22 }, { filter: "blur(0px)", scale: 1.1, duration: 2, ease: "expo.out", clearProps: "filter", scrollTrigger: { trigger: m, start: "top 85%", once: true } });
   });
 
   // section heads sit on their own layer and drift slower than the content
