@@ -12,6 +12,8 @@
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const narrow = matchMedia("(max-width: 760px)");
   const DPR = Math.min(2, window.devicePixelRatio || 1);
+  // the far layer is blurred by CSS, so it doesn't need full resolution
+  const dprOf = (depth) => (depth === "back" ? Math.min(1, DPR * 0.5) : DPR);
   const STEP = 1 / 60;
   const N = 44;
 
@@ -54,13 +56,14 @@
     env.R = 260 * env.scale;
     const spec = narrow.matches ? LAYOUT.narrow : LAYOUT.wide;
     layers.forEach((L) => {
-      L.cv.width = Math.round(r.width * DPR);
-      L.cv.height = Math.round(r.height * DPR);
-      L.ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      const dpr = dprOf(L.depth);
+      L.cv.width = Math.round(r.width * dpr);
+      L.cv.height = Math.round(r.height * dpr);
+      L.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       L.ribbons = (spec[L.depth] || []).map((s) => {
         const ax = s.x * r.width, ay = -40, seg = (s.len * r.height) / (N - 1);
-        // start gathered at the rigging so the silk unfurls downward on load
-        const pts = Array.from({ length: N }, (_, i) => ({ x: ax, y: ay + i * seg * 0.12, px: ax, py: ay + i * seg * 0.12 }));
+        // start hanging straight: the entrance is a fade, never a fall
+        const pts = Array.from({ length: N }, (_, i) => ({ x: ax, y: ay + i * seg, px: ax, py: ay + i * seg }));
         return { ...s, ax, ay, seg, pts };
       });
     });
@@ -110,7 +113,7 @@
   // draws one ribbon: body with a gradient along its length, then sheen and shade on its edges
   function draw(ctx, rb) {
     const { pts } = rb;
-    const left = [], right = [], face = [], widths = new Array(N), normals = new Array(N);
+    const left = [], right = [], widths = new Array(N), normals = new Array(N);
     for (let i = 0; i < N; i++) {
       const p = pts[i], a = pts[Math.max(0, i - 1)], b = pts[Math.min(N - 1, i + 1)];
       let tx = b.x - a.x, ty = b.y - a.y;
@@ -122,8 +125,7 @@
       const taper = Math.min(1, 0.14 + f * 3.4) * (1 - f * 0.32); // gathered at the rigging, open below
       widths[i] = rb.w * env.scale * taper * (0.2 + 0.8 * Math.abs(c));
       normals[i] = [-ty, tx];
-      face.push(c);
-    }
+          }
     // silk never has a jagged edge: average each width with its neighbours
     for (let i = 0; i < N; i++) {
       const w = (widths[Math.max(0, i - 1)] + 2 * widths[i] + widths[Math.min(N - 1, i + 1)]) / 4;
@@ -144,18 +146,18 @@
     ctx.fillStyle = g;
     ctx.fill(outline);
 
-    // sheen on the edge that faces the light, shade on the other: silk, not paper
-    ctx.lineWidth = 1.1;
-    for (let i = 0; i < N - 1; i++) {
-      const lit = face[i];
-      if (lit > 0.15) {
-        ctx.strokeStyle = `rgba(255,255,255,${0.55 * lit * rb.a})`;
-        ctx.beginPath(); ctx.moveTo(left[i][0], left[i][1]); ctx.lineTo(left[i + 1][0], left[i + 1][1]); ctx.stroke();
-      } else if (lit < -0.15) {
-        ctx.strokeStyle = `rgba(${RGB.navy},${0.22 * -lit * rb.a})`;
-        ctx.beginPath(); ctx.moveTo(right[i][0], right[i][1]); ctx.lineTo(right[i + 1][0], right[i + 1][1]); ctx.stroke();
-      }
-    }
+    // sheen on one edge, shade on the other: each is one continuous stroke on the same smooth
+    // curve as the fill, so the edge stays clean (segment-by-segment strokes read as grain)
+    const edge = (P, colour) => {
+      const e = new Path2D(); trace(e, P, true);
+      const gr = ctx.createLinearGradient(top.x, top.y, bot.x, bot.y);
+      gr.addColorStop(0, `rgba(${colour},0)`);
+      gr.addColorStop(0.3, `rgba(${colour},${colour === RGB.navy ? 0.16 * rb.a : 0.5 * rb.a})`);
+      gr.addColorStop(1, `rgba(${colour},0)`);
+      ctx.strokeStyle = gr; ctx.lineWidth = 1.2; ctx.stroke(e);
+    };
+    edge(left, "255,255,255");
+    edge(right, RGB.navy);
   }
 
   /* ── Frame ──────────────────────────────────────────── */
@@ -167,6 +169,7 @@
   }
 
   build();
+  for (let k = 0; k < 150; k++) { env.t += STEP; layers.forEach((L) => L.ribbons.forEach(simulate)); }
   // rebuild only when the width changes (a mobile URL bar changing the height must not re-drop the silk)
   let builtWidth = env.W;
   new ResizeObserver(() => {

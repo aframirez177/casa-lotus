@@ -149,21 +149,61 @@
   };
   const riseIn = (el, vars = {}) => {
     el.style.visibility = "visible";
-    return gsap.from(el, { y: 26, opacity: 0, filter: "blur(8px)", duration: 1.2, ease: "expo.out", clearProps: "filter", ...vars });
+    return gsap.from(el, { y: 26, opacity: 0, duration: 1.2, ease: "expo.out", ...vars });
   };
 
-  // hero: the silk fades in as it unfurls (silk.js). The mark is laid in like a ribbon: the
-  // infinity travels its whole length, end to end, then the three petals loop in. After that
-  // it stays still; the mark never animates again.
+  // hero: the silk fades in as it unfurls (silk.js). A navy ribbon, exactly as wide as the
+  // mark's stroke, flies in from beyond the screen and winds into the infinity: a dash the length
+  // of the infinity slides along lead-in + infinity until it covers the infinity alone. The real
+  // SVG then takes over (that is when the over-under cut appears) and the petals bloom from their
+  // base. After the entrance the mark never moves again.
   const intro = gsap.timeline({ defaults: { ease: "expo.out" }, delay: 0.1 });
   intro.from(".silk", { opacity: 0, duration: 2.2, ease: "sine.out", stagger: 0.25 }, 0)
     .add(() => splitIn($(".hero__title")), 0.35)
-    .add(() => $$(".hero [data-reveal]").forEach((el, i) => riseIn(el, { delay: 0.3 + i * 0.14 })), 0.5)
-    .to(".ribbon--base", { strokeDashoffset: 0, duration: 2.3, ease: "power2.inOut" }, 0.3)
-    .to(".ribbon--centro", { strokeDashoffset: 0, duration: 1.25, ease: "power2.inOut" }, 1.75)
-    .to(".ribbon--izq", { strokeDashoffset: 0, duration: 1.05, ease: "power2.inOut" }, 2.0)
-    .to(".ribbon--der", { strokeDashoffset: 0, duration: 1.05, ease: "power2.inOut" }, 2.12)
-    .to(".lotus-draw__halo", { opacity: 0.85, duration: 1.8, ease: "sine.out" }, 2.5);
+    .add(() => $$(".hero [data-reveal]").forEach((el, i) => riseIn(el, { delay: 0.3 + i * 0.14 })), 0.5);
+  const fly = $(".ribbon-fly"), measure = $(".ribbon-measure"), mark = $("[data-lotus-draw]");
+  if (fly && measure && mark) {
+    // The infinity's centreline was measured on the real shape and smoothed (data-centre).
+    // The lead-in is one cubic Bézier that starts beyond the top-right corner of *this* screen
+    // and arrives on the exact tangent of the infinity, so there is no kink where they meet.
+    const centre = mark.dataset.centre.trim().split(/\s+/).map((p) => p.split(",").map(Number));
+    const catmull = (pts, move = true) => {
+      const P = [pts[0], ...pts, pts[pts.length - 1]];
+      let d = move ? `M${P[1][0]} ${P[1][1]}` : "";
+      for (let i = 1; i < P.length - 2; i++) {
+        const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+        d += `C${p1[0] + (p2[0] - p0[0]) / 6} ${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6} ${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]} ${p2[1]}`;
+      }
+      return d;
+    };
+    const inv = mark.getScreenCTM().inverse();
+    const toMark = (x, y) => { const q = new DOMPoint(x, y).matrixTransform(inv); return [q.x, q.y]; };
+    const S = toMark(innerWidth + 40, -40), J = centre[0];
+    const tx = centre[1][0] - J[0], ty = centre[1][1] - J[1], tl = Math.hypot(tx, ty);
+    const reach = Math.hypot(J[0] - S[0], J[1] - S[1]);
+    const c2 = [J[0] - (tx / tl) * reach * 0.42, J[1] - (ty / tl) * reach * 0.42];  // on the tangent, behind J
+    const c1 = [S[0] - reach * 0.18, S[1] + reach * 0.34];                         // a slow, open arc down
+    const leadD = `M${S[0]} ${S[1]}C${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${J[0]} ${J[1]}`;
+    measure.setAttribute("d", catmull(centre));
+    fly.setAttribute("d", leadD + catmull(centre, false));
+    const total = fly.getTotalLength(), inf = measure.getTotalLength(), leadLen = total - inf;
+    gsap.set(fly, { strokeDasharray: `${inf} ${total + inf}`, strokeDashoffset: inf, opacity: 1 });
+
+    // landing, told as one gesture: the ribbon turns to light, the light condenses into the mark
+    // (a slow crossfade, so no edge ever jumps), a ripple leaves, and the glow settles into the halo
+    const t0 = 0.1, flight = 2.3, land = t0 + flight;
+    intro.to(fly, { strokeDashoffset: -leadLen, duration: flight, ease: "power2.out" }, t0)  // enters with momentum, settles as it lands
+      .to(fly, { stroke: "#F4FAFC", duration: 0.5, ease: "sine.in" }, land - 0.45)
+      .fromTo(".lotus-glow", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1.06, duration: 0.8, ease: "sine.inOut", immediateRender: false }, land - 0.65)
+      .to(".lotus-part--base", { opacity: 1, duration: 0.9, ease: "sine.inOut" }, land - 0.05)
+      .to(fly, { opacity: 0, duration: 0.8, ease: "sine.inOut" }, land)
+      .fromTo(".lotus-ripple", { opacity: 0.8, scale: 0.6 }, { opacity: 0, scale: 2.6, duration: 1.8, ease: "power2.out", immediateRender: false }, land + 0.05)
+      .to(".lotus-glow", { opacity: 0, scale: 1.5, duration: 1.9, ease: "power2.inOut" }, land + 0.15)
+      .to([".lotus-draw__halo", ".lotus-draw__shadow"], { opacity: (i) => (i ? 0.16 : 0.85), duration: 1.8, ease: "sine.inOut" }, land + 0.1)
+      .fromTo(".lotus-part--petal", { opacity: 0, y: 46, scale: 0.7, transformOrigin: "50% 100%" },
+        { opacity: 1, y: 0, scale: 1, duration: 1.6, ease: "expo.out", stagger: 0.16 }, land + 0.35);
+    if (root.classList.contains("dev")) window.__intro = intro; // local QA: frame-by-frame review
+  }
   gsap.to(".hero__copy", { y: -80, opacity: 0.2, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1 } });
 
   atmosphere();
