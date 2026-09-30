@@ -362,6 +362,10 @@ html.motion-off .ribbon-fly { display: none; }
 .book__opt em { font-style: normal; font-size: .8125rem; font-weight: 600; color: var(--teal); white-space: nowrap; }
 .book__opt.is-off { opacity: .5; cursor: not-allowed; }
 .book__opt.is-off em { color: var(--muted); }
+.book__submit:disabled { opacity: .45; cursor: progress; }
+.book__loading { margin: 0; padding: 1.1rem 1rem; border: 1.5px dashed var(--line); border-radius: var(--r-m); color: var(--muted); font-size: var(--t-small); text-align: center; animation: book-wait 1.6s ease-in-out infinite; }
+@keyframes book-wait { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .book__loading { animation: none; } }
 .book__field { display: grid; gap: .4rem; font-weight: 600; color: var(--navy); font-size: var(--t-small); }
 .book__field input { min-height: 52px; padding: 0 1rem; border: 1.5px solid var(--line); border-radius: var(--r-m); background: var(--white); font: 400 1rem var(--font-sans); color: var(--ink); }
 .book__field input:focus { outline: 2px solid var(--navy); outline-offset: 1px; border-color: transparent; }

@@ -170,23 +170,36 @@
     });
   }
 
-  function abrirReserva(origen) {
+  function opcionesDe(origen) {
     const opciones = deFranja(origen.dataset.franja);
     const primera = opciones.find((c) => c.reservable);
-    $("[data-book-options]", dlg).innerHTML = opciones.map((c) => `
+    return opciones.map((c) => `
       <label class="book__opt${c.reservable ? "" : " is-off"}">
         <input type="radio" name="clase" value="${c.id}"${c.reservable ? "" : " disabled"}${c === primera ? " checked" : ""}>
         <span><strong>${corto(c.fecha)}</strong> · ${hora12(c.hora)}${c.clase ? `<small>${c.clase}</small>` : ""}</span>
         <em>${c.reservable ? cupos(c.libres) : c.libres ? "cerrada" : "llena"}</em>
       </label>`).join("") || `<p class="book__note">No hay clases abiertas en esta franja. Escríbenos por WhatsApp.</p>`;
-    $("[data-book-note]", dlg).textContent = `Tu primera clase cuesta $25.000. Te guardamos el columpio ${agenda.horasParaPagar} horas mientras nos envías el comprobante.`;
+  }
+
+  // Opens at once. If the studio has not answered yet, the form waits in «Buscando cupos…» and fills
+  // itself when the answer lands; if it never does, the visitor is offered WhatsApp, as always.
+  function abrirReserva(origen) {
+    const listo = !!agenda;
+    dlg.origen = origen;
+    $("[data-book-options]", dlg).innerHTML = listo ? opcionesDe(origen) : `<p class="book__loading" role="status">Buscando cupos…</p>`;
+    $("[data-book-note]", dlg).textContent = `Tu primera clase cuesta $25.000. Te guardamos el columpio ${agenda?.horasParaPagar || 12} horas mientras nos envías el comprobante.`;
     $("[data-book-wa]", dlg).href = origen.href; // same WhatsApp message and ref as the link that opened it
     dlg.dataset.ref = origen.dataset.wa || "WEB";
     $("[data-book-error]", dlg).textContent = "";
     $("[data-book-form]", dlg).hidden = false;
     $("[data-book-done]", dlg).hidden = true;
-    dlg.showModal();
-    lenis?.stop();
+    $("[data-book-form] button[type=submit]", dlg).disabled = !listo;
+    if (!dlg.open) { dlg.showModal(); lenis?.stop(); }
+    if (!listo) pedido.then(() => {
+      if (!dlg.open || dlg.origen !== origen) return;
+      if (agenda) abrirReserva(origen);
+      else $("[data-book-options]", dlg).innerHTML = `<p class="book__note">No pudimos ver los cupos en este momento. Escríbenos por WhatsApp y te apartamos el columpio.</p>`;
+    });
   }
 
   const errores = {
@@ -195,18 +208,35 @@
     muchas: "Ya tienes dos reservas esperando el pago. Envía el comprobante o escríbenos por WhatsApp.", clase: "Elige una clase.",
   };
 
-  if (API && dlg?.showModal) {
-    const corte = new AbortController();
-    setTimeout(() => corte.abort(), 8000);
-    fetch(`${API}?accion=disponibilidad`, { signal: corte.signal })
+  // Apps Script takes 2 to 15 s to answer (Google starting the script, not our code). So the last answer
+  // is kept 10 minutes to paint at once, the fresh one is awaited up to 25 s, and a click that comes
+  // before it still opens the form. The server re-checks every booking: an old count never oversells.
+  const GUARDADA = "casalotus:agenda";
+  const traerAgenda = () => {
+    const corte = new AbortController(), t = setTimeout(() => corte.abort(), 25000);
+    return fetch(`${API}?accion=disponibilidad`, { signal: corte.signal })
       .then((r) => r.json())
       .then((d) => {
-        if (!d.ok) return;
+        if (!d.ok) throw new Error("sin agenda");
         agenda = d;
         pintarAgenda();
-        $$("[data-book]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); abrirReserva(a); }));
+        try { localStorage.setItem(GUARDADA, JSON.stringify({ t: Date.now(), d })); } catch { /* private mode: fine */ }
       })
-      .catch(() => {}); // no API: WhatsApp keeps working
+      .finally(() => clearTimeout(t));
+  };
+  let pedido = Promise.resolve(), fallo = false;
+
+  if (API && dlg?.showModal) {
+    try {
+      const g = JSON.parse(localStorage.getItem(GUARDADA) || "null");
+      if (g && Date.now() - g.t < 600000) { agenda = g.d; pintarAgenda(); }
+    } catch { /* nothing kept */ }
+    pedido = traerAgenda().catch(() => { fallo = true; }); // no answer: WhatsApp keeps working
+    $$("[data-book]").forEach((a) => a.addEventListener("click", (e) => {
+      if (fallo && !agenda) return; // the studio never answered: the link goes to WhatsApp as always
+      e.preventDefault();
+      abrirReserva(a);
+    }));
 
     const form = $("[data-book-form]", dlg);
     form.addEventListener("submit", (e) => {
@@ -221,6 +251,7 @@
       error.textContent = "";
       boton.disabled = true;
       boton.lastChild.textContent = "Apartando…";
+      const paciencia = setTimeout(() => { boton.lastChild.textContent = "Un momento más…"; }, 6000);
       fetch(API, { method: "POST", body: JSON.stringify(datos) }) // text/plain: no preflight, Apps Script reads it as-is
         .then((r) => r.json())
         .then((r) => {
@@ -231,10 +262,10 @@
           form.hidden = true;
           $("[data-book-done]", dlg).hidden = false;
           window.dispatchEvent(new CustomEvent("casalotus:reserva", { detail: { ref: datos.ref, codigo: r.codigo } }));
-          fetch(`${API}?accion=disponibilidad`).then((x) => x.json()).then((d) => { if (d.ok) { agenda = d; pintarAgenda(); } }).catch(() => {});
+          traerAgenda().catch(() => {});
         })
         .catch((err) => { error.textContent = err.message.startsWith("No pudimos") || Object.values(errores).includes(err.message) ? err.message : "No pudimos conectar. Reserva por WhatsApp, te respondemos rápido."; })
-        .finally(() => { boton.disabled = false; boton.lastChild.textContent = "Apartar mi columpio"; });
+        .finally(() => { clearTimeout(paciencia); boton.disabled = false; boton.lastChild.textContent = "Apartar mi columpio"; });
     });
     $("[data-book-close]", dlg).addEventListener("click", () => dlg.close());
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
