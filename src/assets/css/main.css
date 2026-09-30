@@ -230,6 +230,8 @@ html.motion-off .ribbon-fly { display: none; }
 .slot__time small { font: 500 .9rem/1 var(--font-sans); letter-spacing: 0; color: var(--muted); white-space: nowrap; }
 .slot__meta { display: grid; gap: .75rem; }
 .slot__class { font-weight: 500; color: var(--ink); }
+.slot__next { font-size: var(--t-small); color: var(--teal); font-weight: 500; }
+.slot__next:empty { display: none; }
 .swings { display: flex; gap: 10px; height: 22px; }
 .swings i { position: relative; width: 8px; transform-origin: 50% 0; }
 .swings i::before { content: ""; position: absolute; left: 50%; top: 0; width: 1px; height: 12px; background: color-mix(in srgb, var(--navy) 45%, transparent); }
@@ -341,6 +343,40 @@ html.motion-off .ribbon-fly { display: none; }
   .stories__row > .story { flex: 0 0 68%; scroll-snap-align: start; }
   .stories__row > :nth-child(2) { margin-top: 0; }
 }
+/* booking: one short form that holds a swing; WhatsApp stays one tap away */
+.book { width: min(100% - 2rem, 480px); max-width: none; max-height: min(92vh, 92svh); margin: auto; padding: 0; border: 0; border-radius: var(--r-l); background: var(--paper); color: var(--ink); box-shadow: var(--shadow-soft); overflow: auto; overscroll-behavior: contain; }
+.book::backdrop { background: rgb(14 58 78 / .72); }
+.book__form, .book__done { display: grid; gap: 1rem; padding: clamp(1.5rem, 1rem + 2vw, 2.25rem); }
+.book__form[hidden], .book__done[hidden] { display: none; }
+.book__title { font: 400 clamp(1.9rem, 1.5rem + 1.6vw, 2.5rem)/1.05 var(--font-display); color: var(--navy); margin: -.25rem 0 .25rem; }
+.book__close { position: absolute; top: 12px; right: 12px; width: 44px; aspect-ratio: 1; border: 0; border-radius: 50%; background: var(--white); cursor: pointer; }
+.book__close::before, .book__close::after { content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 2px; background: var(--navy); translate: -50% -50%; rotate: 45deg; }
+.book__close::after { rotate: -45deg; }
+.book__dates { border: 0; padding: 0; margin: 0; display: grid; gap: .6rem; }
+.book__dates legend { font-weight: 600; color: var(--navy); margin-bottom: .6rem; }
+.book__options { display: grid; gap: .5rem; }
+.book__opt { display: grid; grid-template-columns: auto 1fr auto; gap: .75rem; align-items: center; padding: .85rem 1rem; border: 1.5px solid var(--line); border-radius: var(--r-m); background: var(--white); cursor: pointer; transition: border-color var(--d-fast), background-color var(--d-fast); }
+.book__opt:has(input:checked) { border-color: var(--navy); background: color-mix(in srgb, var(--mint) 35%, var(--white)); }
+.book__opt input { width: 20px; height: 20px; accent-color: var(--navy); margin: 0; }
+.book__opt small { display: block; color: var(--muted); font-size: .8125rem; }
+.book__opt em { font-style: normal; font-size: .8125rem; font-weight: 600; color: var(--teal); white-space: nowrap; }
+.book__opt.is-off { opacity: .5; cursor: not-allowed; }
+.book__opt.is-off em { color: var(--muted); }
+.book__field { display: grid; gap: .4rem; font-weight: 600; color: var(--navy); font-size: var(--t-small); }
+.book__field input { min-height: 52px; padding: 0 1rem; border: 1.5px solid var(--line); border-radius: var(--r-m); background: var(--white); font: 400 1rem var(--font-sans); color: var(--ink); }
+.book__field input:focus { outline: 2px solid var(--navy); outline-offset: 1px; border-color: transparent; }
+.book__hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.book__check { display: grid; grid-template-columns: auto 1fr; gap: .75rem; align-items: start; font-size: var(--t-small); color: var(--ink); }
+.book__check input { width: 20px; height: 20px; margin: .1rem 0 0; accent-color: var(--navy); }
+.book__note { margin: 0; font-size: var(--t-small); color: var(--muted); }
+.book__error { margin: 0; color: #9c3a2e; font-size: var(--t-small); font-weight: 600; }
+.book__error:empty { display: none; }
+.book__submit { width: 100%; justify-content: center; }
+.book__alt { justify-self: center; color: var(--teal); font-size: var(--t-small); font-weight: 600; }
+.book__when { margin: 0; font-weight: 600; color: var(--ink); }
+.book__steps { margin: 0; padding-left: 1.2rem; display: grid; gap: .6rem; }
+.book__steps strong { color: var(--navy); font-size: 1.05em; letter-spacing: .04em; }
+@media (max-width: 560px) { .book { width: 100%; max-height: 94svh; margin: auto 0 0; border-radius: var(--r-l) var(--r-l) 0 0; } }
 /* the viewer: one portrait video over a navy veil */
 .viewer { width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; }
 .viewer[open] { display: grid; place-items: center; }
@@ -351,7 +387,10 @@ html.motion-off .ribbon-fly { display: none; }
 .viewer__close::after { rotate: -45deg; }
 .method__media figcaption { margin-top: .9rem; color: var(--muted); font-size: var(--t-small); }
 .method__copy { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap-m); justify-items: start; }
-.seal { display: inline-flex; align-items: center; min-height: 64px; padding: 0 1.25rem; border-radius: var(--r-m); border: 1px dashed color-mix(in srgb, var(--navy) 35%, transparent); color: var(--muted); font-size: var(--t-small); }
+/* the official AÉREO® logo, untouched (licensed mark: never redrawn), next to what it certifies */
+.seal { display: inline-flex; align-items: center; gap: 1.25rem; margin-top: .5rem; padding: 1rem 1.5rem 1rem 1.25rem; border-radius: var(--r-m); background: var(--white); box-shadow: 0 18px 40px -28px rgb(22 84 114 / .45); }
+.seal__logo { display: block; width: clamp(128px, 11vw, 168px); height: auto; }
+.seal__label { padding-left: 1.25rem; border-left: 1px solid var(--line); font-size: var(--t-small); font-weight: 600; letter-spacing: .08em; line-height: 1.35; text-transform: uppercase; color: var(--navy); }
 @media (max-width: 860px) { .method__grid { grid-template-columns: 1fr; } .method__media { max-width: 420px; } }
 
 /* ── FAQ ────────────────────────────────────────────────── */

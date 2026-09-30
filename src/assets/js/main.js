@@ -106,11 +106,12 @@
     if (!e.target.closest("a")) $(".link-arrow", card)?.click();
   }));
 
-  // swings sway one after another; the first data-taken ones show as booked
-  $$(".swings").forEach((s) => $$("i", s).forEach((i, n) => {
+  // swings sway one after another; the first data-taken ones show as booked (live count: see Booking)
+  const marcarColumpios = (s) => $$("i", s).forEach((i, n) => {
     i.style.setProperty("--n", n);
     i.classList.toggle("is-taken", n < (+s.dataset.taken || 0));
-  }));
+  });
+  $$(".swings").forEach(marcarColumpios);
 
   /* ── Video viewer ──────────────────────────────────────────
      Testimonials play with sound only when someone taps them: nothing downloads before that. */
@@ -134,6 +135,110 @@
     $("[data-viewer-close]", viewer).addEventListener("click", () => viewer.close());
     viewer.addEventListener("click", (e) => { if (e.target === viewer) viewer.close(); });
     viewer.addEventListener("close", () => { vv.pause(); vv.removeAttribute("src"); vv.load(); lenis?.start(); });
+  }
+
+  /* ── Booking ───────────────────────────────────────────────
+     The site is static; the studio's Sheet answers through an Apps Script web app (data-api on
+     <html>). With it, the schedule shows the real free swings and every [data-book] link opens a
+     form that holds a swing until Ana confirms the payment. Without it (offline, slow, blocked),
+     nothing changes: every link keeps going to WhatsApp. */
+  // on localhost, ?api=http://localhost:5175/api points the site at the local studio (apps-script/dev)
+  const API = (root.classList.contains("dev") && new URLSearchParams(location.search).get("api")) || root.dataset.api;
+  const dlg = $("[data-book-dialog]");
+  let agenda = null;
+  const corto = (f) => { // "mié 30 sep"
+    const [y, m, d] = f.split("-").map(Number), fecha = new Date(y, m - 1, d);
+    return `${["dom", "lun", "mar", "mié", "jue", "vie", "sáb"][fecha.getDay()]} ${d} ${["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][m - 1]}`;
+  };
+  const hora12 = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "a. m." : "p. m."}`; };
+  const cupos = (n) => (n === 1 ? "queda 1 cupo" : `quedan ${n} cupos`);
+  const deFranja = (franja) => {
+    if (!franja) return agenda.clases.filter((c) => c.reservable).slice(0, 6);
+    const [dia, hora] = franja.split(" ");
+    return agenda.clases.filter((c) => c.dia === dia && c.hora === hora).slice(0, 3);
+  };
+
+  function pintarAgenda() {
+    $$("[data-franja]").forEach((slot) => {
+      const lista = deFranja(slot.dataset.franja), c = lista.find((x) => x.reservable) || lista[0];
+      if (!c) return;
+      const sw = $(".swings", slot);
+      sw.dataset.taken = c.ocupados;
+      marcarColumpios(sw);
+      $("[data-next]", slot).textContent = `${corto(c.fecha)} · ${c.libres ? cupos(c.libres) : "llena, hay lista de espera"}`;
+      if (c.clase) { const k = $(".slot__class", slot); k.textContent = c.clase; k.removeAttribute("data-todo"); }
+    });
+  }
+
+  function abrirReserva(origen) {
+    const opciones = deFranja(origen.dataset.franja);
+    const primera = opciones.find((c) => c.reservable);
+    $("[data-book-options]", dlg).innerHTML = opciones.map((c) => `
+      <label class="book__opt${c.reservable ? "" : " is-off"}">
+        <input type="radio" name="clase" value="${c.id}"${c.reservable ? "" : " disabled"}${c === primera ? " checked" : ""}>
+        <span><strong>${corto(c.fecha)}</strong> · ${hora12(c.hora)}${c.clase ? `<small>${c.clase}</small>` : ""}</span>
+        <em>${c.reservable ? cupos(c.libres) : c.libres ? "cerrada" : "llena"}</em>
+      </label>`).join("") || `<p class="book__note">No hay clases abiertas en esta franja. Escríbenos por WhatsApp.</p>`;
+    $("[data-book-note]", dlg).textContent = `Tu primera clase cuesta $25.000. Te guardamos el columpio ${agenda.horasParaPagar} horas mientras nos envías el comprobante.`;
+    $("[data-book-wa]", dlg).href = origen.href; // same WhatsApp message and ref as the link that opened it
+    dlg.dataset.ref = origen.dataset.wa || "WEB";
+    $("[data-book-error]", dlg).textContent = "";
+    $("[data-book-form]", dlg).hidden = false;
+    $("[data-book-done]", dlg).hidden = true;
+    dlg.showModal();
+    lenis?.stop();
+  }
+
+  const errores = {
+    nombre: "Escribe tu nombre.", whatsapp: "Revisa tu WhatsApp: 10 dígitos que empiezan por 3.", acepta: "Para reservar, acepta la política de datos.",
+    llena: "Esa clase se llenó hace un momento. Elige otra fecha.", tarde: "Esa clase empieza pronto y ya no se reserva por la web. Escríbenos por WhatsApp.",
+    muchas: "Ya tienes dos reservas esperando el pago. Envía el comprobante o escríbenos por WhatsApp.", clase: "Elige una clase.",
+  };
+
+  if (API && dlg?.showModal) {
+    const corte = new AbortController();
+    setTimeout(() => corte.abort(), 8000);
+    fetch(`${API}?accion=disponibilidad`, { signal: corte.signal })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.ok) return;
+        agenda = d;
+        pintarAgenda();
+        $$("[data-book]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); abrirReserva(a); }));
+      })
+      .catch(() => {}); // no API: WhatsApp keeps working
+
+    const form = $("[data-book-form]", dlg);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const f = new FormData(form), error = $("[data-book-error]", dlg), boton = $("button[type=submit]", form);
+      const datos = { accion: "reservar", clase: f.get("clase"), nombre: String(f.get("nombre") || "").trim(), whatsapp: f.get("whatsapp"),
+        acepta: form.acepta.checked, website: f.get("website"), ref: dlg.dataset.ref + (source ? `·${source}` : "") };
+      if (!datos.clase) return (error.textContent = errores.clase);
+      if (datos.nombre.length < 2) return (error.textContent = errores.nombre);
+      if (String(datos.whatsapp).replace(/\D/g, "").length < 10) return (error.textContent = errores.whatsapp);
+      if (!datos.acepta) return (error.textContent = errores.acepta);
+      error.textContent = "";
+      boton.disabled = true;
+      boton.lastChild.textContent = "Apartando…";
+      fetch(API, { method: "POST", body: JSON.stringify(datos) }) // text/plain: no preflight, Apps Script reads it as-is
+        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) throw new Error(errores[r.error] || "No pudimos apartar el columpio. Escríbenos por WhatsApp.");
+          $("[data-book-when]", dlg).textContent = `${r.clase.fechaTexto.charAt(0).toUpperCase() + r.clase.fechaTexto.slice(1)} · ${r.clase.horaTexto} · te lo guardamos ${r.horas} horas`;
+          $("[data-book-code]", dlg).textContent = r.codigo;
+          $("[data-book-send]", dlg).href = `https://wa.me/${r.whatsapp}?text=${encodeURIComponent(`Hola Casa Lotus, aparté mi columpio para el ${r.clase.fechaTexto} a las ${r.clase.horaTexto} (código ${r.codigo}). Te envío el comprobante.`)}`;
+          form.hidden = true;
+          $("[data-book-done]", dlg).hidden = false;
+          window.dispatchEvent(new CustomEvent("casalotus:reserva", { detail: { ref: datos.ref, codigo: r.codigo } }));
+          fetch(`${API}?accion=disponibilidad`).then((x) => x.json()).then((d) => { if (d.ok) { agenda = d; pintarAgenda(); } }).catch(() => {});
+        })
+        .catch((err) => { error.textContent = err.message.startsWith("No pudimos") || Object.values(errores).includes(err.message) ? err.message : "No pudimos conectar. Reserva por WhatsApp, te respondemos rápido."; })
+        .finally(() => { boton.disabled = false; boton.lastChild.textContent = "Apartar mi columpio"; });
+    });
+    $("[data-book-close]", dlg).addEventListener("click", () => dlg.close());
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", () => lenis?.start());
   }
 
   /* ── Studio video ──────────────────────────────────────────

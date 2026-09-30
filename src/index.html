@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="es-CO">
+<!-- data-api: Casa Lotus booking API (Apps Script web app, apps-script/api in the private repo) -->
+<html lang="es-CO" data-api="https://script.google.com/macros/s/AKfycbx6nygA-SOLEYRDnJieAzm5fgpEJWl1-8OZi_E-r22ZefNeakQcXRB7PLBkILxuOToL8Q/exec">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -102,7 +103,7 @@
         <h1 class="display hero__title" data-split>Suelta el peso.</h1>
         <p class="lead hero__lead" data-reveal>Yoga, pilates y stretch aéreo en Bogotá.</p>
         <div class="hero__actions" data-reveal>
-          <a class="btn btn--primary" data-wa="WEB-HERO" data-magnetic data-cursor="Reservar" href="https://wa.me/573128720888"><span class="dot" aria-hidden="true"></span>Reserva tu clase de prueba</a>
+          <a class="btn btn--primary" data-wa="WEB-HERO" data-book data-magnetic data-cursor="Reservar" href="https://wa.me/573128720888"><span class="dot" aria-hidden="true"></span>Reserva tu clase de prueba</a>
         </div>
       </div>
       <div class="hero__mark" aria-hidden="true">
@@ -267,27 +268,27 @@
       <div class="days">
         <div class="day" data-reveal>
           <h3 class="day__name">Miércoles</h3>
-          <a class="slot" data-wa="WEB-HORARIO-MIE-1800" data-wa-text="Hola Casa Lotus, quiero reservar el miércoles 6:00 p. m." href="https://wa.me/573128720888" data-cursor="Reservar">
+          <a class="slot" data-wa="WEB-HORARIO-MIE-1800" data-franja="Miércoles 18:00" data-book data-wa-text="Hola Casa Lotus, quiero reservar el miércoles 6:00 p. m." href="https://wa.me/573128720888" data-cursor="Reservar">
             <span class="slot__time">6:00<small>p. m.</small></span>
-            <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
+            <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="slot__next" data-next></span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
             <span class="slot__go" aria-hidden="true"></span>
           </a>
-          <a class="slot" data-wa="WEB-HORARIO-MIE-1900" data-wa-text="Hola Casa Lotus, quiero reservar el miércoles 7:00 p. m." href="https://wa.me/573128720888" data-cursor="Reservar">
+          <a class="slot" data-wa="WEB-HORARIO-MIE-1900" data-franja="Miércoles 19:00" data-book data-wa-text="Hola Casa Lotus, quiero reservar el miércoles 7:00 p. m." href="https://wa.me/573128720888" data-cursor="Reservar">
             <span class="slot__time">7:00<small>p. m.</small></span>
-            <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
+            <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="slot__next" data-next></span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
             <span class="slot__go" aria-hidden="true"></span>
           </a>
         </div>
         <div class="day" data-reveal>
           <h3 class="day__name">Sábado</h3>
-          <a class="slot" data-wa="WEB-HORARIO-SAB-0800" data-wa-text="Hola Casa Lotus, quiero reservar el sábado 8:00 a. m." href="https://wa.me/573128720888" data-cursor="Reservar">
+          <a class="slot" data-wa="WEB-HORARIO-SAB-0800" data-franja="Sábado 08:00" data-book data-wa-text="Hola Casa Lotus, quiero reservar el sábado 8:00 a. m." href="https://wa.me/573128720888" data-cursor="Reservar">
             <span class="slot__time">8:00<small>a. m.</small></span>
-            <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
+            <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="slot__next" data-next></span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
             <span class="slot__go" aria-hidden="true"></span>
           </a>
-          <a class="slot" data-wa="WEB-HORARIO-SAB-0915" data-wa-text="Hola Casa Lotus, quiero reservar el sábado 9:15 a. m." href="https://wa.me/573128720888" data-cursor="Reservar">
+          <a class="slot" data-wa="WEB-HORARIO-SAB-0915" data-franja="Sábado 09:15" data-book data-wa-text="Hola Casa Lotus, quiero reservar el sábado 9:15 a. m." href="https://wa.me/573128720888" data-cursor="Reservar">
             <span class="slot__time">9:15<small>a. m.</small></span>
-            <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
+            <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="slot__next" data-next></span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
             <span class="slot__go" aria-hidden="true"></span>
           </a>
         </div>
@@ -362,7 +363,10 @@
         <p class="eyebrow" data-reveal>El método</p>
         <h2 class="display h2" data-split>Centro autorizado AÉREO®.</h2>
         <p class="lead" data-reveal>El Método Aéreo es un sistema de entrenamiento en suspensión que integra yoga, pilates y estiramiento. En Casa Lotus todo el equipo de profes está certificado en el método, y cada clase se adapta a tu cuerpo.</p>
-        <div class="seal" data-todo data-reveal>Sello oficial AÉREO® · Centro autorizado</div>
+        <div class="seal" data-reveal>
+          <img class="seal__logo" src="assets/images/aereo-negro.png" width="400" height="228" alt="AÉREO®, método de entrenamiento" loading="lazy" decoding="async">
+          <span class="seal__label">Centro<br>autorizado</span>
+        </div>
       </div>
     </div>
   </section>
@@ -457,7 +461,7 @@
     </div>
     <div class="wrap closing__inner">
       <h2 class="display closing__title" data-split>Tu columpio te está esperando.</h2>
-      <a class="btn btn--lime" data-wa="WEB-CIERRE" data-magnetic data-cursor="Reservar" href="https://wa.me/573128720888">Reservar mi clase de prueba · $25.000</a>
+      <a class="btn btn--lime" data-wa="WEB-CIERRE" data-book data-magnetic data-cursor="Reservar" href="https://wa.me/573128720888">Reservar mi clase de prueba · $25.000</a>
     </div>
   </section>
 </main>
@@ -486,13 +490,42 @@
     </div>
   </div>
   <div class="wrap footer__legal">
-    <p>© 2026 Casa Lotus · Centro autorizado AÉREO®</p>
+    <p>© 2026 Casa Lotus · Centro autorizado AÉREO® · <a href="privacidad.html">Tratamiento de datos</a></p>
   </div>
 </footer>
 
-<a class="mobile-cta" data-wa="WEB-BARRA-MOVIL" href="https://wa.me/573128720888" data-mobile-cta>
+<a class="mobile-cta" data-wa="WEB-BARRA-MOVIL" data-book href="https://wa.me/573128720888" data-mobile-cta>
   <span>Clase de prueba <strong>$25.000</strong></span><span class="mobile-cta__go">Reservar</span>
 </a>
+
+<!-- booking: holds a swing in the studio's Sheet until Ana confirms the payment -->
+<dialog class="book" data-book-dialog aria-labelledby="book-title">
+  <button class="book__close" type="button" aria-label="Cerrar" data-book-close></button>
+  <form class="book__form" data-book-form novalidate>
+    <p class="eyebrow">Reserva</p>
+    <h2 class="book__title" id="book-title">Aparta tu columpio.</h2>
+    <fieldset class="book__dates"><legend>Elige la clase</legend><div class="book__options" data-book-options></div></fieldset>
+    <label class="book__field"><span>Tu nombre</span><input name="nombre" autocomplete="name" maxlength="80" required></label>
+    <label class="book__field"><span>Tu WhatsApp</span><input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="312 872 0888" required></label>
+    <label class="book__hp" aria-hidden="true">No llenar<input name="website" tabindex="-1" autocomplete="off"></label>
+    <label class="book__check"><input type="checkbox" name="acepta" required><span>Acepto la <a href="privacidad.html" target="_blank" rel="noopener">política de tratamiento de datos</a> de Casa Lotus.</span></label>
+    <p class="book__note" data-book-note>Tu primera clase cuesta $25.000. Te guardamos el columpio mientras nos envías el comprobante.</p>
+    <p class="book__error" data-book-error role="alert"></p>
+    <button class="btn btn--primary book__submit" type="submit"><span class="dot" aria-hidden="true"></span>Apartar mi columpio</button>
+    <a class="book__alt" data-book-wa href="https://wa.me/573128720888" target="_blank" rel="noopener">Prefiero reservar por WhatsApp</a>
+  </form>
+  <div class="book__done" data-book-done hidden>
+    <p class="eyebrow">Listo</p>
+    <h2 class="book__title">Tu columpio está apartado.</h2>
+    <p class="book__when" data-book-when></p>
+    <ol class="book__steps">
+      <li>Paga por Nequi, DaviPlata o Bre-B al <span class="nowrap">319 328 8469</span>. La clase de prueba cuesta $25.000.</li>
+      <li>Envía la captura por WhatsApp con tu código <strong data-book-code></strong>.</li>
+    </ol>
+    <p class="book__note">Si ya tienes un plan con clases, no pagas: solo escríbenos y la confirmamos.</p>
+    <a class="btn btn--lime book__submit" data-book-send href="https://wa.me/573128720888" target="_blank" rel="noopener">Enviar el comprobante por WhatsApp</a>
+  </div>
+</dialog>
 
 <!-- video viewer: testimonials open here with sound, one at a time -->
 <dialog class="viewer" data-viewer aria-label="Video">
