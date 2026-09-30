@@ -359,6 +359,7 @@ html.motion-off .ribbon-fly { display: none; }
 .book__opt:has(input:checked) { border-color: var(--navy); background: color-mix(in srgb, var(--mint) 35%, var(--white)); }
 .book__opt input { width: 20px; height: 20px; accent-color: var(--navy); margin: 0; }
 .book__opt small { display: block; color: var(--muted); font-size: .8125rem; }
+.book__hora { display: block; white-space: nowrap; }
 .book__opt em { font-style: normal; font-size: .8125rem; font-weight: 600; color: var(--teal); white-space: nowrap; }
 .book__opt.is-off { opacity: .5; cursor: not-allowed; }
 .book__opt.is-off em { color: var(--muted); }

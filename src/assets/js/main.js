@@ -176,7 +176,7 @@
     return opciones.map((c) => `
       <label class="book__opt${c.reservable ? "" : " is-off"}">
         <input type="radio" name="clase" value="${c.id}"${c.reservable ? "" : " disabled"}${c === primera ? " checked" : ""}>
-        <span><strong>${corto(c.fecha)}</strong> · ${hora12(c.hora)}${c.clase ? `<small>${c.clase}</small>` : ""}</span>
+        <span><strong>${corto(c.fecha)}</strong><span class="book__hora">${hora12(c.hora)}</span>${c.clase ? `<small>${c.clase}</small>` : ""}</span>
         <em>${c.reservable ? cupos(c.libres) : c.libres ? "cerrada" : "llena"}</em>
       </label>`).join("") || `<p class="book__note">No hay clases abiertas en esta franja. Escríbenos por WhatsApp.</p>`;
   }

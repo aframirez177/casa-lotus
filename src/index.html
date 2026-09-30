@@ -77,7 +77,7 @@
   </div>
 </header>
 
-<div class="menu" id="menu" data-menu hidden>
+<div class="menu" id="menu" data-menu data-lenis-prevent hidden>
   <div class="menu__inner wrap">
     <button class="menu-btn menu-btn--close" data-menu-close>Cerrar</button>
     <nav class="menu__nav" aria-label="Menú">
@@ -499,7 +499,8 @@
 </a>
 
 <!-- booking: holds a swing in the studio's Sheet until Ana confirms the payment -->
-<dialog class="book" data-book-dialog aria-labelledby="book-title">
+<!-- data-lenis-prevent: Lenis is stopped while a dialog is open and would swallow every scroll gesture, even inside it -->
+<dialog class="book" data-book-dialog data-lenis-prevent aria-labelledby="book-title">
   <button class="book__close" type="button" aria-label="Cerrar" data-book-close></button>
   <form class="book__form" data-book-form novalidate>
     <p class="eyebrow">Reserva</p>
@@ -528,7 +529,7 @@
 </dialog>
 
 <!-- video viewer: testimonials open here with sound, one at a time -->
-<dialog class="viewer" data-viewer aria-label="Video">
+<dialog class="viewer" data-viewer data-lenis-prevent aria-label="Video">
   <button class="viewer__close" type="button" aria-label="Cerrar video" data-viewer-close></button>
   <video class="viewer__video" playsinline controls preload="none"></video>
 </dialog>
