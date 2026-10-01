@@ -319,3 +319,28 @@ Plantilla = { nombre, categoria: "UTILITY"|"MARKETING"|"AUTHENTICATION", idioma:
 ## 9. Site ↔ app hand-off
 
 Every booking CTA on the site links to `/app/reservar?ref=<REF>[&clase=<id>][&plan=Clase de prueba]`, keeping the visitor's UTM / click ids, which the site stores first-party in `localStorage["cl_atribucion"]` as `{ utm, clickIds, landing, ts }` for **90 days** (Google Ads accepts conversions up to 90 days after the click), last non-empty click wins, and the app reads. The prefilled WhatsApp messages carry a short attribution code (`ref`) so chats that start on WhatsApp stay attributable. Refs keep the v1 scheme (`WEB-HERO`, `WEB-CLASE-PILATES`, `WEB-HORARIO-SAB-0800`, `WEB-PLAN-8`, …).
+
+## 10. Additions after the first build (implemented in server/, app/ follows them)
+
+| Where | What |
+|---|---|
+| `GET /api/yo`, `GET /api/auth/yo` | `limitada: boolean` — a public booking with a known WhatsApp opens a limited session (see Security) |
+| `POST /api/auth/codigo` | always `{ ok: true }` (no `canal`/`destino`); sending happens after the answer |
+| `GET /api/publico/disponibilidad` | cancelled classes stay listed with `reservable: false, motivo: "cancelada"` |
+| `ClaseEquipo` | `asistenciaEditable: boolean` (profe: class day → start + 48 h; admin: from the class day) and `reemplazoPedido: { fecha, motivo, pedidoPor } \| null` |
+| `GET /api/profe/clientas?q=` | ≥ 2 letters, names only → `[{ id, nombre, primeraVez, fichaCompleta }]`, max 10 |
+| `POST /api/profe/clases/:id/asistentes` `{ clienta }` | `201 { clase: ClaseEquipo, reserva: { id, clienta, estado }, sinPlan }` — «Asistió» on her plan, or «Pendiente de pago» + Notas «Vino sin plan» (alert `vino-sin-plan`, push). Full class: 409 `llena` unless admin. Origen «Profe · <nombre>» |
+| `POST /api/profe/clases/:id/cerrar` | `ClaseEquipo & { marcadas }` — remaining «Confirmada» → «No vino»; 409 `no-ha-empezado` before the start |
+| profe attendance writes | after start + 48 h → 409 `fuera-de-plazo` (admins unaffected) |
+| `POST /api/profe/clases/:id/reemplazo` `{ motivo }` | `ClaseEquipo` with `reemplazoPedido`; alert `necesita-reemplazo` (prioridad 1, ruta `…/agenda/<id>?profe=1`), novedad, push to admins |
+| `GET /api/profe/resumen` | adds `pendientesPorMarcar`, `proximaClase: Clase \| null`, `reemplazosPedidos` |
+| `GET /api/{admin,profe}/push/clave`, `POST/DELETE /api/{admin,profe}/push/suscribir` | Web Push for any staff member; profes hear about assignments and new bookings in their classes |
+| `GET /api/admin/profes` | `[{ id, nombre, nombreHorario, activa }]` (profes, and admins with a schedule name) |
+| `PATCH /api/admin/clases/:id`, `POST/PATCH /api/admin/horario`, `POST /api/admin/clases` | `profe` must be active staff (schedule name or full name, accent/case-insensitive) or `""` / «Por confirmar» → 422 otherwise; written as her schedule name. A change closes the substitute request, adds a novedad and pushes «Te asignaron…» to the new profe |
+| `GET /api/admin/clases/:id` | one `ClaseEquipo` |
+| alerts | new `vino-sin-plan` (1), `necesita-reemplazo` (1), `sin-profe` (2, next 7 days, ruta `/app/admin/agenda/<id>`) |
+| `GET /api/admin/salud` | `push: { activo, clavePublica, suscripciones }`, `conversiones: { destino, sheetId, pestana, ok }` |
+| conversions | Data Manager columns, one row per purchase, separate spreadsheet (`CONVERSIONES_SHEET_ID`) |
+| `Consentimientos.novedades`, `Perfil.novedades` | WhatsApp marketing opt-in (stored as the tag `novedades-whatsapp` in «Etiquetas») |
+
+Alert `accion.ruta` values are full paths (`/app/admin/…`), the same strings used as Web Push URLs.
