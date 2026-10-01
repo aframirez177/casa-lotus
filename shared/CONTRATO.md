@@ -121,7 +121,7 @@ Plan = { nombre, clases, precio, vigencia, tipo, activo }
 Perfil = {                               // Ana's Google Form + what booking needs
   nombre, whatsapp, correo, nacimiento: "yyyy-MM-dd" | "", barrio,
   intereses: string[],                   // up to 2, from INTERESES below
-  salud: string,                         // "Ninguna" | free text | "Prefiero contárselo a la profe"
+  salud: string,                         // "Ninguna" | free text | "Prefiero contárselo a mi profe"
   eps, contactoEmergencia: { nombre, whatsapp },
   experiencia, llego: "Instagram" | "Facebook" | "Referencia de un amigo/a" | "Google" | "Otro"
 }
@@ -129,7 +129,8 @@ Consentimientos = {
   datos: { acepta: boolean, fecha, version },          // Ley 1581: tratamiento de datos personales
   sensibles: { acepta: boolean, fecha, version },      // datos de salud (opcional, art. 6)
   descargo: { acepta: boolean, fecha, version },       // descargo de responsabilidad (texto de Ana)
-  imagen: { acepta: boolean, fecha }                   // registro audiovisual
+  imagen: { acepta: boolean, fecha },                  // registro audiovisual
+  novedades?: { acepta: boolean, fecha, version }      // optional marketing opt-in for WhatsApp (default off)
 }
 ```
 

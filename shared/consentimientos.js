@@ -17,14 +17,21 @@ export const CONSENTIMIENTOS = {
   datos: {
     version: "datos-v1",
     titulo: "Tratamiento de tus datos personales",
-    corto: "Autorizo a Casa Lotus a tratar mis datos para gestionar mis clases, pagos y comunicaciones, según su política de privacidad.",
+    corto: "Autorizo a Casa Lotus a tratar mis datos para gestionar mis clases y pagos, y a escribirme por WhatsApp y correo sobre ellas, según su política de privacidad.",
     texto:
       "Autorizo a Casa Lotus, responsable del tratamiento, a recolectar y usar mi nombre, WhatsApp, correo, fecha de nacimiento, barrio, " +
-      "EPS y contacto de emergencia para agendar y gestionar mis clases, registrar mis pagos, avisarme de cambios y recordatorios, y " +
+      "EPS y contacto de emergencia para agendar y gestionar mis clases, registrar mis pagos y enviarme por WhatsApp y correo " +
+      "confirmaciones, recordatorios, códigos de acceso y avisos sobre mis clases y mi plan, y " +
       "contactar a mi contacto de emergencia si fuera necesario. Sé que puedo conocer, actualizar, rectificar y pedir que se supriman " +
       "mis datos, o revocar esta autorización, escribiendo a casalotusbogota@gmail.com o al WhatsApp 312 872 0888 (Ley 1581 de 2012).",
     obligatorio: true,
     enlace: "/privacidad/",
+  },
+  novedades: {
+    version: "novedades-v1",
+    titulo: "Novedades por WhatsApp",
+    corto: "Quiero recibir por WhatsApp novedades, eventos y promociones de Casa Lotus. Puedo darme de baja cuando quiera escribiendo «BAJA».",
+    obligatorio: false, // marketing messages need their own opt-in (Meta Business Messaging policy); default off
   },
   sensibles: {
     version: "sensibles-v1",
@@ -32,7 +39,7 @@ export const CONSENTIMIENTOS = {
     corto: "Autorizo a Casa Lotus a conocer la información de salud que comparto, solo para cuidarme en clase.",
     texto:
       "La información sobre tu salud es un dato sensible. Contárnosla es voluntario: no estás obligada a autorizar su tratamiento. " +
-      "Si la compartes, solo la verán Ana y la profe de tu clase, y solo para adaptar los ejercicios y cuidarte. No la usamos para " +
+      "Si la compartes, solo la verán Ana y tu profe, y solo para adaptar los ejercicios y cuidarte. No la usamos para " +
       "nada más ni la compartimos con terceros.",
     obligatorio: false, // required only when she writes something about her health
     enlace: "/privacidad/#datos-sensibles",
@@ -42,9 +49,9 @@ export const CONSENTIMIENTOS = {
     titulo: "Descargo de responsabilidad y posibles riesgos",
     corto: "Leí y acepto los términos y condiciones de Casa Lotus y su descargo de responsabilidad.",
     texto:
-      "Casa Lotus no se hará responsable de quienes no sigan las indicaciones de la profe. Cualquier condición médica o física, lesión " +
-      "reciente o persistente, así como cualquier información relevante para tu práctica, debe comunicarse a la profe antes de comenzar " +
-      "la clase. Es tu responsabilidad avisarle a la profe de cualquier dolor o molestia física durante la clase. Usar las instalaciones " +
+      "Casa Lotus no se hará responsable de quienes no sigan las indicaciones de tu profe. Cualquier condición médica o física, lesión " +
+      "reciente o persistente, así como cualquier información relevante para tu práctica, debe comunicarse a tu profe antes de comenzar " +
+      "la clase. Es tu responsabilidad avisarle a tu profe de cualquier dolor o molestia física durante la clase. Usar las instalaciones " +
       "de Casa Lotus implica aceptar el riesgo asociado a toda forma de ejercicio físico. Si tienes dudas sobre tu capacidad para participar " +
       "por tu condición médica, consulta con tu médico. Casa Lotus y su equipo, propietarios, directores y profes no se harán responsables " +
       "de: cualquier lesión o daño que resulte de la participación o del uso de las instalaciones; cualquier daño o pérdida de objetos " +
@@ -75,7 +82,7 @@ export const INTERESES = [
 
 export const EXPERIENCIA = ["Primera vez", "Algo de experiencia", "Practico seguido"];
 export const COMO_LLEGO = ["Instagram", "Facebook", "Referencia de un amigo/a", "Google", "Otro"];
-export const SALUD_SIN_DATOS = ["Ninguna", "Prefiero contárselo a la profe"];
+export const SALUD_SIN_DATOS = ["Ninguna", "Prefiero contárselo a mi profe"];
 
 /** The ficha is complete when the safety answers a profe needs before the first class are in. */
 export function fichaCompleta(perfil = {}, consentimientos = {}) {
