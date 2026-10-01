@@ -43,7 +43,7 @@ export default function Entrar() {
             )}
             <div className="mt-10 grid gap-4">
               <Puerta onClick={() => setPuerta("alumna")} titulo="Soy alumna" texto="Con tu WhatsApp o tu correo. Te enviamos un código." icono={<MessageCircle size={22} strokeWidth={1.7} />} color="var(--color-yoga)" />
-              <Puerta onClick={() => setPuerta("equipo")} titulo="Equipo" texto="Profes y Ana, con correo y contraseña." icono={<KeyRound size={22} strokeWidth={1.7} />} color="var(--color-multinivel)" />
+              <Puerta onClick={() => setPuerta("equipo")} titulo="Equipo" texto="Profes y Ana, con Google o con tu correo." icono={<KeyRound size={22} strokeWidth={1.7} />} color="var(--color-multinivel)" />
             </div>
             <p className="mt-8 texto-s suave">¿Primera vez? <Link className="enlace" to="/reservar?ref=APP-ENTRAR">Reserva tu clase de prueba</Link> y tu cuenta se crea sola.</p>
             {esDemo && <AccesoDemo volver={volver} />}
