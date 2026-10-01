@@ -143,8 +143,13 @@ export function planSugerido(M, idClienta) {
 }
 
 /** Payment instructions for a pending booking (CONTRATO §6 `pago`). */
+/** The plan a pending booking is for: the one she asked for (public booking), else a suggestion. */
+export function planDeReserva(M, r) {
+  return (r.atribucion?.plan && M.planPorNombre.get(r.atribucion.plan)) || planSugerido(M, r.clienta);
+}
+
 export function vistaPago(M, r, { plan, nombre } = {}) {
-  const p = (plan && M.planPorNombre.get(plan)) || planSugerido(M, r.clienta);
+  const p = (plan && M.planPorNombre.get(plan)) || planDeReserva(M, r);
   const c = claseOFantasma(M, r.clase);
   const monto = p?.precio || 0;
   const quien = nombre || M.clientaPorId.get(r.clienta)?.nombre || "";
@@ -193,6 +198,9 @@ export function vistaReservaClienta(M, r, ahora, { nombre, limitada = false } = 
   };
   if (compra && !limitada) { o.compra = compra.id; o.plan = compra.plan; }
   if (r.reagendadaDe) o.reagendadaDe = r.reagendadaDe;
-  if (r.estado === R.ESTADO.PENDIENTE) o.pago = vistaPago(M, r, { nombre, plan: limitada ? planDePrueba(M)?.nombre : undefined });
+  if (r.estado === R.ESTADO.PENDIENTE) {
+    // a limited session sees only what that device asked for, never a plan suggested from her history
+    o.pago = vistaPago(M, r, { nombre, plan: limitada ? r.atribucion?.plan || planDePrueba(M)?.nombre : undefined });
+  }
   return o;
 }

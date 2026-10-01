@@ -6,7 +6,7 @@ import { exigir } from "../auth/middleware.js";
 import { tablero } from "../dominio/tablero.js";
 import { agenda, verClase, crearClaseExtra, editarClase, cancelarClase, horario, crearSlot, editarSlot, desactivarSlot } from "../dominio/clases.js";
 import { listarClientas, segmentos, verClienta, crearClienta, editarClienta } from "../dominio/clientas.js";
-import { reservar, confirmar, asistencia, cancelar, liberar, reagendar, listarEspera, tomarCupo, estadoEspera } from "../dominio/reservas.js";
+import { reservar, confirmar, asistencia, cancelar, liberar, reagendar, listarEspera, tomarCupo, estadoEspera, unirseEspera } from "../dominio/reservas.js";
 import { pagosDelMes, registrarPago, planes, editarPlan } from "../dominio/pagos.js";
 import { verAjustes, editarAjustes } from "../dominio/ajustes.js";
 import { listarRegistro } from "../dominio/registro.js";
@@ -132,6 +132,10 @@ export function rutasAdmin(ctx) {
 
   /* ── waiting list ── */
   r.get("/espera", async (_req, res) => res.json(await listarEspera(ctx)));
+  r.post("/espera", async (req, res) => {
+    const d = validar(z.object({ clienta: E.idClienta, clase: E.claseId }), req.body);
+    res.status(201).json(await unirseEspera(ctx, req.actor, d));
+  });
   r.post("/espera/:id/tomar", async (req, res) => res.json(await tomarCupo(ctx, req.actor, req.params.id)));
   r.patch("/espera/:id", async (req, res) => {
     const { estado } = validar(z.object({ estado: E.estadoEspera }), req.body);

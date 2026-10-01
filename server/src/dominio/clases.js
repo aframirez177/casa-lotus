@@ -46,7 +46,10 @@ export async function crearClaseExtra(ctx, actor, { fecha, hora, clase, profe: p
     const M = tx.M, hoy = R.hoyClave(tx.ahora);
     if (fecha < hoy) throw validacion("Esa fecha ya pasó.", { fecha: "Elige una fecha de hoy en adelante." });
     const festivo = R.festivosEntre(fecha, fecha)[fecha];
-    if (festivo && !forzar) throw validacion("El " + R.fechaLegible(fecha) + " es festivo (" + festivo + "). Si igual quieres abrir la clase, confírmalo.", { fecha: "Es festivo: " + festivo + "." });
+    if (festivo && !forzar) {
+      const f = R.fechaUTC(fecha);
+      throw conflicto("festivo", "El " + f.getUTCDate() + " de " + R.MESES[f.getUTCMonth()] + " es festivo (" + festivo + "). ¿Crearla igual?");
+    }
     const id = R.claseId(fecha, hora);
     if (M.clasePorId.has(id)) throw conflicto("estado", "Ya hay una clase el " + R.fechaLegible(fecha) + " a las " + R.horaLegible(hora) + ".");
     await tx.agregar("Clases", {

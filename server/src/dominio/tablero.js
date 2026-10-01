@@ -2,7 +2,7 @@
 // today's and tomorrow's classes, attendance to mark, pending payments and alerts by urgency.
 import * as R from "../../../shared/reglas.js";
 import { modelo } from "./base.js";
-import { vistaClase, vistaClaseEquipo, esPasada, iso, nombreClase, reemplazoDe } from "./vistas.js";
+import { vistaClase, vistaClaseEquipo, esPasada, iso, nombreClase, reemplazoDe, planDeReserva } from "./vistas.js";
 import { sinProfe } from "./asignacion.js";
 import { NOTA_SIN_PLAN } from "./asistencia.js";
 import { analizar, SEGMENTOS } from "./clientas.js";
@@ -29,7 +29,7 @@ export function pendientePago(M, r, ahora) {
     " en Casa Lotus. Para confirmarla, envíanos por aquí el comprobante de pago. ¡Te esperamos!";
   return {
     reserva: r.id, clienta: r.clienta, nombre: p.nombre, whatsapp: p.whatsapp, clase: c ? vistaClase(M, c, ahora) : null,
-    creada: iso(r.creada), venceApartado: iso(r.vence), saldo: s.clases, origen: r.origen, waTexto: texto,
+    creada: iso(r.creada), venceApartado: iso(r.vence), saldo: s.clases, origen: r.origen, plan: planDeReserva(M, r)?.nombre || "", waTexto: texto,
     waEnlace: p.whatsapp ? R.enlaceWhatsApp(p.whatsapp, texto) : "",
   };
 }

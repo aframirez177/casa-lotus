@@ -69,8 +69,8 @@ test("extra class: refused on a holiday unless forced, never over an existing cl
     await entrarComo(ana, ADMIN);
     const base = { hora: "18:00", clase: "Pilates Aéreo", profe: "Laura", cupos: 6 };
     const festivo = await ana.post("/api/admin/clases", { ...base, fecha: "2026-10-12" });
-    assert.equal(festivo.status, 422);
-    assert.match(festivo.json.mensaje, /festivo \(Día de la Raza\)/);
+    assert.equal(festivo.status, 409);
+    assert.deepEqual(festivo.json, { ok: false, error: "conflicto", motivo: "festivo", mensaje: "El 12 de octubre es festivo (Día de la Raza). ¿Crearla igual?" });
     const forzada = await ana.post("/api/admin/clases", { ...base, fecha: "2026-10-12", forzar: true });
     assert.equal(forzada.status, 201, forzada.texto);
     assert.equal(forzada.json.tipo, "Extra");
@@ -176,6 +176,37 @@ test("unpaid holds expire on their own and free the swing", async () => {
     const fila = s.datos._tablas.Reservas.filas[0];
     assert.equal(fila["Estado"], "Vencida");
     assert.match(fila["Notas"], /Sin pago a tiempo/);
+  } finally {
+    await s.cerrar();
+  }
+});
+
+test("the pending booking carries the plan she asked for; admin adds someone to a waiting list", async () => {
+  const s = await arrancar();
+  try {
+    const ana = s.cliente();
+    await entrarComo(ana, ADMIN);
+    await s.cliente().post("/api/publico/reservas", { ...reservaWeb(SAB_0800, { whatsapp: "3155550401" }), plan: "8 clases al mes" });
+    await s.cliente().post("/api/publico/reservas", reservaWeb(SAB_0800, { whatsapp: "3155550402", nombre: "Sin Plan Elegido" }));
+    const pend = (await ana.get("/api/admin/tablero")).json.pendientes;
+    assert.equal(pend.find((p) => p.whatsapp === "573155550401").plan, "8 clases al mes");
+    assert.equal(pend.find((p) => p.whatsapp === "573155550402").plan, "Clase de prueba", "default: the trial");
+    const fila = s.datos._tablas.Reservas.filas.find((f) => f["Clienta"] === "C-0001");
+    assert.equal(JSON.parse(fila["Atribución"]).plan, "8 clases al mes", "stored compactly in «Atribución», no new column");
+
+    // admin waiting list: any class (even with swings left), never twice, never a cancelled class
+    const e = await ana.post("/api/admin/espera", { clienta: "C-0002", clase: "2026-10-07 18:00" });
+    assert.equal(e.status, 201, e.texto);
+    assert.match(e.json.id, /^E-\d{4}$/);
+    assert.equal(e.json.estado, "Esperando");
+    assert.equal(e.json.nombre, "Sin Plan Elegido");
+    const otra = await ana.post("/api/admin/espera", { clienta: "C-0002", clase: "2026-10-07 18:00" });
+    assert.equal(otra.status, 409);
+    assert.equal(otra.json.motivo, "ya-reservada");
+    assert.equal((await ana.post("/api/admin/espera", { clienta: "C-0002", clase: "2026-10-30 18:00" })).status, 404);
+    await ana.post("/api/admin/clases/" + encodeURIComponent("2026-10-07 19:00") + "/cancelar", { motivo: "Prueba" });
+    assert.equal((await ana.post("/api/admin/espera", { clienta: "C-0002", clase: "2026-10-07 19:00" })).json.motivo, "cancelada");
+    assert.equal((await ana.post("/api/admin/espera", { clienta: "C-0001", clase: SAB_0800 })).json.motivo, "ya-reservada", "already booked in it");
   } finally {
     await s.cerrar();
   }

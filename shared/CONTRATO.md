@@ -342,5 +342,8 @@ Every booking CTA on the site links to `/app/reservar?ref=<REF>[&clase=<id>][&pl
 | `GET /api/admin/salud` | `push: { activo, clavePublica, suscripciones }`, `conversiones: { destino, sheetId, pestana, ok }` |
 | conversions | Data Manager columns, one row per purchase, separate spreadsheet (`CONVERSIONES_SHEET_ID`) |
 | `Consentimientos.novedades`, `Perfil.novedades` | WhatsApp marketing opt-in (stored as the tag `novedades-whatsapp` in «Etiquetas») |
+| `PendientePago.plan` | the plan she asked for: the public booking's `plan` (default «Clase de prueba»), stored as `plan` inside the «Atribución» JSON (no new column); other pending bookings: her last plan, or the trial |
+| `POST /api/admin/clases` on a holiday | 409 `{ ok: false, error: "conflicto", motivo: "festivo", mensaje: "El 12 de octubre es festivo (Día de la Raza). ¿Crearla igual?" }`; the same body with `forzar: true` creates it |
+| `POST /api/admin/espera` `{ clienta, clase }` | `201 EsperaItem` — any class not cancelled and not started (even with swings left); 409 `ya-reservada` (already waiting or booked), 409 `cancelada`, 409 `empezo`, 404 unknown class or clienta |
 
 Alert `accion.ruta` values are full paths (`/app/admin/…`), the same strings used as Web Push URLs.

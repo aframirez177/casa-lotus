@@ -316,7 +316,7 @@ export async function expirarApartados(ctx) {
 
 /* ── waiting list ─────────────────────────────────────── */
 
-export async function unirseEsperaEnTx(tx, { clienta, clase, admin = false }) {
+export async function unirseEsperaEnTx(tx, { clienta, clase, admin = false, rechazarRepetida = false }) {
   const M = tx.M;
   const c = M.clasePorId.get(clase);
   if (!c) throw noExiste("Esa clase no existe.");
@@ -324,6 +324,7 @@ export async function unirseEsperaEnTx(tx, { clienta, clase, admin = false }) {
   if (esPasada(c, tx.ahora)) throw conflictoReserva("empezo");
   if (M.reservasDeClase(clase).some((r) => r.clienta === clienta && R.OCUPAN.includes(r.estado))) throw conflictoReserva("ya-reservada");
   const ya = M.esperaDeClase(clase).find((e) => e.clienta === clienta && (e.estado === "Esperando" || e.estado === "Avisada"));
+  if (ya && rechazarRepetida) throw conflictoReserva("ya-reservada", "Ya está en la lista de espera de esa clase.");
   if (ya) return { item: ya, nueva: false };
   if (!admin && M.ocupados(clase) < c.cupos) throw conflictoReserva("estado", "Esa clase todavía tiene cupos: resérvala.");
   const id = R.siguienteId("E", M.espera.map((e) => e.id));
@@ -336,7 +337,7 @@ export async function unirseEspera(ctx, actor, { clienta, clase }) {
   return transaccion(ctx, actor, async (tx) => {
     const p = tx.M.clientaPorId.get(quien);
     if (!p) throw noExiste("No encontramos a esa clienta.");
-    const { item, nueva } = await unirseEsperaEnTx(tx, { clienta: quien, clase, admin: esAdmin(actor) });
+    const { item, nueva } = await unirseEsperaEnTx(tx, { clienta: quien, clase, admin: esAdmin(actor), rechazarRepetida: esAdmin(actor) });
     if (nueva) {
       const c = tx.M.clasePorId.get(clase);
       tx.auditar("espera.unirse", item.id, { clienta: quien, clase });

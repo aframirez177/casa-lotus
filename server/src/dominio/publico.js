@@ -79,7 +79,9 @@ export async function reservaPublica(ctx, input) {
       p = tx.M.clientaPorId.get(id);
       nueva = true;
     }
-    const r = await reservarEnTx(tx, { clienta: p.id, clase: c.id, origen: "Web · " + ref, atribucion, soloPendiente: true });
+    const plan = input.plan || planDePrueba(tx.M)?.nombre;
+    // the plan she asked for rides in «Atribución» (no new column): Ana's «Confirmar» preselects it
+    const r = await reservarEnTx(tx, { clienta: p.id, clase: c.id, origen: "Web · " + ref, atribucion: { ...atribucion, ...(plan ? { plan } : {}) }, soloPendiente: true });
     tx.auditar("reserva.web", r.id, { clienta: p.id, clase: c.id, ref, nueva });
     const cv = vistaClase(tx.M, c, tx.ahora);
     tx.publicar({
@@ -87,7 +89,6 @@ export async function reservaPublica(ctx, input) {
       detalle: R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora) + (cv.clase ? " · " + cv.clase : "") + " · código " + r.id,
       clienta: p.id, clase: c.id, ruta: "/app/admin",
     });
-    const plan = input.plan || planDePrueba(tx.M)?.nombre;
     const pago = vistaPago(tx.M, r, { plan, nombre: perfil.nombre });
     const correo = String(tx.M.ajustes["Correo para avisos"] || "").trim();
     aviso = {
