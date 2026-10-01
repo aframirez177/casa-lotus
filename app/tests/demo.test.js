@@ -208,3 +208,20 @@ describe("admin follow-ups", () => {
     expect(post("/api/admin/clases", { fecha: `${anio}-12-25`, hora: "10:00", clase: "Yoga Aéreo", forzar: true }).status).toBe(201);
   });
 });
+
+describe("Google sign-in for the team (demo stand-in)", () => {
+  test("config, a team member enters, a stranger gets a generic 403", () => {
+    expect(get("/api/auth/config").cuerpo.google.clientId).toBe("demo");
+    const ok = post("/api/auth/google", { credential: "demo:ana@demo.casalotus.studio" });
+    expect(ok.status).toBe(200);
+    expect(ok.cuerpo.usuario.rol).toBe("admin");
+    expect(get("/api/auth/yo").cuerpo.usuario.metodo).toBe("google");
+    expect(post("/api/auth/google", { credential: "demo:alguien@gmail.com" }).status).toBe(403);
+  });
+  test("an invitation can be activated with the invited Google account only", () => {
+    expect(post("/api/auth/invitacion/inv-u-3/google", { credential: "demo:otra@gmail.com" }).status).toBe(403);
+    const r = post("/api/auth/invitacion/inv-u-3/google", { credential: "demo:tomas@demo.casalotus.studio" });
+    expect(r.status).toBe(200);
+    expect(r.cuerpo.usuario.rol).toBe("profe");
+  });
+});

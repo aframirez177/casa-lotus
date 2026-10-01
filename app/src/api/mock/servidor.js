@@ -265,7 +265,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       return cl ? { id: cl.id, rol: "clienta", nombre: cl.nombre, whatsapp: cl.whatsapp, correo: cl.correo, clienta: cl.id, limitada: Boolean(s.limitada) } : null;
     }
     const u = usuario(s.id);
-    return u && u.activa ? { id: u.id, rol: u.rol, nombre: u.nombre, correo: u.correo, whatsapp: u.whatsapp } : null;
+    return u && u.activa ? { id: u.id, rol: u.rol, nombre: u.nombre, correo: u.correo, whatsapp: u.whatsapp, metodo: s.metodo || "password" } : null;
   }
   function exigir(ctx, ...roles) {
     const u = yoUsuario(sesionActual());
@@ -495,6 +495,22 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     abrirSesion({ rol: u.rol, id: u.id });
     u.ultimoAcceso = iso(ahora());
     return { usuario: yoUsuario({ rol: u.rol, id: u.id }) };
+  });
+  // Google sign-in for the team. The demo has no Google: its stand-in button sends "demo:<correo>".
+  ruta("GET", "/api/auth/config", () => ({ google: { clientId: "demo" } }));
+  const correoDeGoogle = (credential) => String(credential || "").replace(/^demo:/, "").trim().toLowerCase();
+  ruta("POST", "/api/auth/google", ({ b }) => {
+    const u = db.equipo.find((x) => x.activa && x.correo.toLowerCase() === correoDeGoogle(b.credential));
+    if (!u) falla(403, "sin-permiso", "Esta cuenta de Google no está en el equipo de Casa Lotus. Pídele a Ana que te invite con ese correo.");
+    abrirSesion({ rol: u.rol, id: u.id, metodo: "google" });
+    u.ultimoAcceso = iso(ahora());
+    return { usuario: yoUsuario({ rol: u.rol, id: u.id, metodo: "google" }) };
+  });
+  ruta("POST", "/api/auth/invitacion/:token/google", ({ p, b }) => {
+    const u = db.invitaciones[p.token] ? usuario(db.invitaciones[p.token]) : usuario("U-3");
+    if (correoDeGoogle(b.credential) !== u.correo.toLowerCase()) falla(403, "sin-permiso", `Usa la cuenta de Google de ${u.correo}, el correo de tu invitación.`);
+    abrirSesion({ rol: u.rol, id: u.id, metodo: "google" });
+    return { usuario: yoUsuario({ rol: u.rol, id: u.id, metodo: "google" }) };
   });
   ruta("POST", "/api/auth/codigo", ({ b }) => {
     const wa = b.whatsapp ? normalizaWhatsApp(b.whatsapp) : "";

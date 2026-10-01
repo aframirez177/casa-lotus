@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import { AnimatePresence, m } from "motion/react";
-import { ArrowLeft, ArrowRight, MessageCircle, KeyRound, Sparkles } from "lucide-react";
-import { useYo, useEntrarEquipo, useRecuperar } from "../../api/hooks/auth.js";
+import { ArrowLeft, ArrowRight, MessageCircle, KeyRound, Sparkles, Clock, RefreshCw } from "lucide-react";
+import { useYo, useEntrarEquipo, useRecuperar, useConfigAuth, useEntrarGoogle } from "../../api/hooks/auth.js";
+import { BotonGoogle, Divisor } from "../../ui/BotonGoogle.jsx";
+import { enlaceWhatsApp } from "../../lib/reglas.js";
 import { FlujoCodigo } from "./FlujoCodigo.jsx";
 import { inicioDe } from "../../shell/rutas.jsx";
 import { Boton } from "../../ui/Boton.jsx";
@@ -15,7 +17,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { K } from "../../api/claves.js";
 
 export default function Entrar() {
-  const { data: yo, isPending } = useYo();
+  const { data: yo, isPending, error: errorYo, refetch: reintentarYo } = useYo();
+  const config = useConfigAuth();
+  // the API itself does not answer (deploy, restart): a calm notice instead of forms that would fail
+  const sinApi = Boolean(errorYo?.sinApi || config.error?.sinApi);
+  const reintentar = () => { reintentarYo(); config.refetch(); };
   const [params] = useSearchParams();
   const [puerta, setPuerta] = useState(params.get("puerta") || "");
   const volver = params.get("volver");
@@ -43,8 +49,8 @@ export default function Entrar() {
             {esDemo && <AccesoDemo volver={volver} />}
           </m.section>
         )}
-        {puerta === "alumna" && <m.section key="alumna" {...entrada}><Alumna atras={() => setPuerta("")} volver={volver} /></m.section>}
-        {puerta === "equipo" && <m.section key="equipo" {...entrada}><Equipo atras={() => setPuerta("")} volver={volver} /></m.section>}
+        {puerta === "alumna" && <m.section key="alumna" {...entrada}><Alumna atras={() => setPuerta("")} volver={volver} sinApi={sinApi} reintentar={reintentar} /></m.section>}
+        {puerta === "equipo" && <m.section key="equipo" {...entrada}><Equipo atras={() => setPuerta("")} volver={volver} sinApi={sinApi} reintentar={reintentar} google={config.data?.google || null} cargandoConfig={config.isPending} /></m.section>}
       </AnimatePresence>
     </PaginaSola>
   );
@@ -69,9 +75,17 @@ function Atras({ onClick }) {
   return <button type="button" onClick={onClick} className="-ml-3 mb-6 inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-navy hover:bg-white/70"><ArrowLeft size={18} /> Volver</button>;
 }
 
-function Alumna({ atras, volver }) {
+function Alumna({ atras, volver, sinApi, reintentar }) {
   const navegar = useNavigate();
   const [paso, setPaso] = useState("dato");
+  if (sinApi) {
+    return (
+      <div>
+        <Atras onClick={atras} />
+        <SinApi titulo="Entrar con tu código vuelve en un momento" texto="Estamos actualizando la app. Si necesitas cambiar o cancelar una clase ya, escríbenos por WhatsApp." reintentar={reintentar} conWhatsApp />
+      </div>
+    );
+  }
   return (
     <div>
       <Atras onClick={atras} />
@@ -84,13 +98,24 @@ function Alumna({ atras, volver }) {
   );
 }
 
-function Equipo({ atras, volver }) {
+function Equipo({ atras, volver, sinApi, reintentar, google, cargandoConfig }) {
   const [correo, setCorreo] = useState("");
   const [clave, setClave] = useState("");
   const [olvido, setOlvido] = useState(false);
   const entrar = useEntrarEquipo();
+  const conGoogle = useEntrarGoogle();
   const recuperar = useRecuperar();
   const navegar = useNavigate();
+  const listo = (r) => navegar(volver || inicioDe(r.usuario.rol), { replace: true });
+
+  if (sinApi || entrar.error?.sinApi || conGoogle.error?.sinApi) {
+    return (
+      <div>
+        <Atras onClick={atras} />
+        <SinApi titulo="El acceso del equipo vuelve en un momento" texto="Estamos actualizando la app o el servidor no responde. Intenta de nuevo en unos minutos." reintentar={() => { entrar.reset(); conGoogle.reset(); reintentar(); }} />
+      </div>
+    );
+  }
 
   if (olvido) {
     return (
@@ -119,14 +144,38 @@ function Equipo({ atras, volver }) {
     <div>
       <Atras onClick={atras} />
       <h1 className="titulo">Equipo Casa Lotus</h1>
-      <p className="lead mt-3">Entra con tu correo y tu contraseña.</p>
-      <form className="mt-8 space-y-5" onSubmit={(e) => { e.preventDefault(); entrar.mutate({ correo: correo.trim(), password: clave }, { onSuccess: (r) => navegar(volver || inicioDe(r.usuario.rol), { replace: true }) }); }}>
-        <Entrada etiqueta="Correo" type="email" valor={correo} onCambio={setCorreo} autoComplete="username" required autoFocus />
+      <p className="lead mt-3">{google ? "Entra con tu cuenta de Google o con tu correo y contraseña." : "Entra con tu correo y tu contraseña."}</p>
+      {cargandoConfig && <div className="esqueleto mt-8 h-11 rounded-full" aria-hidden="true" />}
+      {google && (
+        <div className="mt-8">
+          <BotonGoogle clientId={google.clientId} ocupado={conGoogle.isPending} correoDemo="ana@demo.casalotus.studio"
+            onCredencial={(credential) => { entrar.reset(); conGoogle.mutate(credential, { onSuccess: listo }); }} />
+          {conGoogle.isError && <p className="campo-error mt-3 text-center" role="alert">{conGoogle.error.mensaje}</p>}
+          <Divisor texto="o con tu correo" />
+        </div>
+      )}
+      <form className={`space-y-5 ${google || cargandoConfig ? "" : "mt-8"}`} onSubmit={(e) => { e.preventDefault(); conGoogle.reset(); entrar.mutate({ correo: correo.trim(), password: clave }, { onSuccess: listo }); }}>
+        <Entrada etiqueta="Correo" type="email" valor={correo} onCambio={setCorreo} autoComplete="username" required autoFocus={!google} />
         <CampoClave valor={clave} onCambio={setClave} />
         {entrar.isError && <p className="campo-error" role="alert">{entrar.error.mensaje}</p>}
         <Boton type="submit" bloque tam="l" cargando={entrar.isPending} disabled={!correo || !clave}>Entrar</Boton>
       </form>
       <button type="button" onClick={() => setOlvido(true)} className="mt-6 enlace texto-s">¿Olvidaste tu contraseña?</button>
+    </div>
+  );
+}
+
+/** The API does not answer: say so calmly, offer a retry (and WhatsApp to students). */
+function SinApi({ titulo, texto, reintentar, conWhatsApp = false }) {
+  return (
+    <div className="tarjeta p-6" role="status">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-mist text-navy"><Clock size={22} /></span>
+      <h1 className="titulo-s mt-5">{titulo}</h1>
+      <p className="mt-3 text-ink">{texto}</p>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Boton tam="s" icono={<RefreshCw size={16} />} onClick={reintentar}>Intentar de nuevo</Boton>
+        {conWhatsApp && <Boton tam="s" variante="suave" href={enlaceWhatsApp("573128720888", "Hola Casa Lotus, quiero hacer un cambio en mi clase.")} icono={<MessageCircle size={16} />}>Escribir por WhatsApp</Boton>}
+      </div>
     </div>
   );
 }

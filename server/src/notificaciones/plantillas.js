@@ -1,6 +1,9 @@
 // Casa Lotus · e-mail templates (HTML + text). Brand palette from shared/tema.css; Arial for mail clients.
 import { whatsappLegible, enlaceWhatsApp, primerNombre } from "../../../shared/reglas.js";
 
+/** Hosted by the public site (no inline cid images: Resend sends plain HTML). */
+export const LOGO_CORREO = "https://casalotus.studio/apple-touch-icon.png";
+
 const h = (t) => String(t ?? "").replace(/[&<>"']/g, (x) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[x]);
 
 const boton = (href, texto, fondo, color) =>
@@ -10,7 +13,7 @@ const boton = (href, texto, fondo, color) =>
 function marco(publicUrl, cuerpo, pie) {
   return '<div style="margin:0;padding:24px 12px;background:#EFF4F8">' +
     '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:520px;margin:0 auto;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#24434C">' +
-    '<tr><td style="padding:4px 4px 18px"><img src="' + h(publicUrl) + '/apple-touch-icon.png" width="44" height="44" alt="" style="display:inline-block;vertical-align:middle;border:0;border-radius:12px">' +
+    '<tr><td style="padding:4px 4px 18px"><img src="' + LOGO_CORREO + '" width="44" height="44" alt="" style="display:inline-block;vertical-align:middle;border:0;border-radius:12px">' +
     '<span style="display:inline-block;vertical-align:middle;margin-left:10px;font-size:22px;color:#165472;letter-spacing:.01em">Casa Lotus</span></td></tr>' +
     '<tr><td style="background:#FFFFFF;border-radius:22px;padding:28px 26px">' + cuerpo + "</td></tr>" +
     '<tr><td style="padding:16px 6px 0;font-size:12px;line-height:1.5;color:#53748C">' + pie + "</td></tr></table></div>";

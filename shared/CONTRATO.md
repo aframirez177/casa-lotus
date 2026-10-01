@@ -350,5 +350,10 @@ Every booking CTA on the site links to `/app/reservar?ref=<REF>[&clase=<id>][&pl
 | `GET /api/auth/sesiones` | `{ sesiones, total }`: the 10 most recently used (the current one always included) and how many live sessions there are; expired sessions are deleted by the daily job |
 | `GET /api/admin/agenda?desde&hasta` | default today − 7 → today + 21; also returns classes up to 14 days before `desde` that still have attendance to mark («Por marcar») |
 | `ClientaDetalle.reservas[].atribucion` | admin only: `{ ref, utm: { source?, medium?, campaign?, term?, content? }, clic: "gclid" \| "gbraid" \| "wbraid" \| "fbclid" \| null } \| null` — which click id the booking carried, never its value; `null` for app/panel bookings |
+| `GET /api/auth/config` | public: `{ google: { clientId } \| null }` — what the sign-in screen needs for «Entrar con Google» |
+| `POST /api/auth/google` `{ credential }` | staff only: a Google ID token (verified: signature, audience = `GOOGLE_CLIENT_ID`, issuer, `email_verified`) of an **active** staff e-mail → `{ usuario }` + the same `cl_sesion` cookie as `/api/auth/entrar`. Unknown or inactive e-mail → 403 `sin-permiso` «Esta cuenta de Google no está en el equipo de Casa Lotus. Pídele a Ana que te invite con ese correo.»; bad token → 401; Google off → 503 `no-configurado`; rate-limited like the password login. Google never creates accounts |
+| `POST /api/auth/invitacion/:token/google` `{ credential }` | accepts an invitation with Google when the Google e-mail is the invited one (403 otherwise) → `{ usuario }` + cookie; no password is set (e-mail + password stays possible later through «¿Olvidaste tu contraseña?») |
+| e-mail | sent from «Casa Lotus <reservas@casalotus.studio>» through Resend, Reply-To `casalotusbogota@gmail.com`; the logo is the hosted `https://casalotus.studio/apple-touch-icon.png` (no inline images) |
+| `GET /api/admin/salud` | `correo: { driver: "resend" \| "smtp" \| "console", remitente, ok }`, `google: { activo }` |
 
 Alert `accion.ruta` values are full paths (`/app/admin/…`), the same strings used as Web Push URLs.

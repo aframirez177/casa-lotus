@@ -1,8 +1,8 @@
 // /app/profe/cuenta and /app/admin/cuenta — name, WhatsApp, password, active sessions, sign out.
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { LogOut, Smartphone, Monitor, KeyRound } from "lucide-react";
-import { useYo, useEditarCuenta, useCambiarPassword, useSesiones, useCerrarSesionRemota, useSalir } from "../../api/hooks/auth.js";
+import { LogOut, Smartphone, Monitor, KeyRound, ShieldCheck } from "lucide-react";
+import { useYo, useEditarCuenta, useCambiarPassword, useSesiones, useCerrarSesionRemota, useSalir, useRecuperar } from "../../api/hooks/auth.js";
 import { Seccion, Avatar } from "../../ui/Basicos.jsx";
 import { Esqueleto } from "../../ui/Esqueleto.jsx";
 import { Boton } from "../../ui/Boton.jsx";
@@ -19,6 +19,7 @@ export default function Cuenta() {
   const sesiones = useSesiones();
   const cerrar = useCerrarSesionRemota();
   const salir = useSalir();
+  const recuperar = useRecuperar();
   const navegar = useNavigate();
   const { avisar } = useAvisos();
   const [nombre, setNombre] = useState("");
@@ -35,7 +36,11 @@ export default function Cuenta() {
     <div className="max-w-[720px]">
       <header className="mb-10 flex items-center gap-5 pt-4">
         <Avatar nombre={yo.nombre} tam={72} />
-        <div><h1 className="titulo">{yo.nombre}</h1><p className="mt-2 suave">{yo.correo} · {yo.rol === "admin" ? "Administración" : "Profe"}</p></div>
+        <div>
+          <h1 className="titulo">{yo.nombre}</h1>
+          <p className="mt-2 suave">{yo.correo} · {yo.rol === "admin" ? "Administración" : "Profe"}</p>
+          {yo.metodo === "google" && <p className="mt-2 inline-flex items-center gap-2 chip chip-blanco"><ShieldCheck size={14} />Entras con Google ({yo.correo})</p>}
+        </div>
       </header>
 
       <Seccion titulo="Tus datos">
@@ -44,7 +49,10 @@ export default function Cuenta() {
           <Entrada etiqueta="WhatsApp" valor={wa} onCambio={(v) => setWa(formatoCelular(v))} inputMode="tel" placeholder="300 123 4567" />
           <div className="flex flex-wrap gap-2">
             <Boton type="submit" disabled={!sucio} cargando={editar.isPending}>Guardar</Boton>
-            <Boton variante="suave" icono={<KeyRound size={17} />} onClick={() => setClave(true)}>Cambiar contraseña</Boton>
+            {yo.metodo === "google" ? (
+              <Boton variante="suave" icono={<KeyRound size={17} />} cargando={recuperar.isPending}
+                onClick={() => recuperar.mutate({ correo: yo.correo }, { onSuccess: () => avisar(`Te enviamos un enlace a ${yo.correo} para crear una contraseña de respaldo.`) })}>Crear contraseña de respaldo</Boton>
+            ) : <Boton variante="suave" icono={<KeyRound size={17} />} onClick={() => setClave(true)}>Cambiar contraseña</Boton>}
           </div>
         </form>
       </Seccion>

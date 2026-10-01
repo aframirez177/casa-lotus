@@ -40,7 +40,7 @@ export function whatsappFalso({ configurado = true } = {}) {
   };
 }
 
-export async function arrancar({ semilla = "basica", ahora = JUEVES, latenciaMs = 0, sinColumnas, sinPestanas, whatsapp, candado, clienteConversiones, push, env = {} } = {}) {
+export async function arrancar({ semilla = "basica", ahora = JUEVES, latenciaMs = 0, sinColumnas, sinPestanas, whatsapp, candado, clienteConversiones, push, google, fetchCorreo, env = {} } = {}) {
   let t = ahora;
   const reloj = { ahora: () => t, avanzar: (ms) => { t += ms; }, fijar: (ms) => { t = ms; } };
   const config = leerConfig({ NODE_ENV: "test", PUBLIC_URL: "https://casalotus.studio", LOG_LEVEL: "silencio", TAREAS: "0", ...env });
@@ -51,6 +51,7 @@ export async function arrancar({ semilla = "basica", ahora = JUEVES, latenciaMs 
     // never the real module in tests: it would fall back to WHATSAPP_* from the shell and reach Meta
     whatsapp: whatsapp || whatsappFalso({ configurado: false }), ...(candado ? { candado } : {}),
     ...(clienteConversiones ? { clienteConversiones } : {}), ...(push ? { push } : {}),
+    ...(google !== undefined ? { google } : {}), ...(fetchCorreo ? { fetchCorreo } : {}),
   });
   const app = crearApp(ctx);
   const servidor = await new Promise((ok) => { const s = app.listen(0, "127.0.0.1", () => ok(s)); });

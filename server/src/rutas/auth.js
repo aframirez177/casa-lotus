@@ -11,6 +11,7 @@ import {
   entrar, cambiarPassword, recuperar, restablecer, verInvitacion, aceptarInvitacion, editarCuenta, vistaUsuario, porId,
 } from "../auth/usuarios.js";
 import { pedirCodigo, verificarCodigo, usarEnlace } from "../auth/clientas.js";
+import { entrarConGoogle, aceptarInvitacionConGoogle } from "../auth/google.js";
 import { nombreDeSesion } from "../dominio/yo.js";
 import { noAutenticado, noExiste, validacion } from "../errores.js";
 import { consumir, HORA } from "../auth/limites.js";
@@ -42,6 +43,27 @@ export function rutasAuth(ctx) {
     if (!req.actor) throw noAutenticado("No has entrado.");
     if (req.actor.tipo === "clienta") return res.json(clientaUsuario(req.actor, await nombreDeSesion(ctx, req.actor)));
     res.json(yoStaff(porId(ctx, req.actor.id)));
+  });
+
+  // what the sign-in screen needs to know (public)
+  r.get("/config", (_req, res) => {
+    res.set("Cache-Control", "public, max-age=300");
+    res.json({ google: ctx.google ? { clientId: ctx.google.clientId } : null });
+  });
+
+  // «Entrar con Google» (staff only: the Google e-mail must belong to an active member of the team)
+  r.post("/google", async (req, res) => {
+    const { credential } = validar(z.object({ credential: z.string().min(20).max(4096) }), req.body);
+    const u = await entrarConGoogle(ctx, credential, { ip: req.ip });
+    abrirSesionStaff(ctx, req, res, u);
+    res.json(yoStaff(u));
+  });
+
+  r.post("/invitacion/:token/google", async (req, res) => {
+    const { credential } = validar(z.object({ credential: z.string().min(20).max(4096) }), req.body);
+    const u = await aceptarInvitacionConGoogle(ctx, req.params.token, credential, { ip: req.ip });
+    abrirSesionStaff(ctx, req, res, u);
+    res.json(yoStaff(u));
   });
 
   r.post("/entrar", async (req, res) => {

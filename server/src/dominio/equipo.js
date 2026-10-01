@@ -32,7 +32,8 @@ export async function salud(ctx) {
     },
     whatsapp,
     conversiones: { ...conversiones, sheetId: ctx.config.conversiones.sheetId || "" },
-    correo: { driver: ctx.correo.driver, activo: ctx.correo.activo },
+    correo: { driver: ctx.correo.driver, remitente: ctx.correo.remitente, ok: Boolean(ctx.correo.activo) },
+    google: { activo: Boolean(ctx.google) },
     push: { activo: ctx.push.activo, clavePublica: ctx.push.clavePublica || "", suscripciones: ctx.push.total() },
     version: ctx.config.version,
   };

@@ -22,6 +22,20 @@ function alEntrar(qc) {
   };
 }
 
+/** How the team can sign in: { google: { clientId } | null }. */
+export function useConfigAuth() {
+  return useQuery({ queryKey: ["auth", "config"], queryFn: () => api.get("/api/auth/config"), staleTime: 30 * 60000, retry: 1 });
+}
+export function useEntrarGoogle() {
+  const qc = useQueryClient();
+  // a rejected Google token answers 401: an error for this screen, not «your session ended»
+  return useMutation({ mutationFn: (credential) => api.post("/api/auth/google", { credential }, { silencioso401: true }), onSuccess: alEntrar(qc) });
+}
+export function useInvitacionGoogle(token) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (credential) => api.post(`/api/auth/invitacion/${id(token)}/google`, { credential }, { silencioso401: true }), onSuccess: alEntrar(qc) });
+}
+
 export function useEntrarEquipo() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (b) => api.post("/api/auth/entrar", b), onSuccess: alEntrar(qc) });

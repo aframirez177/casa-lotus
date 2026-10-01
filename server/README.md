@@ -75,7 +75,8 @@ See `.env.example`. The important ones:
 | `CONVERSIONES_SHEET_ID` | separate spreadsheet for Google Ads offline conversions (first tab); empty → the «Conversiones Ads» tab |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | service account key, base64 (or `GOOGLE_APPLICATION_CREDENTIALS` path) |
 | `SQLITE_PATH` | `/app/data/casalotus.db` in Docker (the `./data` volume) |
-| `CORREO_DRIVER`, `SMTP_*` | Gmail SMTP with an app password |
+| `CORREO_DRIVER`, `RESEND_API_KEY`, `CORREO_REMITENTE`, `CORREO_RESPONDER_A` | e-mail through Resend from «Casa Lotus <reservas@casalotus.studio>», replies to the studio's Gmail (`smtp` and `console` drivers remain) |
+| `GOOGLE_CLIENT_ID` | «Entrar con Google» for staff; empty = only e-mail + password |
 | `VAPID_*` | Web Push; without them push is simply off |
 | `WHATSAPP_*` | Meta Cloud API; without them `/api/admin/whatsapp` answers 503 `no-configurado` |
 | `PUBLIC_URL` | origin for links (invitations, resets, access links) and the CSRF Origin check |
@@ -85,8 +86,11 @@ Settings that change business behaviour live in the Sheet's **Ajustes** tab, not
 
 ## The Google service account (once)
 
-1. Google Cloud console with the studio account (`casalotusbogota@gmail.com`) → create a project
-   «casa-lotus-api» → APIs & Services → enable **Google Sheets API**.
+The service account and the OAuth client live in **Álvaro's** Google Cloud project; the Sheet stays in the
+studio's Drive and is only shared with the service account.
+
+1. Google Cloud console with Álvaro's account → create a project «casa-lotus-api» → APIs & Services → enable
+   **Google Sheets API**.
 2. IAM → Service accounts → create «casalotus-api» (no roles needed) → Keys → Add key → JSON.
 3. Open the Sheet «Casa Lotus · Sistema» → **Share** → paste the service account e-mail
    (`casalotus-api@<project>.iam.gserviceaccount.com`) → **Editor** → uncheck «Notify».
@@ -94,6 +98,32 @@ Settings that change business behaviour live in the Sheet's **Ajustes** tab, not
    the key file from your laptop.
 5. The Sheet's time zone must be **America/Bogota** (File → Settings). `GET /api/admin/salud` warns otherwise
    and lists any column the server wants but the Sheet lacks (run the installer «Instalar o reparar» to add them).
+
+## E-mail through Resend (once)
+
+1. resend.com → Domains → add `casalotus.studio` → copy the DNS records (SPF `send` MX/TXT, DKIM `resend._domainkey`)
+   into Cloudflare DNS (DNS only, grey cloud) → Verify.
+2. API Keys → create one with **Sending access** for that domain → `RESEND_API_KEY` in `.env`.
+3. `CORREO_REMITENTE=Casa Lotus <reservas@casalotus.studio>`, `CORREO_RESPONDER_A=casalotusbogota@gmail.com`
+   (replies land in the studio's Gmail). `GET /api/admin/salud` → `correo.ok` must be `true`.
+
+The free plan sends 3,000 e-mails a month and 100 a day (https://resend.com/pricing): one alert per web
+booking plus login codes and resets fits easily. A failed send is logged and never fails the booking; the
+driver retries once on 429/5xx and never logs the key or full addresses. E-mails carry no inline images: the
+logo is the site's hosted `https://casalotus.studio/apple-touch-icon.png`.
+
+## «Entrar con Google» for staff (once)
+
+1. Same Google Cloud project → APIs & Services → OAuth consent screen: External, app name «Casa Lotus», scopes
+   `openid email profile` only (no verification needed).
+2. Credentials → Create OAuth client ID → **Web application** → Authorized JavaScript origins
+   `https://casalotus.studio` (and `http://localhost:5180` for development) → copy the client id into
+   `GOOGLE_CLIENT_ID`.
+3. The app loads Google Identity Services with the id from `GET /api/auth/config` and posts the ID token to
+   `POST /api/auth/google`. The server verifies it (signature, audience, issuer, `email_verified`) and signs in the
+   **active** staff member with that e-mail; Google never creates accounts. An invitation can also be accepted with
+   Google (`POST /api/auth/invitacion/:token/google`) when the Google e-mail is the invited one; e-mail + password
+   stays available as the fallback.
 
 ## Google Ads conversions (Data Manager)
 
@@ -164,8 +194,8 @@ Back up `server/data/` (SQLite) with the droplet backups; the business record is
 docker compose exec api node scripts/crear-admin.mjs --correo casalotusbogota@gmail.com --nombre "Ana Caona"
 ```
 
-It prints a one-time link (7 days) to `/app/invitacion/<token>` where she sets her password. Run it again
-for a new link. Profes are invited from the app (Equipo → invitar), which returns a link and a prefilled
+It prints a one-time link (7 days) to `/app/invitacion/<token>`, where she either signs in with Google (same
+e-mail) or sets a password. Run it again for a new link. Profes are invited from the app (Equipo → invitar), which returns a link and a prefilled
 WhatsApp text to share.
 
 ## Security notes

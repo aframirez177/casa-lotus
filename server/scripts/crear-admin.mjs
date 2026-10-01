@@ -19,5 +19,5 @@ const log = crearLog({ nivel: "warn" });
 const db = abrirBase(config.sqlitePath, { log });
 const ctx = { config, db, log, ahora: () => Date.now(), enSegundoPlano: () => {} };
 const { usuario, invitacion } = crearAdminInicial(ctx, { correo, nombre });
-process.stdout.write("\nAdmin: " + usuario.nombre + " <" + usuario.correo + ">\nEnlace para crear la contraseña (vence " + invitacion.vence + "):\n\n  " + invitacion.enlace + "\n\nÁbrelo una sola vez. Si se pierde, vuelve a correr este comando.\n\n");
+process.stdout.write("\nAdmin: " + usuario.nombre + " <" + usuario.correo + ">\nEnlace para entrar por primera vez (vence " + invitacion.vence + "):\n\n  " + invitacion.enlace + "\n\nÁbrelo una sola vez: ahí puede entrar con Google (con ese mismo correo) o crear una contraseña.\nSi se pierde, vuelve a correr este comando.\n\n");
 db.close();

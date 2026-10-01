@@ -15,6 +15,7 @@ import { buscarPorWhatsApp, buscarPorId, crearLead, registrarBaja } from "./domi
 import { crearUsuarioConPassword } from "./auth/usuarios.js";
 import { SISTEMA } from "./dominio/base.js";
 import { destinoHojaSeparada, destinoPestana } from "./datos/conversiones.js";
+import { crearVerificadorGoogle } from "./auth/google.js";
 
 /**
  * opciones.ahora: () => ms (a fixed or movable clock for tests).
@@ -72,7 +73,8 @@ export async function crearContexto(config, opciones = {}) {
   } else {
     ctx.conversiones = destinoPestana(ctx);
   }
-  ctx.correo = opciones.correo || crearCorreo(config, log);
+  ctx.correo = opciones.correo || crearCorreo(config, log, opciones.fetchCorreo ? { fetch: opciones.fetchCorreo } : {});
+  ctx.google = opciones.google !== undefined ? opciones.google : crearVerificadorGoogle(config);
   ctx.push = opciones.push || (await crearPush(ctx));
 
   // what the WhatsApp module may ask of the domain (all async)
