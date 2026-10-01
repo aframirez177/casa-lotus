@@ -1,0 +1,17 @@
+---
+// FAQ section (v1): a sticky head and the accordion. The same items are the page's FAQPage JSON-LD.
+import Faq from "../ui/Faq.astro";
+import type { Faq as Item } from "../../data/paginas";
+interface Props { items: Item[]; titulo?: string; eyebrow?: string; todas?: boolean }
+const { items, titulo = "Antes de subirte.", eyebrow = "Preguntas", todas = true } = Astro.props;
+---
+<section class="section faq" id="preguntas" data-bg="paper">
+  <div class="wrap faq__grid">
+    <header class="section__head" data-float>
+      <p class="eyebrow" data-reveal>{eyebrow}</p>
+      <h2 class="display h2" data-split>{titulo}</h2>
+      {todas && <a class="link-arrow" href="/preguntas/" data-reveal>Todas las preguntas</a>}
+    </header>
+    <Faq items={items} />
+  </div>
+</section>

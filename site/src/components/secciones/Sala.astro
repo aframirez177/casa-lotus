@@ -1,0 +1,19 @@
+---
+// La sala (v1): six short loops of real classes hung from a line like the swings; each plays only
+// while on screen, and nothing downloads before it nears the screen.
+interface Props { titulo?: string }
+const { titulo = "Así se vive una clase." } = Astro.props;
+---
+<section class="section sala" id="la-sala" data-bg="paper" aria-labelledby="sala-title">
+  <div class="wrap">
+    <header class="section__head" data-float>
+      <p class="eyebrow" data-reveal>La sala</p>
+      <h2 class="display h2" id="sala-title" data-split>{titulo}</h2>
+    </header>
+  </div>
+  <div class="sala__reel" aria-hidden="true">
+    {[1, 2, 3, 4, 5, 6].map((n) => (
+      <figure class="sala__clip"><video muted playsinline loop preload="none" width="432" height="768" data-poster={`/assets/video/clase-${n}.webp`} data-src={`/assets/video/clase-${n}.mp4`}></video></figure>
+    ))}
+  </div>
+</section>

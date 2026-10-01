@@ -1,0 +1,73 @@
+---
+// /planes/: monthly / quarterly plans (toggle as on the home), a full price table, the conditions.
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import Cierre from "../../components/ui/Cierre.astro";
+import Planes from "../../components/secciones/Planes.astro";
+import Preguntas from "../../components/secciones/Preguntas.astro";
+import { PAGINAS } from "../../data/paginas";
+import { PLANES, PRUEBA, ESTUDIO, POLITICAS, dinero, porClase } from "../../data/estudio";
+const p = PAGINAS.planes;
+---
+<Base pagina={p}>
+  <PageHero pagina={p} secundario={{ texto: "Ver horarios", href: "/horarios/" }} />
+
+  <Planes cabeza={false} />
+
+  <section class="section section--tight" id="precios" data-bg="paper">
+    <div class="wrap">
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>Todos los precios</p>
+        <h2 class="display h2" data-split>Cuánto pagas por clase.</h2>
+      </header>
+      <div class="tabla-wrap" data-reveal>
+        <table class="tabla">
+          <caption>Planes 2026 de Casa Lotus, en pesos colombianos (COP)</caption>
+          <thead>
+            <tr><th scope="col">Plan</th><th scope="col">Mensual</th><th scope="col">Por clase</th><th scope="col">Trimestral (3 meses)</th><th scope="col">Por clase</th><th scope="col">Ahorras</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">{PRUEBA.nombre}</th>
+              <td class="num">{dinero(PRUEBA.precio)}</td><td class="num">{dinero(PRUEBA.precio)}</td><td>—</td><td>—</td><td>—</td>
+            </tr>
+            {PLANES.map((x) => (
+              <tr>
+                <th scope="row">{x.clases} clases al mes</th>
+                <td class="num">{dinero(x.mes)}</td>
+                <td class="num">{dinero(porClase(x))}</td>
+                <td class="num">{dinero(x.trimestre)}</td>
+                <td class="num">{dinero(porClase(x, "trimestre"))}</td>
+                <td class="num ahorro">{dinero(x.mes * 3 - x.trimestre)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight" id="condiciones" data-bg="mist">
+    <div class="wrap split">
+      <header class="split__head">
+        <p class="eyebrow" data-reveal>Condiciones</p>
+        <h2 class="display h2" data-split>Lo que debes saber.</h2>
+        <a class="link-arrow" href="/terminos/" data-reveal>Términos completos</a>
+      </header>
+      <div class="condiciones" data-reveal>
+        <ul>
+          <li>Los planes son personales e intransferibles.</li>
+          <li>No se congelan: su vigencia corre sin interrupción desde la fecha de inicio.</li>
+          <li>No hacemos reembolsos de dinero.</li>
+          <li>Pagas por {ESTUDIO.mediosPago.slice(0, -1).join(", ")} o {ESTUDIO.mediosPago.at(-1)} a la llave {ESTUDIO.llavePago} y envías la captura al WhatsApp {ESTUDIO.whatsappTexto}. Si prefieres transferencia bancaria, te enviamos los datos por WhatsApp.</li>
+          <li>Reservas cada clase hasta {POLITICAS.horasReservar} horas antes. Si cancelas con mínimo {POLITICAS.horasCancelar} horas de anticipación, la clase vuelve a tu plan; si no, se descuenta.</li>
+          <li>Los días festivos no hay clase.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <Preguntas items={p.faq ?? []} titulo="Sobre los planes." />
+
+  <Cierre ref="WEB-PLANES-CIERRE" titulo="Empieza por una clase." lead="Tu primera clase cuesta $25.000. Si te gusta, eliges el plan que va con tu ritmo." />
+</Base>

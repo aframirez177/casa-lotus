@@ -1,0 +1,58 @@
+---
+// /clases/: the four classes, a chooser table, when they happen, FAQ.
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import HeroFoto from "../../components/ui/HeroFoto.astro";
+import Cierre from "../../components/ui/Cierre.astro";
+import Clases from "../../components/secciones/Clases.astro";
+import Horarios from "../../components/secciones/Horarios.astro";
+import Preguntas from "../../components/secciones/Preguntas.astro";
+import { CLASES } from "../../data/estudio";
+import { PAGINAS } from "../../data/paginas";
+import sala from "../../assets/fotos/sala-invertida.jpg";
+const p = PAGINAS.clases;
+/** «Ideal si buscas…»: one line per class, from Ana's benefits. */
+const BUSCAS: Record<string, string> = {
+  "yoga-aereo-multinivel": "Probar un poco de todo: fuerza, flexibilidad y relajación",
+  "yoga-aereo": "Calma, respiración y atención plena, con posturas invertidas",
+  "stretch-aereo": "Movilidad, salud articular y soltar la rigidez",
+  "pilates-aereo": "Fuerza, resistencia y mejor postura, sin impacto",
+};
+---
+<Base pagina={p}>
+  <PageHero pagina={p} secundario={{ texto: "Ver horarios", href: "/horarios/" }}>
+    <HeroFoto slot="media" src={sala} alt="Alumna colgada de cabeza en el columpio, en la sala de Casa Lotus con su pared verde menta" color="var(--c-multinivel)" tag="Todas aptas para principiantes" />
+  </PageHero>
+
+  <Clases cabeza={false} />
+
+  <section class="section section--tight" id="cual-elegir" data-bg="mist">
+    <div class="wrap">
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>¿Cuál elegir?</p>
+        <h2 class="display h2" data-split>Empieza por lo que buscas.</h2>
+      </header>
+      <div class="tabla-wrap" data-reveal>
+        <table class="tabla">
+          <caption>Las clases de Casa Lotus y para qué sirve cada una</caption>
+          <thead><tr><th scope="col">Clase</th><th scope="col">Ideal si buscas</th><th scope="col">Lo que trabajas</th></tr></thead>
+          <tbody>
+            {CLASES.map((c) => (
+              <tr style={`--c: ${c.colorVar}`}>
+                <th scope="row"><span class="dot-c" aria-hidden="true"></span><a href={`/clases/${c.slug}/`}>{c.nombre}</a></th>
+                <td>{BUSCAS[c.slug]}</td>
+                <td>{c.beneficios[0]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <Horarios titulo="¿Cuándo hay clase?" lead="Mira qué clase hay en cada horario y aparta tu columpio en línea. Si el horario que buscas no aparece, escríbenos: estamos abriendo clases nuevas." />
+
+  <Preguntas items={p.faq ?? []} titulo="Antes de elegir." />
+
+  <Cierre ref="WEB-CLASES-CIERRE" />
+</Base>

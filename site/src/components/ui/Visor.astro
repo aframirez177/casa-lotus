@@ -1,0 +1,8 @@
+---
+// Video viewer: testimonials open here with sound, one at a time. Nothing downloads before a tap.
+// data-lenis-prevent: Lenis is stopped while a dialog is open and would swallow every scroll gesture.
+---
+<dialog class="viewer" data-viewer data-lenis-prevent aria-label="Video">
+  <button class="viewer__close" type="button" aria-label="Cerrar video" data-viewer-close></button>
+  <video class="viewer__video" playsinline controls preload="none"></video>
+</dialog>

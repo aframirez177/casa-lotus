@@ -1,0 +1,26 @@
+---
+// Class card (v1 look): class-colour field, photo, tag, Ana's three benefits with the mark as bullet.
+// MPA: the heading opens the class page (and so does a tap anywhere on the card); the arrow books.
+import Foto from "./Foto.astro";
+import { reservar } from "../../lib/enlaces";
+import { PRUEBA, type Clase } from "../../data/estudio";
+interface Props { clase: Clase; nivel?: "h2" | "h3" }
+const { clase } = Astro.props;
+const ruta = `/clases/${clase.slug}/`;
+---
+<article class="class-card" style={`--c: ${clase.colorVar}`} data-cursor="Ver clase">
+  <figure class="class-card__media" data-media>
+    <Foto src={clase.foto} alt={clase.alt} sizes="(max-width: 760px) 92vw, (max-width: 1100px) 44vw, 300px" />
+  </figure>
+  <div class="class-card__body">
+    <span class="tag">{clase.corto}</span>
+    <h3 class="h3"><a href={ruta}>{clase.nombre}</a></h3>
+    <ul class="benefits">
+      {clase.beneficios.map((b) => <li>{b}</li>)}
+    </ul>
+    <div class="class-card__links">
+      <a class="link-arrow" data-cta={clase.ref} data-cursor="Reservar" href={reservar(clase.ref, { plan: PRUEBA.nombre })}>Reservar esta clase</a>
+      <a class="class-card__more" href={ruta} tabindex="-1" aria-hidden="true">Conoce la clase</a>
+    </div>
+  </div>
+</article>

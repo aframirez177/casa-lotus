@@ -1,0 +1,13 @@
+# The build context is web/ (see docker-compose.yml). Only shared/ and the server's own files go in.
+**
+!shared/**
+!server/package.json
+!server/package-lock.json
+!server/migraciones/**
+!server/scripts/**
+!server/src/**
+**/node_modules
+**/.env
+**/.env.*
+**/*.db
+**/*.db-*

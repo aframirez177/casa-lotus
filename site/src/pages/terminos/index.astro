@@ -1,0 +1,84 @@
+---
+// /terminos/: Ana's conditions and recommendations, the cancellation / reschedule policy, the trial
+// rules, and the disclaimer exactly as the student accepts it in the app (shared/consentimientos.js).
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import Preguntas from "../../components/secciones/Preguntas.astro";
+import { PAGINAS } from "../../data/paginas";
+import { CONDICIONES, REGLAS_PRUEBA, POLITICAS, ESTUDIO, PRUEBA, dinero } from "../../data/estudio";
+import { CONSENTIMIENTOS } from "../../../../shared/consentimientos.js";
+const p = PAGINAS.terminos;
+const { descargo, imagen } = CONSENTIMIENTOS;
+const TOC = [
+  ["reservas", "Reservas"],
+  ["cancelaciones", "Cancelaciones y cambios"],
+  ["prueba", "Clase de prueba"],
+  ["planes", "Planes y pagos"],
+  ["practica", "Tu práctica"],
+  ["sala", "En la sala"],
+  ["imagen", "Fotos y videos"],
+  ["descargo", "Descargo de responsabilidad"],
+  ["datos", "Tus datos"],
+];
+const grupo = (g: string) => CONDICIONES.find((c) => c.grupo === g)?.reglas ?? [];
+---
+<Base pagina={p}>
+  <PageHero pagina={p} cta={false} />
+
+  <section class="section section--first" data-bg="paper">
+    <div class="wrap legal-grid">
+      <nav class="toc" aria-label="En esta página">
+        <p>En esta página</p>
+        {TOC.map(([id, t]) => <a href={`#${id}`}>{t}</a>)}
+      </nav>
+      <div class="prosa">
+        <h2 id="reservas">Reservas</h2>
+        <ul>
+          <li>Reservas tu clase en línea o por WhatsApp al {ESTUDIO.whatsappTexto}, hasta {POLITICAS.horasReservar} horas antes de que empiece.</li>
+          <li>Una reserva sin pago te guarda el columpio por unas horas mientras envías el comprobante. Si no llega a tiempo, el cupo se libera para otra persona.</li>
+          <li>Los días festivos no hay clase.</li>
+        </ul>
+
+        <h2 id="cancelaciones">Cancelaciones y cambios</h2>
+        <ul>
+          <li><strong>Con mínimo {POLITICAS.horasCancelar} horas de anticipación:</strong> cancelas o cambias tu clase desde tu cuenta en la web o por WhatsApp, y la clase vuelve a tu plan.</li>
+          <li><strong>Con menos de {POLITICAS.horasCancelar} horas:</strong> liberamos tu columpio para la lista de espera, pero la clase se descuenta de tu plan.</li>
+          <li>Si tienes que cancelar por una urgencia, avísanos al WhatsApp {ESTUDIO.whatsappTexto}.</li>
+          <li data-todo>La escuela puede cancelar una clase hasta {POLITICAS.horasQuorum} horas antes si no hay un mínimo de dos asistentes. Te avisamos por WhatsApp.</li>
+        </ul>
+
+        <h2 id="prueba">Clase de prueba</h2>
+        <p>Tu clase de prueba cuesta {dinero(PRUEBA.precio)} y se paga antes de la clase. Puedes reprogramarla una sola vez, avisando con mínimo {POLITICAS.horasCancelar} horas de anticipación; si cancelas con menos tiempo, no se puede reprogramar.</p>
+        <ul>
+          {REGLAS_PRUEBA.map((r) => <li data-todo={r.todo ? true : undefined}><strong>{r.titulo}.</strong> {r.texto}</li>)}
+        </ul>
+
+        <h2 id="planes">Planes y pagos</h2>
+        <ul>
+          {grupo("Planes y pagos").map((r) => <li>{r}</li>)}
+          <li>Pagas por {ESTUDIO.mediosPago.slice(0, -1).join(", ")} o {ESTUDIO.mediosPago.at(-1)} a la llave {ESTUDIO.llavePago}, o por transferencia bancaria (te enviamos los datos por WhatsApp). Tu plan queda activo cuando confirmamos el pago.</li>
+        </ul>
+
+        <h2 id="practica">Tu práctica</h2>
+        <ul>{grupo("Tu práctica").map((r) => <li>{r}</li>)}</ul>
+
+        <h2 id="sala">En la sala</h2>
+        <ul>{grupo("En la sala").map((r) => <li>{r}</li>)}</ul>
+
+        <h2 id="imagen">{imagen.titulo}</h2>
+        <p>{imagen.corto} Al reservar eliges una de dos opciones: «{imagen.opciones[0]}» o «{imagen.opciones[1]}». Puedes cambiar tu respuesta cuando quieras desde tu cuenta o escribiéndonos.</p>
+
+        <h2 id="descargo">{descargo.titulo}</h2>
+        <p class="aviso">{descargo.texto}</p>
+        <p class="fecha">Versión del texto: {descargo.version}. Lo aceptas al reservar tu primera clase.</p>
+
+        <h2 id="datos">Tus datos</h2>
+        <p>Cómo tratamos tus datos personales y tus datos de salud está en la <a href="/privacidad/">política de tratamiento de datos</a> (Ley 1581 de 2012).</p>
+
+        <p class="fecha" data-todo>Vigentes desde el 1 de octubre de 2026.</p>
+      </div>
+    </div>
+  </section>
+
+  <Preguntas items={p.faq ?? []} titulo="Lo que más se pregunta." />
+</Base>

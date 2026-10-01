@@ -1,0 +1,21 @@
+---
+// Classes grid (v1). On the home it has its head; on /clases/ the page hero is the head.
+import ClaseCard from "../ui/ClaseCard.astro";
+import { CLASES } from "../../data/estudio";
+interface Props { cabeza?: boolean }
+const { cabeza = true } = Astro.props;
+---
+<section class:list={["section classes", { "section--first": !cabeza }]} id="clases" data-bg="paper">
+  <div class="wrap">
+    {cabeza && (
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>Clases</p>
+        <h2 class="display h2" data-split>Tu forma de estar en el aire.</h2>
+        <p class="lead section__lead" data-reveal>El Método Aéreo se abre en muchos tipos de clase. Estas son las que damos hoy en Casa Lotus, y todas son aptas para principiantes: no necesitas experiencia para empezar por la que más te llame.</p>
+      </header>
+    )}
+    <div class="classes__grid">
+      {CLASES.map((c) => <ClaseCard clase={c} />)}
+    </div>
+  </div>
+</section>

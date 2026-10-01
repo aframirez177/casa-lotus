@@ -1,0 +1,34 @@
+# Casa Lotus · platform API on the droplet (based on infra/templates/app/docker-compose.yml).
+# Layout on the server: /srv/apps/casalotus-api/{shared,server}; run compose from server/.
+# No "ports:": Caddy reaches it as casalotus-api:3000 on the shared `web` network.
+name: casalotus-api
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: casalotus-api:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      SQLITE_PATH: /app/data/casalotus.db
+    expose: ["3000"]
+    volumes:
+      - ./data:/app/data          # SQLite (accounts, sessions, audit…). Back it up with the droplet.
+    networks:
+      web:
+        aliases: [casalotus-api]  # unique across the server: Caddy targets casalotus-api:3000
+    # A runaway app gets killed alone instead of starving its neighbours.
+    mem_limit: 256m
+    cpus: 0.75
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+networks:
+  web:
+    external: true

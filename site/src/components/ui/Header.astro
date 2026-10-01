@@ -1,0 +1,36 @@
+---
+// Header + full-screen menu (v1 look and behaviour). Links now go to pages; the current one is
+// marked with aria-current="page". The CTA hands off to the app with its ref.
+import Marca from "./Marca.astro";
+import { NAV, MENU } from "../../data/paginas";
+import { reservar } from "../../lib/enlaces";
+import { PRUEBA, dinero } from "../../data/estudio";
+
+interface Props { actual: string; inicio?: boolean }
+const { actual, inicio = false } = Astro.props;
+const enSeccion = (ruta: string) => actual === ruta || (ruta !== "/" && actual.startsWith(ruta));
+---
+<header class="header" data-header>
+  <div class="header__inner wrap">
+    <a class="brand" href={inicio ? "#inicio" : "/"} aria-label="Casa Lotus, inicio">
+      <Marca />
+    </a>
+    <nav class="nav" aria-label="Principal">
+      {NAV.map((l) => <a href={l.ruta} aria-current={enSeccion(l.ruta) ? "page" : undefined}>{l.nombre}</a>)}
+    </nav>
+    <a class="btn btn--primary btn--sm header__cta" data-cta="WEB-HEADER" data-magnetic data-cursor="Reservar" href={reservar("WEB-HEADER", { plan: PRUEBA.nombre })}>
+      <span class="dot" aria-hidden="true"></span>Clase de prueba · {dinero(PRUEBA.precio)}
+    </a>
+    <button class="menu-btn" type="button" data-menu-open aria-expanded="false" aria-controls="menu">Menú</button>
+  </div>
+</header>
+
+<div class="menu" id="menu" data-menu data-lenis-prevent hidden>
+  <div class="menu__inner wrap">
+    <button class="menu-btn menu-btn--close" type="button" data-menu-close>Cerrar</button>
+    <nav class="menu__nav" aria-label="Menú">
+      {MENU.map((l) => <a href={l.ruta} data-menu-link aria-current={enSeccion(l.ruta) ? "page" : undefined}>{l.nombre}</a>)}
+    </nav>
+    <a class="btn btn--primary" data-cta="WEB-MENU" href={reservar("WEB-MENU", { plan: PRUEBA.nombre })}><span class="dot" aria-hidden="true"></span>Reservar mi clase de prueba</a>
+  </div>
+</div>

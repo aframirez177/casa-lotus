@@ -1,0 +1,34 @@
+---
+// Testimonials (v1): three portrait videos, quote underneath; they open in the viewer with sound.
+import { TESTIMONIOS } from "../../data/estudio";
+import { transcripciones } from "../../lib/transcripciones";
+const tr = transcripciones();
+interface Props { titulo?: string; eyebrow?: string }
+const { titulo = "Por qué vuelven.", eyebrow = "Testimonios" } = Astro.props;
+---
+<section class="section stories" id="testimonios" data-bg="paper">
+  <div class="wrap">
+    <header class="section__head" data-float>
+      <p class="eyebrow" data-reveal>{eyebrow}</p>
+      <h2 class="display h2" data-split>{titulo}</h2>
+    </header>
+    <div class="stories__row">
+      {TESTIMONIOS.map((v) => (
+        <figure class="story" data-reveal>
+          <button class="story__open" type="button" data-video={v.archivo} data-poster={v.poster} data-captions={v.subtitulos} data-ref={v.ref} aria-label={`Ver testimonio, ${v.duracionTexto}`}>
+            <img src={v.poster} alt="" loading="lazy" decoding="async" width={v.ancho} height={v.alto}><span class="play" aria-hidden="true"></span><span class="story__time" aria-hidden="true">{v.duracionTexto}</span>
+          </button>
+          <figcaption class="story__cap">
+            <span class="story__quote">“{v.cita}”</span>
+            {tr[v.clave] && (
+              <details class="story__tr">
+                <summary>Transcripción</summary>
+                <p>{tr[v.clave]}</p>
+              </details>
+            )}
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  </div>
+</section>

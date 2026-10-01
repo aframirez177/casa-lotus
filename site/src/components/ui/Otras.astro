@@ -1,0 +1,15 @@
+---
+// Small cards linking to the other class pages (internal links by intent).
+import Foto from "./Foto.astro";
+import { CLASES, type Clase } from "../../data/estudio";
+interface Props { excepto?: Clase["slug"] }
+const { excepto } = Astro.props;
+---
+<div class="otras">
+  {CLASES.filter((c) => c.slug !== excepto).map((c) => (
+    <a class="otra" href={`/clases/${c.slug}/`} style={`--c: ${c.colorVar}`} data-reveal>
+      <span class="otra__img"><Foto src={c.foto} alt="" sizes="88px" widths={[180]} /></span>
+      <span><strong>{c.nombre}</strong><small>{c.beneficios[0]}</small></span>
+    </a>
+  ))}
+</div>

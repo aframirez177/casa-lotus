@@ -1,0 +1,23 @@
+---
+// The method (v1): a practice on the swing, and the AÉREO® authorised-centre seal.
+import Sello from "../ui/Sello.astro";
+import { VIDEOS } from "../../data/estudio";
+interface Props { enlace?: boolean }
+const { enlace = true } = Astro.props;
+const v = VIDEOS.metodo;
+---
+<section class="section method" id="metodo" data-bg="paper">
+  <div class="wrap method__grid">
+    <figure class="method__media">
+      <div class="method__frame" data-media><video muted playsinline loop preload="none" width={v.ancho} height={v.alto} data-poster={v.poster} data-src={v.archivo} aria-label="Una alumna pasa por varias posturas invertidas en el columpio"></video></div>
+      <figcaption>Una práctica en el columpio, en Casa Lotus.</figcaption>
+    </figure>
+    <div class="method__copy">
+      <p class="eyebrow" data-reveal>El método</p>
+      <h2 class="display h2" data-split>Centro autorizado AÉREO®.</h2>
+      <p class="lead" data-reveal>El Método Aéreo es un sistema de entrenamiento en suspensión que integra yoga, pilates y estiramiento. En Casa Lotus todo el equipo de profes está certificado en el método, y cada clase se adapta a tu cuerpo.</p>
+      <Sello />
+      {enlace && <a class="link-arrow" href="/metodo-aereo/" data-reveal>Conoce el método</a>}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,14 @@
+---
+// 404: friendly, noindex, and every main door one tap away.
+import Base from "../layouts/Base.astro";
+import PageHero from "../components/ui/PageHero.astro";
+import { PAGINAS, MENU } from "../data/paginas";
+const p = PAGINAS["404"];
+---
+<Base pagina={p}>
+  <PageHero pagina={p} secundario={{ texto: "Volver al inicio", href: "/" }}>
+    <nav slot="nota" class="chips" aria-label="Páginas" data-in style="--i:4">
+      {MENU.map((l) => <a class="chip" href={l.ruta}>{l.nombre}</a>)}
+    </nav>
+  </PageHero>
+</Base>

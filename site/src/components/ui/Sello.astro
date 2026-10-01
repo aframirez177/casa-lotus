@@ -1,0 +1,11 @@
+---
+// The official AÉREO® logo, untouched (licensed mark: never redrawn), next to what it certifies.
+import { Image } from "astro:assets";
+import aereo from "../../assets/images/aereo-negro.png";
+interface Props { grande?: boolean; reveal?: boolean }
+const { grande = false, reveal = true } = Astro.props;
+---
+<div class:list={["seal", { "seal--big": grande }]} data-reveal={reveal ? true : undefined}>
+  <Image class="seal__logo" src={aereo} width={400} height={228} alt="AÉREO®, método de entrenamiento" loading="lazy" decoding="async" format="png" />
+  <span class="seal__label">Centro<br>autorizado</span>
+</div>

@@ -1,0 +1,7 @@
+---
+// The logo as symbol + wordmark, drawn from the page sprite (Sprite.astro). Never redrawn.
+interface Props { clase?: string }
+const { clase = "" } = Astro.props;
+---
+<svg class:list={["brand__mark", clase]} viewBox="0 0 865 763" aria-hidden="true"><use href="#lotus-base"/><use href="#lotus-petalo-der"/><use href="#lotus-petalo-izq"/><use href="#lotus-centro"/></svg>
+<svg class="brand__word" viewBox="0 0 1023 153" aria-hidden="true"><use href="#lotus-palabra"/></svg>

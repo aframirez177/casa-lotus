@@ -1,0 +1,42 @@
+---
+// Inner-page hero: breadcrumb, eyebrow, the page's H1 (its LCP element, so it enters with CSS only,
+// no JavaScript wait), the intro, the booking CTA, and an optional visual in the "media" slot.
+import Migas from "./Migas.astro";
+import Seda from "./Seda.astro";
+import { reservar, refDe } from "../../lib/enlaces";
+import type { Pagina } from "../../data/paginas";
+
+interface Props {
+  pagina: Pagina;
+  seda?: boolean;
+  secundario?: { texto: string; href: string; cta?: string };
+  cta?: boolean;
+  id?: string;
+}
+const { pagina, seda = false, secundario, cta = true, id } = Astro.props;
+const conMedia = Astro.slots.has("media");
+const ref = refDe(pagina.ref, "HERO");
+---
+<section class:list={["page-hero", { "page-hero--solo": !conMedia }]} id={id} data-bg="paper" data-silk-host={seda ? true : undefined}>
+  {seda && <Seda />}
+  <div class="page-hero__grid wrap">
+    <div class="page-hero__copy">
+      {pagina.migas.length > 0 && <Migas migas={pagina.migas} />}
+      {pagina.eyebrow && <p class="eyebrow" data-in style="--i:1">{pagina.eyebrow}</p>}
+      <h1 class="display page-hero__title">{pagina.h1}</h1>
+      {pagina.intro && <p class="lead page-hero__lead" data-in style="--i:2">{pagina.intro}</p>}
+      {(cta || secundario) && (
+        <div class="page-hero__actions" data-in style="--i:3">
+          {cta && (
+            <a class="btn btn--primary" data-cta={ref} data-magnetic data-cursor="Reservar" href={reservar(ref, pagina.cta.plan ? { plan: pagina.cta.plan } : {})}>
+              <span class="dot" aria-hidden="true"></span>{pagina.cta.texto}
+            </a>
+          )}
+          {secundario && <a class="btn btn--ghost" href={secundario.href} data-cta={secundario.cta}>{secundario.texto}</a>}
+        </div>
+      )}
+      <slot name="nota" />
+    </div>
+    <slot name="media" />
+  </div>
+</section>

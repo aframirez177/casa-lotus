@@ -1,0 +1,40 @@
+---
+// /horarios/: every class of the next three weeks with live swings (static weekly grid as fallback).
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import Cierre from "../../components/ui/Cierre.astro";
+import Horarios from "../../components/secciones/Horarios.astro";
+import Preguntas from "../../components/secciones/Preguntas.astro";
+import { PAGINAS } from "../../data/paginas";
+import { POLITICAS, ESTUDIO } from "../../data/estudio";
+import { whatsapp } from "../../lib/enlaces";
+const p = PAGINAS.horarios;
+---
+<Base pagina={p}>
+  <PageHero pagina={p} secundario={{ texto: "Ver planes", href: "/planes/" }} />
+
+  <Horarios modo="lista" cabeza={false} />
+
+  <section class="section section--tight" id="antes-de-reservar" data-bg="mist">
+    <div class="wrap split">
+      <header class="split__head">
+        <p class="eyebrow" data-reveal>Antes de reservar</p>
+        <h2 class="display h2" data-split>Las reglas del horario.</h2>
+      </header>
+      <div class="condiciones" data-reveal>
+        <ul>
+          <li>Puedes reservar hasta {POLITICAS.horasReservar} horas antes de que empiece la clase.</li>
+          <li>Si cancelas con mínimo {POLITICAS.horasCancelar} horas de anticipación, la clase vuelve a tu plan. Pasado ese tiempo, se descuenta.</li>
+          <li>Llega diez minutos antes. Por seguridad, no se permite el ingreso después de {POLITICAS.minutosTolerancia} minutos de iniciada la clase.</li>
+          <li data-todo>La clase se puede cancelar hasta {POLITICAS.horasQuorum} horas antes si no hay un mínimo de dos asistentes. Te avisamos por WhatsApp.</li>
+          <li>Los días festivos no hay clase.</li>
+          <li>¿No ves el horario que te sirve? <a data-wa="WEB-HORARIOS-WHATSAPP" data-wa-text="Hola Casa Lotus, busco un horario que no veo en la web" href={whatsapp("WEB-HORARIOS-WHATSAPP", "Hola Casa Lotus, busco un horario que no veo en la web")}>Escríbenos al WhatsApp {ESTUDIO.whatsappTexto}</a>: estamos abriendo clases nuevas.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <Preguntas items={p.faq ?? []} titulo="Sobre reservas." />
+
+  <Cierre ref="WEB-HORARIOS-CIERRE" />
+</Base>

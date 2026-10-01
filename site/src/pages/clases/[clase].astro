@@ -1,0 +1,114 @@
+---
+// One landing page per class (search intent «yoga aéreo Bogotá», «pilates aéreo Bogotá»…):
+// H1, intro, what you work on (Ana's three benefits), how the class goes, live schedule, proof,
+// the trial price, FAQ, other classes, booking CTA.
+import { getImage } from "astro:assets";
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import HeroFoto from "../../components/ui/HeroFoto.astro";
+import Otras from "../../components/ui/Otras.astro";
+import Sello from "../../components/ui/Sello.astro";
+import Cierre from "../../components/ui/Cierre.astro";
+import Horarios from "../../components/secciones/Horarios.astro";
+import PrimeraClase from "../../components/secciones/PrimeraClase.astro";
+import Testimonios from "../../components/secciones/Testimonios.astro";
+import Preguntas from "../../components/secciones/Preguntas.astro";
+import { CLASES, SITIO, type Clase } from "../../data/estudio";
+import { PAGINAS, type Pagina } from "../../data/paginas";
+
+export function getStaticPaths() {
+  return CLASES.map((clase) => ({ params: { clase: clase.slug }, props: { clase } }));
+}
+
+const { clase } = Astro.props as { clase: Clase };
+const pagina = PAGINAS[clase.slug as keyof typeof PAGINAS] as Pagina;
+const imagen = await getImage({ src: clase.foto, width: 1050, format: "webp" });
+
+/** How the class goes, built on Ana's class pieces (no claims beyond them). */
+const DETALLE: Record<Clase["slug"], { titulo: string; parrafos: string[] }> = {
+  "yoga-aereo": {
+    titulo: "Respira, inviértete, suelta.",
+    parrafos: [
+      "En Yoga Aéreo el columpio sostiene parte de tu peso para que entres en posturas que en el piso cuestan más, también las invertidas. La respiración marca el ritmo y la atención se queda en el presente.",
+      "Si ya practicas yoga en piso, vas a reconocer las posturas clásicas y a descubrir sus progresiones en el aire. Si nunca has practicado, tu profe te muestra la versión más sencilla de cada una.",
+    ],
+  },
+  "pilates-aereo": {
+    titulo: "Fuerza, sin impacto.",
+    parrafos: [
+      "En Pilates Aéreo el columpio es a la vez apoyo y resistencia. Trabajas fuerza y resistencia muscular, corriges hábitos posturales y ganas conciencia de cómo se mueve tu cuerpo.",
+      "No hay saltos ni golpes: entrenas el cuerpo de forma equilibrada, a tu ritmo. ¿Nunca has hecho pilates? Mira más abajo cómo le fue en su primera clase a una alumna que tampoco.",
+    ],
+  },
+  "stretch-aereo": {
+    titulo: "Estirar sin forzar.",
+    parrafos: [
+      "En Stretch Aéreo la tela te ayuda a estirar: sostiene parte de tu peso y te deja quedarte en cada estiramiento con calma, sin forzar.",
+      "Alivia la rigidez y la tensión muscular, mejora tus rangos de movilidad y tu salud articular. No necesitas ser flexible para empezar: la flexibilidad es lo que vas ganando.",
+    ],
+  },
+  "yoga-aereo-multinivel": {
+    titulo: "Todos los estilos, un solo grupo.",
+    parrafos: [
+      "Yoga Aéreo multinivel recorre los estilos del Método Aéreo en una misma clase: momentos de fuerza, de flexibilidad y de relajación.",
+      "Está adaptada a todos los niveles: tu profe ajusta cada postura a quien está empezando y a quien quiere ir más lejos, y cada quien avanza a su ritmo.",
+    ],
+  },
+};
+const d = DETALLE[clase.slug];
+const REF = pagina.ref;
+---
+<Base pagina={pagina} imagenServicio={SITIO + imagen.src}>
+  <PageHero pagina={pagina} secundario={{ texto: "Ver horarios", href: "#horarios" }}>
+    <HeroFoto slot="media" src={clase.foto} alt={clase.alt} color={clase.colorVar} tag={clase.corto} />
+  </PageHero>
+
+  <section class="section section--tight" id="trabajas" data-bg="paper">
+    <div class="wrap">
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>Lo que trabajas</p>
+        <h2 class="display h2" data-split>{clase.nombre}, en tres ideas.</h2>
+      </header>
+      <ol class="trabajas">
+        {clase.beneficios.map((b, i) => (
+          <li style={`--c: ${clase.colorVar}`} data-reveal><b aria-hidden="true">{String(i + 1).padStart(2, "0")}</b><span>{b}</span></li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section section--tight" id="como-es" data-bg="mist">
+    <div class="wrap split">
+      <header class="split__head">
+        <p class="eyebrow" data-reveal>Cómo es la clase</p>
+        <h2 class="display h2" data-split>{d.titulo}</h2>
+      </header>
+      <div class="prosa" data-reveal>
+        {d.parrafos.map((p) => <p>{p}</p>)}
+        <p>Las clases son semipersonalizadas, con cupos limitados, para que tu profe esté pendiente de ti. Todo el equipo está certificado en el Método Aéreo: Casa Lotus es centro autorizado AÉREO®.</p>
+        <p>Trae ropa deportiva ajustada que cubra piernas y axilas y tu botella de agua. El tapete y el columpio te esperan en la sala.</p>
+        <Sello reveal={false} />
+      </div>
+    </div>
+  </section>
+
+  <Horarios titulo="¿Cuándo hay clase?" lead="Elige un horario y aparta tu columpio en línea. Cada columpio relleno es un cupo tomado; si la clase está llena, únete a la lista de espera." />
+
+  <PrimeraClase ref={`WEB-${REF}-PRUEBA`} video={clase.slug === "pilates-aereo"} />
+
+  <Testimonios />
+
+  <Preguntas items={pagina.faq ?? []} titulo={`Sobre ${clase.nombre}.`} />
+
+  <section class="section section--tight" id="otras-clases" data-bg="paper">
+    <div class="wrap">
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>Otras clases</p>
+        <h2 class="display h2" data-split>¿Te llama otra?</h2>
+      </header>
+      <Otras excepto={clase.slug} />
+    </div>
+  </section>
+
+  <Cierre ref={`WEB-${REF}-CIERRE`} />
+</Base>

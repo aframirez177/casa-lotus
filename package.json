@@ -3,11 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node serve.mjs",
-    "build": "node scripts/build.mjs",
-    "preview": "ROOT=dist PORT=5174 node serve.mjs"
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/construir.mjs",
+    "preview": "npm --prefix site run preview",
+    "test": "node --test shared/tests/*.test.mjs && npm --prefix server test && npm --prefix app test --if-present",
+    "instalar": "npm --prefix server install && npm --prefix app install && npm --prefix site install",
+    "desplegar-api": "scripts/desplegar-api.sh"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   }
 }
