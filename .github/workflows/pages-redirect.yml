@@ -31,7 +31,7 @@ jobs:
       - name: Write the redirect page
         run: |
           mkdir -p redirect
-          cp src/favicon-32.png src/favicon.ico redirect/
+          cp site/public/favicon.ico site/public/favicon.svg redirect/
           cat > redirect/index.html <<'EOF'
           <!doctype html>
           <meta charset="utf-8">

@@ -1,12 +1,26 @@
-# Casa Lotus · sitio web
+# Casa Lotus · plataforma
 
-Yoga, pilates y stretch aéreo en Bogotá. Sitio estático: HTML, CSS y JavaScript sin frameworks.
+Yoga, pilates y stretch aéreo en Bogotá. One origin, three parts:
+
+| Path | Part | Stack | Folder |
+|---|---|---|---|
+| `casalotus.studio/` | public site, one page per search intent | Astro (static), Tailwind v4, GSAP + Lenis | `site/` |
+| `casalotus.studio/app/` | installable app for students, profes and Ana (noindex) | React 19, React Router, TanStack Query, Tailwind v4, PWA | `app/` |
+| `casalotus.studio/api/` | API over the studio's Google Sheet | Express 5, Sheets API, SQLite (node:sqlite) | `server/` |
+| — | business rules, theme, consent texts, the contract | plain ESM | `shared/` |
+
+Start with `shared/CONTRATO.md`: it is the agreement between the three parts.
 
 ```bash
-npm run dev       # http://localhost:5173 (src/)
-npm run build     # dist/, con verificación de archivos y rutas
-npm run preview   # http://localhost:5174 (dist/, igual que en GitHub Pages)
+nvm use                 # Node 24 (.nvmrc)
+npm run instalar        # npm install in server/, app/, site/
+npm run dev             # API :8787 (fake studio) · app :5180/app/ · site :4321
+npm test                # shared rules + API (incl. WhatsApp) + app
+npm run build           # site + app → dist/, with checks (OG images, privacy guard)
 ```
 
-Cada push a `main` publica el sitio en GitHub Pages (`.github/workflows/deploy.yml`).
-Fuentes: Momo Trust Display y Momo Trust Sans (Google Fonts, OFL). Animación: GSAP y Lenis.
+Deploy:
+- **Site + app:** push to `main`. `.github/workflows/deploy-droplet.yml` tests, builds and uploads `dist/` to the droplet.
+- **API:** `SERVER=<ip> scripts/desplegar-api.sh` from the Mac (it is a container; CI keys get no shell). Setup, secrets and the Google service account: `server/README.md`.
+
+This repository is public. Business figures, client data and secrets never go in it: the Sheet holds the business, `.env` on the server holds the secrets.
