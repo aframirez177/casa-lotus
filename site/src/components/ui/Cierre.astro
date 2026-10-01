@@ -26,8 +26,10 @@ const {
   <div class="wrap closing__inner">
     <h2 class="display closing__title" data-split>{titulo}</h2>
     {lead && <p class="closing__lead" data-reveal>{lead}</p>}
+    <div class="closing__actions">
     <a class="btn btn--lime" data-cta={ref} data-magnetic data-cursor="Reservar" href={reservar(ref, plan ? { plan } : {})}>{texto}</a>
     <a class="closing__alt" data-wa={`${ref}-WHATSAPP`} data-wa-text="Hola Casa Lotus, quiero reservar mi clase de prueba" href={whatsapp(`${ref}-WHATSAPP`, "Hola Casa Lotus, quiero reservar mi clase de prueba")}>Prefiero reservar por WhatsApp</a>
+    </div>
     <slot />
   </div>
 </section>

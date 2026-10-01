@@ -157,7 +157,8 @@ export function claseDeNombre(nombre: string) {
 /* ── weekly grid: the static fallback when the API does not answer ──────────
    Current grid (Wed 18:00 + 19:00, Sat 08:00 + 09:15). The class per slot is
    not decided yet (data-todo): the API fills it in when the Sheet has it. */
-export interface Franja { dia: string; hora: string }
+/** clase: the class this slot usually has, when Ana has fixed it (else the slot shows only its time) */
+export interface Franja { dia: string; hora: string; clase?: string }
 export const HORARIO_SEMANAL: Franja[] = [
   { dia: "Miércoles", hora: "18:00" },
   { dia: "Miércoles", hora: "19:00" },

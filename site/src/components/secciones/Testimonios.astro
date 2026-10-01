@@ -2,6 +2,8 @@
 // Testimonials (v1): three portrait videos, quote underneath; they open in the viewer with sound.
 import { TESTIMONIOS } from "../../data/estudio";
 import { transcripciones } from "../../lib/transcripciones";
+import Foto from "../ui/Foto.astro";
+import { POSTERS } from "../../lib/posters";
 const tr = transcripciones();
 interface Props { titulo?: string; eyebrow?: string }
 const { titulo = "Por qué vuelven.", eyebrow = "Testimonios" } = Astro.props;
@@ -16,7 +18,7 @@ const { titulo = "Por qué vuelven.", eyebrow = "Testimonios" } = Astro.props;
       {TESTIMONIOS.map((v) => (
         <figure class="story" data-reveal>
           <button class="story__open" type="button" data-video={v.archivo} data-poster={v.poster} data-captions={v.subtitulos} data-ref={v.ref} aria-label={`Ver testimonio, ${v.duracionTexto}`}>
-            <img src={v.poster} alt="" loading="lazy" decoding="async" width={v.ancho} height={v.alto}><span class="play" aria-hidden="true"></span><span class="story__time" aria-hidden="true">{v.duracionTexto}</span>
+            <Foto src={POSTERS[v.clave]} alt="" sizes="(max-width: 860px) 68vw, 400px" widths={[280, 420, 560, 720]} /><span class="play" aria-hidden="true"></span><span class="story__time" aria-hidden="true">{v.duracionTexto}</span>
           </button>
           <figcaption class="story__cap">
             <span class="story__quote">“{v.cita}”</span>

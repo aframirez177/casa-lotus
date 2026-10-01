@@ -144,7 +144,7 @@ for (const f of paginas) {
   }
   for (const m of t.matchAll(/\b(\d+)\s+(columpios|cupos|personas por clase|alumn[ao]s por clase)\b/gi)) fallo(`class size in text: «${m[0]}»`, rel);
 
-  const n = (html.match(/data-todo/g) || []).length;
+  const n = (html.match(/\sdata-todo[\s>=]/g) || []).length;
   if (n) { todo += n; aviso(`${n} block(s) still marked data-todo (content pending with Ana)`, rel); }
 }
 

@@ -57,7 +57,7 @@ function slot(c, { conFecha }) {
   const cuando = conFecha ? `${fechaCorta(c.fecha)} · ` : "";
   const inner = `
     <span class="slot__time">${esc(hora)}<small>${esc(sufijo)}</small></span>
-    <span class="slot__meta"><span class="slot__class">${c.clase ? esc(c.clase) : "Clase por confirmar"}</span><span class="slot__next">${esc(cuando + est.texto)}</span><span class="swings" data-taken="${tomados(c)}" aria-hidden="true">${"<i></i>".repeat(ICONOS)}</span></span>
+    <span class="slot__meta">${c.clase ? `<span class="slot__class">${esc(c.clase)}</span>` : ""}<span class="slot__next">${esc(cuando + est.texto)}</span><span class="swings" data-taken="${tomados(c)}" aria-hidden="true">${"<i></i>".repeat(ICONOS)}</span></span>
     <span class="slot__go" aria-hidden="true"></span>`;
   const style = color ? ` style="--c: ${color}"` : "";
   if (est.off) return `<div class="slot is-off"${style} aria-disabled="true">${inner}</div>`;
@@ -119,18 +119,19 @@ function pintar(datos) {
     const ok = el.dataset.horario === "lista" ? pintarLista(el, clases) : pintarSemana(el, clases);
     if (ok) {
       algo = true;
+      el.classList.remove("is-static");
       el.querySelectorAll(".swings").forEach(marcarColumpios);
       el.dispatchEvent(new CustomEvent("casalotus:contenido", { bubbles: true }));
     }
   });
   document.querySelectorAll("[data-horario-estado]").forEach((e) => {
     if (!algo) return;
-    e.hidden = false;
     e.dataset.horarioEstado = "vivo";
     const hora = datos.actualizado ? new Date(datos.actualizado) : new Date();
     const t = e.querySelector("[data-horario-texto]");
     if (t) t.textContent = `Cupos en vivo · actualizado ${hora.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" })}`;
   });
+  if (algo) document.querySelectorAll("[data-leyenda]").forEach((l) => (l.hidden = false));
   return algo;
 }
 

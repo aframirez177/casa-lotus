@@ -33,15 +33,15 @@ const BUSCAS: Record<string, string> = {
         <h2 class="display h2" data-split>Empieza por lo que buscas.</h2>
       </header>
       <div class="tabla-wrap" data-reveal>
-        <table class="tabla">
+        <table class="tabla tabla--apilable">
           <caption>Las clases de Casa Lotus y para qué sirve cada una</caption>
           <thead><tr><th scope="col">Clase</th><th scope="col">Ideal si buscas</th><th scope="col">Lo que trabajas</th></tr></thead>
           <tbody>
             {CLASES.map((c) => (
               <tr style={`--c: ${c.colorVar}`}>
                 <th scope="row"><span class="dot-c" aria-hidden="true"></span><a href={`/clases/${c.slug}/`}>{c.nombre}</a></th>
-                <td>{BUSCAS[c.slug]}</td>
-                <td>{c.beneficios[0]}</td>
+                <td data-label="Ideal si buscas">{BUSCAS[c.slug]}</td>
+                <td data-label="Lo que trabajas">{c.beneficios[0]}</td>
               </tr>
             ))}
           </tbody>

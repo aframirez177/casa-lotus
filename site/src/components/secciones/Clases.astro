@@ -14,6 +14,7 @@ const { cabeza = true } = Astro.props;
         <p class="lead section__lead" data-reveal>El Método Aéreo se abre en muchos tipos de clase. Estas son las que damos hoy en Casa Lotus, y todas son aptas para principiantes: no necesitas experiencia para empezar por la que más te llame.</p>
       </header>
     )}
+    {!cabeza && <h2 class="sr-only">Las clases</h2>}
     <div class="classes__grid">
       {CLASES.map((c) => <ClaseCard clase={c} />)}
     </div>

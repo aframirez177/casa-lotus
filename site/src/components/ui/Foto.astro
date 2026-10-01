@@ -10,7 +10,7 @@ interface Props {
   prioridad?: boolean;
   clase?: string;
 }
-const { src, alt, sizes, widths = [360, 540, 760, 1050], prioridad = false, clase } = Astro.props;
+const { src, alt, sizes, widths = [360, 480, 640, 760, 1050], prioridad = false, clase } = Astro.props;
 const anchos = widths.filter((w) => w <= src.width);
 ---
 <Picture
@@ -20,7 +20,7 @@ const anchos = widths.filter((w) => w <= src.width);
   widths={anchos}
   formats={["avif"]}
   fallbackFormat="webp"
-  quality={70}
+  quality={60}
   loading={prioridad ? "eager" : "lazy"}
   fetchpriority={prioridad ? "high" : undefined}
   decoding="async"

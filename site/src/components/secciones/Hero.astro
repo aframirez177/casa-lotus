@@ -12,14 +12,17 @@ const centre = "343.6,536.1 326.7,529.8 315.5,525.6 304.2,521.5 292.9,517.5 281.
   <Seda />
   <div class="hero__grid wrap">
     <div class="hero__copy">
-      <!-- SEO plan: the H1 names the search intent; the brand line keeps the big display type (v1 look) -->
-      <p class="display hero__title" data-split>{pagina.lema}</p>
-      <h1 class="lead hero__lead" data-reveal>{pagina.h1}.</h1>
-      <div class="hero__actions" data-reveal>
+      <!-- SEO plan: the H1 names the search intent; the brand line keeps the big display type (v1 look).
+           Painted from the first frame (the LCP element): a CSS rise of 300 ms, no script waits on it. -->
+      <p class="display hero__title" data-in style="--i:0">{pagina.lema}</p>
+      <h1 class="lead hero__lead" data-in style="--i:1">{pagina.h1}.</h1>
+      <div class="hero__actions" data-in style="--i:2">
         <a class="btn btn--primary" data-cta="WEB-HERO" data-magnetic data-cursor="Reservar" href={reservar("WEB-HERO", { plan: PRUEBA.nombre })}><span class="dot" aria-hidden="true"></span>{pagina.cta.texto}</a>
       </div>
     </div>
     <div class="hero__mark" aria-hidden="true">
+      <!-- paper discs bloom behind the mark when the ribbon lands (scripts/entrada.js) -->
+      <div class="paper-veil"></div>
       <svg class="lotus-draw__shadow" viewBox="-60 -60 985 883"><use href="#lotus-base"/><use href="#lotus-petalo-izq"/><use href="#lotus-petalo-der"/><use href="#lotus-centro"/></svg>
       <!-- entrance: a navy ribbon, as wide as the mark's stroke, flies in from off-screen and winds into the
            infinity (path built at runtime from data-centre so it always starts beyond the screen edge). -->
@@ -34,3 +37,6 @@ const centre = "343.6,536.1 326.7,529.8 315.5,525.6 304.2,521.5 292.9,517.5 281.
     </div>
   </div>
 </section>
+<script>
+  import "../../scripts/entrada.js";
+</script>

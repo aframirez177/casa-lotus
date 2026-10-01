@@ -1,9 +1,11 @@
 ---
 // "Her first class" video, one tap from the price (v1 clip-note). Opens in the viewer with sound.
 import { VIDEOS } from "../../data/estudio";
+import Foto from "./Foto.astro";
+import { POSTERS } from "../../lib/posters";
 const v = VIDEOS.primeraClase;
 ---
 <button class="clip-note" type="button" data-video={v.archivo} data-poster={v.poster} data-ref={v.ref} data-reveal>
-  <span class="clip-note__thumb"><img src={v.poster} alt="" loading="lazy" decoding="async" width={v.ancho} height={v.alto}><span class="play" aria-hidden="true"></span></span>
+  <span class="clip-note__thumb"><Foto src={POSTERS[v.clave]} alt="" sizes="92px" widths={[92, 184, 276]} /><span class="play" aria-hidden="true"></span></span>
   <span class="clip-note__text"><strong>“{v.cita}”</strong> Mira cómo le fue en su primera clase de Pilates Aéreo.<span class="clip-note__time">Ver video · {v.duracionTexto}</span></span>
 </button>

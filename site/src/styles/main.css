@@ -136,7 +136,11 @@ section[id] { scroll-margin-top: 88px; }
 /* the ribbon that flies in: same width as the mark's stroke (70 units), round ends */
 /* paper veil: one fixed layer painted as a single radial gradient (JS rebuilds the stops every frame), so the
    discs stay crisp at any size and cost one repaint. Above the header, under the grain (the paper gets its tooth). */
-.paper-veil { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+/* paper discs: contained around the mark, behind it and behind the headline (the copy paints above them);
+   the page is never covered (2026-10-01, Álvaro). scripts/entrada.js paints them. */
+.paper-veil { position: absolute; inset: -60%; z-index: 0; pointer-events: none; }
+.hero__mark svg { z-index: 1; }
+.hero__copy { position: relative; z-index: 2; }
 html.motion-off .paper-veil { display: none; }
 .ribbon-fly { fill: none; stroke: currentColor; stroke-width: 70; stroke-linecap: round; stroke-linejoin: round; }
 .ribbon-measure { display: none; }
@@ -167,7 +171,8 @@ html.motion-off .ribbon-fly { display: none; }
    dropped that rule and the manifesto sat with no vertical padding. That is the layout Ana approved,
    so the port keeps it: no padding-block here. */
 .manifesto__text { font: 300 clamp(1.9rem, 1rem + 3.4vw, 4.4rem)/1.18 var(--font-sans); letter-spacing: -0.025em; color: var(--navy); max-width: 22ch; }
-.manifesto__text .w { opacity: .16; transition: opacity .2s linear; }
+/* words light up as you read: from a soft blue-grey that still passes 3:1 (large text) to navy */
+.manifesto__text .w { color: #6E8CA0; }
 
 /* ── Sections ───────────────────────────────────────────── */
 .section { padding-block: var(--section); position: relative; }
@@ -180,11 +185,12 @@ html.motion-off .ribbon-fly { display: none; }
 /* ── Classes ────────────────────────────────────────────── */
 .classes__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-l) var(--gap-l); }
 .classes__grid > :nth-child(even) { margin-top: var(--gap-xl); }
-.classes__grid { perspective: 1600px; }
+/* each card carries its own perspective, so its lifted layers project around its own centre: with one
+   perspective on the grid, the outer cards' text was pushed toward their edges */
 .class-card {
   --field: color-mix(in srgb, var(--c) 52%, var(--white));
   --rx: 0deg; --ry: 0deg; --lift: 0px; --mx: 50%; --my: 30%;
-  position: relative; transform-style: preserve-3d; transform: translateY(var(--lift)) rotateX(var(--rx)) rotateY(var(--ry));
+  position: relative; transform-style: preserve-3d; transform: perspective(1600px) translateY(var(--lift)) rotateX(var(--rx)) rotateY(var(--ry));
   display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--gap-m);
   padding: clamp(1rem, .6rem + 1.4vw, 1.6rem); border-radius: var(--r-l); background: var(--field);
   transition: background-color var(--d-slow) var(--ease-out), box-shadow var(--d-slow) var(--ease-out);
@@ -201,8 +207,8 @@ html.motion-off .ribbon-fly { display: none; }
 .class-card__body { display: flex; flex-direction: column; gap: 1rem; padding: .5rem .25rem .5rem 0; }
 .tag { align-self: flex-start; padding: .4rem .85rem; border-radius: var(--r-pill); background: var(--white); color: var(--navy); font: 600 .75rem/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; }
 .benefits { display: grid; gap: .7rem; color: var(--ink); font-size: var(--t-small); margin-bottom: 1rem; }
-.benefits li { display: grid; grid-template-columns: 14px 1fr; gap: .7rem; align-items: start; }
-.benefits li::before { content: ""; width: 14px; height: 13px; margin-top: .3em; background: var(--navy); -webkit-mask: url(../assets/logo/simbolo.svg) center / contain no-repeat; mask: url(../assets/logo/simbolo.svg) center / contain no-repeat; } /* the logo as bullet */
+.benefits li { position: relative; padding-left: calc(14px + .7rem); }
+.benefits li::before { content: ""; position: absolute; left: 0; top: .3em; width: 14px; height: 13px; background: var(--navy); -webkit-mask: url(../assets/logo/simbolo.svg) center / contain no-repeat; mask: url(../assets/logo/simbolo.svg) center / contain no-repeat; } /* the logo as bullet */
 @media (max-width: 1100px) { .class-card { grid-template-columns: 1fr; } .class-card__media { min-height: 0; aspect-ratio: 4 / 3; } }
 @media (max-width: 760px) { .classes__grid { grid-template-columns: 1fr; } .classes__grid > :nth-child(even) { margin-top: 0; } }
 
@@ -210,7 +216,7 @@ html.motion-off .ribbon-fly { display: none; }
 .first__grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--gap-xl); align-items: start; }
 .first__head { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap-m); justify-items: start; position: sticky; top: 140px; }
 .first__head { container-type: inline-size; }
-.price { font: 400 min(27cqi, 11rem)/.85 var(--font-display); color: var(--navy); letter-spacing: -0.05em; display: flex; align-items: flex-start; }
+.price { font: 400 min(26cqi, 11rem)/.85 var(--font-display); color: var(--navy); letter-spacing: -0.05em; display: flex; align-items: flex-start; }
 .price__cur { font-size: .42em; margin: .12em .08em 0 0; letter-spacing: 0; }
 .steps { position: relative; display: grid; gap: var(--gap-l); padding-left: 4.75rem; counter-reset: s; }
 .steps::before, .steps::after { content: ""; position: absolute; left: 1.45rem; top: 1rem; bottom: 1rem; width: 1px; background: color-mix(in srgb, var(--navy) 16%, transparent); }
@@ -253,9 +259,9 @@ html.motion-off .ribbon-fly { display: none; }
 .toggle__pill { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc(50% - 5px); border-radius: var(--r-pill); background: var(--navy); transition: transform var(--d-base) var(--ease-out); }
 .toggle[data-state="trimestre"] .toggle__pill { transform: translateX(100%); }
 .plans__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
-.plans__grid { perspective: 1400px; }
+/* per-card perspective (see .class-card) */
 .plan { --rx: 0deg; --ry: 0deg; --lift: 0px; position: relative; display: flex; flex-direction: column; gap: .6rem; padding: 3.75rem 1.6rem 1.6rem; border-radius: var(--r-l); background: var(--white);
-  transform-style: preserve-3d; transform: translateY(var(--lift)) rotateX(var(--rx)) rotateY(var(--ry)); transition: box-shadow var(--d-slow) var(--ease-out); }
+  transform-style: preserve-3d; transform: perspective(1400px) translateY(var(--lift)) rotateX(var(--rx)) rotateY(var(--ry)); transition: box-shadow var(--d-slow) var(--ease-out); }
 .plan:hover { box-shadow: var(--shadow-soft); }
 .plan__n span { display: inline-block; transform: translateZ(40px); }
 .plan__price { transform: translateZ(22px); }
@@ -411,7 +417,7 @@ html.motion-off .ribbon-fly { display: none; }
 .cursor { display: none; }
 @media (hover: hover) and (pointer: fine) {
   html.has-cursor, html.has-cursor a, html.has-cursor button, html.has-cursor summary { cursor: none; }
-  .cursor { display: block; position: fixed; inset: 0; z-index: 90; pointer-events: none; }
+  html.has-cursor .cursor { display: block; position: fixed; inset: 0; z-index: 90; pointer-events: none; }
   .cursor__dot, .cursor__ring { position: fixed; left: 0; top: 0; border-radius: 50%; will-change: transform; }
   .cursor__dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--navy); transition: opacity var(--d-fast); }
   .cursor__ring { width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 1px solid color-mix(in srgb, var(--navy) 55%, transparent); display: grid; place-items: center;
@@ -431,8 +437,14 @@ html.motion-off .ribbon-fly { display: none; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 
 /* ── Motion states (only when JS + motion are available) ── */
-html.js [data-reveal], html.js [data-split] { visibility: hidden; }
-html.js.motion-off [data-reveal], html.js.motion-off [data-split] { visibility: visible; }
+/* Reveals: hidden with opacity (never visibility: headings stay in the accessibility tree and in order),
+   shown by an IntersectionObserver (sitio.js) with a CSS animation; headings get GSAP's line split once
+   the motion module has loaded. Reduced motion or no JS: everything visible. */
+html.js:not(.motion-off) :is([data-reveal], [data-split], .class-card, .plan):not(.is-in):not(.is-split) { opacity: 0; }
+.is-in:not(.is-split) { animation: revelar 1.2s var(--ease-out) var(--d, 0s) both; }
+.class-card.is-in, .plan.is-in { --desde: 50px; animation-duration: 1.3s; }
+@keyframes revelar { from { opacity: 0; translate: 0 var(--desde, 26px); } }
+@media (prefers-reduced-motion: reduce) { .is-in { animation: none; } }
 .split-line { overflow: hidden; padding-bottom: .08em; margin-bottom: -.08em; }
 
 @media (prefers-reduced-motion: reduce) {

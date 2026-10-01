@@ -32,7 +32,9 @@ const dias = DIAS.filter((d) => HORARIO_SEMANAL.some((f) => f.dia === d));
       </header>
     )}
 
-    <div class="days" data-horario={modo}>
+    {!cabeza && <h2 class="sr-only">Horario de clases</h2>}
+    <!-- is-static: the weekly template, until the live availability replaces it (no swings: they would claim free spots) -->
+    <div class="days is-static" data-horario={modo}>
       {dias.map((dia) => (
         <div class="day" data-reveal>
           <h3 class="day__name">{dia}</h3>
@@ -42,7 +44,7 @@ const dias = DIAS.filter((d) => HORARIO_SEMANAL.some((f) => f.dia === d));
             return (
               <a class="slot" data-cta={ref} href={reservar(ref)} data-cursor="Reservar">
                 <span class="slot__time">{hora}<small>{sufijo}</small></span>
-                <span class="slot__meta"><span class="slot__class" data-todo>Clase por confirmar</span><span class="slot__next" data-next></span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
+                <span class="slot__meta">{f.clase && <span class="slot__class">{f.clase}</span>}<span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
                 <span class="slot__go" aria-hidden="true"></span>
               </a>
             );
@@ -50,9 +52,9 @@ const dias = DIAS.filter((d) => HORARIO_SEMANAL.some((f) => f.dia === d));
         </div>
       ))}
     </div>
-    <p class="horario-estado" data-horario-estado hidden><span class="horario-estado__dot" aria-hidden="true"></span><span data-horario-texto>Cupos en vivo</span></p>
+    <p class="horario-estado" data-horario-estado="semanal"><span class="horario-estado__dot" aria-hidden="true"></span><span data-horario-texto>Horario de la semana</span></p>
     {modo === "lista" && (
-      <p class="leyenda" aria-hidden="true"><span><i></i> Columpio libre</span><span><i class="is-taken"></i> Columpio tomado</span></p>
+      <p class="leyenda" data-leyenda hidden aria-hidden="true"><span><i></i> Columpio libre</span><span><i class="is-taken"></i> Columpio tomado</span></p>
     )}
     <p class="note" data-reveal>Reserva hasta {POLITICAS.horasReservar} horas antes. No hay clases los días festivos.</p>
   </div>

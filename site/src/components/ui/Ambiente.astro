@@ -1,18 +1,18 @@
 ---
 // The ambient layers every page shares (v1): the custom cursor (fine pointers only, driven by
-// sitio.js), the atmosphere of blurred light in a 3D scene (each orb has a depth, 0 far → 1 near)
-// and the paper grain.
+// movimiento.js), the atmosphere of blurred light in a 3D scene (each orb has a depth, 0 far → 1 near;
+// its colours, breathing and scroll drift are CSS: styles/atmosfera.css) and the paper grain.
 ---
 <div class="cursor" aria-hidden="true"><span class="cursor__ring"><span class="cursor__label"></span></span><span class="cursor__dot"></span></div>
 <div class="atmos" aria-hidden="true">
   <div class="atmos__scene" data-atmos>
-    <i class="orb" data-depth="0.12" style="--x:52%;--y:-14%;--s:78vmax;--o:.62;--soft:38%"><i class="orb__s"><i class="orb__d" style="--orb:#B2D4E0"></i></i></i>
-    <i class="orb" data-depth="0.22" style="--x:-24%;--y:34%;--s:64vmax;--o:.7;--soft:40%"><i class="orb__s"><i class="orb__d" style="--orb:#D0E8DB"></i></i></i>
-    <i class="orb" data-depth="0.4" style="--x:4%;--y:66%;--s:40vmax;--o:.5;--soft:46%"><i class="orb__s"><i class="orb__d" style="--orb:#D2F3A2"></i></i></i>
-    <i class="orb" data-depth="0.55" style="--x:66%;--y:48%;--s:44vmax;--o:.42;--soft:48%"><i class="orb__s"><i class="orb__d" style="--orb:#8AD4D6"></i></i></i>
-    <i class="orb orb--near" data-depth="0.78" style="--x:30%;--y:14%;--s:22vmax;--o:.5;--soft:56%"><i class="orb__s"><i class="orb__d" style="--orb:#B2D4E0"></i></i></i>
-    <i class="orb orb--near" data-depth="0.9" style="--x:80%;--y:74%;--s:18vmax;--o:.55;--soft:58%"><i class="orb__s"><i class="orb__d" style="--orb:#B7DFC5"></i></i></i>
-    <i class="orb orb--near" data-depth="1" style="--x:16%;--y:28%;--s:9vmax;--o:.38;--soft:62%"><i class="orb__s"><i class="orb__d" style="--orb:#99E27C"></i></i></i>
+    <i class="orb" data-depth="0.12" style="--depth:0.12;--x:52%;--y:-14%;--s:78vmax;--o:.62;--soft:38%"><i class="orb__s"><i class="orb__d"></i></i></i>
+    <i class="orb" data-depth="0.22" style="--depth:0.22;--x:-24%;--y:34%;--s:64vmax;--o:.7;--soft:40%"><i class="orb__s"><i class="orb__d"></i></i></i>
+    <i class="orb" data-depth="0.4" style="--depth:0.4;--x:4%;--y:66%;--s:40vmax;--o:.5;--soft:46%"><i class="orb__s"><i class="orb__d"></i></i></i>
+    <i class="orb" data-depth="0.55" style="--depth:0.55;--x:66%;--y:48%;--s:44vmax;--o:.42;--soft:48%"><i class="orb__s"><i class="orb__d"></i></i></i>
+    <i class="orb orb--near" data-depth="0.78" style="--depth:0.78;--x:30%;--y:14%;--s:22vmax;--o:.5;--soft:56%"><i class="orb__s"><i class="orb__d"></i></i></i>
+    <i class="orb orb--near" data-depth="0.9" style="--depth:0.9;--x:80%;--y:74%;--s:18vmax;--o:.55;--soft:58%"><i class="orb__s"><i class="orb__d"></i></i></i>
+    <i class="orb orb--near" data-depth="1" style="--depth:1;--x:16%;--y:28%;--s:9vmax;--o:.38;--soft:62%"><i class="orb__s"><i class="orb__d"></i></i></i>
   </div>
 </div>
 <div class="grain" aria-hidden="true"></div>

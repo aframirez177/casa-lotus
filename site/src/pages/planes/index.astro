@@ -21,7 +21,7 @@ const p = PAGINAS.planes;
         <h2 class="display h2" data-split>Cuánto pagas por clase.</h2>
       </header>
       <div class="tabla-wrap" data-reveal>
-        <table class="tabla">
+        <table class="tabla tabla--apilable">
           <caption>Planes 2026 de Casa Lotus, en pesos colombianos (COP)</caption>
           <thead>
             <tr><th scope="col">Plan</th><th scope="col">Mensual</th><th scope="col">Por clase</th><th scope="col">Trimestral (3 meses)</th><th scope="col">Por clase</th><th scope="col">Ahorras</th></tr>
@@ -29,16 +29,16 @@ const p = PAGINAS.planes;
           <tbody>
             <tr>
               <th scope="row">{PRUEBA.nombre}</th>
-              <td class="num">{dinero(PRUEBA.precio)}</td><td class="num">{dinero(PRUEBA.precio)}</td><td>—</td><td>—</td><td>—</td>
+              <td class="num" data-label="Precio">{dinero(PRUEBA.precio)}</td><td class="num solo-ancho" data-label="Por clase">{dinero(PRUEBA.precio)}</td><td class="solo-ancho">—</td><td class="solo-ancho">—</td><td class="solo-ancho">—</td>
             </tr>
             {PLANES.map((x) => (
               <tr>
                 <th scope="row">{x.clases} clases al mes</th>
-                <td class="num">{dinero(x.mes)}</td>
-                <td class="num">{dinero(porClase(x))}</td>
-                <td class="num">{dinero(x.trimestre)}</td>
-                <td class="num">{dinero(porClase(x, "trimestre"))}</td>
-                <td class="num ahorro">{dinero(x.mes * 3 - x.trimestre)}</td>
+                <td class="num" data-label="Mensual">{dinero(x.mes)}</td>
+                <td class="num" data-label="Por clase">{dinero(porClase(x))}</td>
+                <td class="num" data-label="Trimestral (3 meses)">{dinero(x.trimestre)}</td>
+                <td class="num" data-label="Por clase, trimestral">{dinero(porClase(x, "trimestre"))}</td>
+                <td class="num ahorro" data-label="Ahorras en el trimestral">{dinero(x.mes * 3 - x.trimestre)}</td>
               </tr>
             ))}
           </tbody>

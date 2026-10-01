@@ -461,7 +461,7 @@ export const PAGINAS = {
     h1: "Horarios y cupos",
     eyebrow: "Cupos limitados, a propósito",
     intro:
-      "Las clases son semipersonalizadas: cupos limitados para que tu profe esté pendiente de ti. Cada columpio relleno es un cupo tomado.",
+      "Las clases son semipersonalizadas: cupos limitados para que tu profe esté pendiente de ti. Elige tu horario y aparta tu columpio en línea.",
     palabrasClave: ["horarios yoga aéreo bogotá", "yoga aéreo sábados bogotá", "yoga aéreo en la noche", "clases de yoga aéreo fin de semana"],
     og: {
       titulo: "Cupos limitados, a propósito.",

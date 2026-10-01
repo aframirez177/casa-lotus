@@ -35,14 +35,16 @@ function referente() {
   } catch { return ""; }
 }
 
-/** One event to the server: survives the navigation that a CTA click starts. */
+/**
+ * One event to the server, as a beacon: it survives the navigation a CTA click starts, never blocks the
+ * click, and a server that is down (502 until the API is deployed) costs nothing and logs nothing.
+ * text/plain JSON, the same as the app's events (no CORS preflight; the server parses both).
+ */
 export function enviar(datos) {
-  const body = JSON.stringify(datos);
   try {
-    // keepalive fetch can carry the CSRF header (X-Casa-Lotus); sendBeacon only where it is missing
-    if ("keepalive" in Request.prototype) {
-      fetch(EVENTOS, { method: "POST", body, keepalive: true, credentials: "same-origin", headers: { "content-type": "application/json", "x-casa-lotus": "1" } }).catch(() => {});
-    } else navigator.sendBeacon?.(EVENTOS, new Blob([body], { type: "application/json" }));
+    const body = JSON.stringify(datos);
+    if (navigator.sendBeacon?.(EVENTOS, new Blob([body], { type: "text/plain;charset=UTF-8" }))) return;
+    fetch(EVENTOS, { method: "POST", body, keepalive: true, credentials: "same-origin", headers: { "content-type": "application/json", "x-casa-lotus": "1" } }).catch(() => {});
   } catch { /* never block a click */ }
 }
 
@@ -69,7 +71,14 @@ export function capturar() {
   }
   if (nuevo) {
     guardar(a);
-    enviar({ tipo: "vista", ref: "WEB-ENTRADA", pagina: landing, utm: a.utm, clickIds: a.clickIds });
+    // the landing view goes when the visitor leaves the page (or clicks first): nothing on the network
+    // while the page loads, and one beacon however the visit ends
+    const vista = { tipo: "vista", ref: "WEB-ENTRADA", pagina: landing, utm: a.utm, clickIds: a.clickIds };
+    let enviada = false;
+    const una = () => { if (!enviada) { enviada = true; enviar(vista); } };
+    addEventListener("pagehide", una, { once: true });
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") una(); });
+    document.addEventListener("click", (e) => { if (e.target instanceof Element && e.target.closest("[data-cta], a[data-wa]")) una(); }, { capture: true });
   }
   return a;
 }

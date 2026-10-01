@@ -15,6 +15,7 @@ import Testimonios from "../../components/secciones/Testimonios.astro";
 import Preguntas from "../../components/secciones/Preguntas.astro";
 import { CLASES, SITIO, type Clase } from "../../data/estudio";
 import { PAGINAS, type Pagina } from "../../data/paginas";
+import { palabra } from "../../lib/tipo";
 
 export function getStaticPaths() {
   return CLASES.map((clase) => ({ params: { clase: clase.slug }, props: { clase } }));
@@ -81,7 +82,7 @@ const REF = pagina.ref;
     <div class="wrap split">
       <header class="split__head">
         <p class="eyebrow" data-reveal>Cómo es la clase</p>
-        <h2 class="display h2" data-split>{d.titulo}</h2>
+        <h2 class="display h2" data-split style={palabra(d.titulo)}>{d.titulo}</h2>
       </header>
       <div class="prosa" data-reveal>
         {d.parrafos.map((p) => <p>{p}</p>)}
@@ -92,7 +93,7 @@ const REF = pagina.ref;
     </div>
   </section>
 
-  <Horarios titulo="¿Cuándo hay clase?" lead="Elige un horario y aparta tu columpio en línea. Cada columpio relleno es un cupo tomado; si la clase está llena, únete a la lista de espera." />
+  <Horarios titulo="¿Cuándo hay clase?" lead="Elige un horario y aparta tu columpio en línea. Si la clase que quieres está llena, te anotamos en la lista de espera." />
 
   <PrimeraClase ref={`WEB-${REF}-PRUEBA`} video={clase.slug === "pilates-aereo"} />
 

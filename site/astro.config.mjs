@@ -53,7 +53,8 @@ export default defineConfig({
   trailingSlash: "always",
   output: "static",
   outDir: "./dist",
-  build: { format: "directory", inlineStylesheets: "auto" },
+  // CSS inlined in every page: no render-blocking request before the first paint (≈12 KB gzip)
+  build: { format: "directory", inlineStylesheets: "always" },
   compressHTML: true,
   devToolbar: { enabled: false },
   server: { port: 4321 },
