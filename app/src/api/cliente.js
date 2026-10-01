@@ -3,7 +3,7 @@
 // normalized to { status, error, mensaje, campos, motivo } so screens can show Ana's words.
 
 export class ErrorApi extends Error {
-  constructor({ status = 0, error = "red", mensaje, campos, motivo } = {}) {
+  constructor({ status = 0, error = "red", mensaje, campos, motivo, sinApi = false } = {}) {
     super(mensaje || MENSAJES[error] || MENSAJES.servidor);
     this.name = "ErrorApi";
     this.status = status;
@@ -11,6 +11,8 @@ export class ErrorApi extends Error {
     this.mensaje = this.message;
     this.campos = campos || null;
     this.motivo = motivo || null;
+    /** true when the API itself is unreachable (no network, proxy error, a non-JSON answer): not a business error */
+    this.sinApi = sinApi;
   }
 }
 
@@ -72,7 +74,7 @@ export async function pedir(ruta, { metodo = "GET", cuerpo, consulta, senal, sil
     res = await transporte(url, init);
   } catch (e) {
     if (e?.name === "AbortError") throw e;
-    throw new ErrorApi({ status: 0, error: "red" });
+    throw new ErrorApi({ status: 0, error: "red", sinApi: true });
   }
 
   if (res.status === 204) return null;
@@ -85,7 +87,8 @@ export async function pedir(ruta, { metodo = "GET", cuerpo, consulta, senal, sil
     const error = datos?.error || CODIGO_POR_STATUS[res.status] || "servidor";
     const motivo = datos?.motivo || null;
     const mensaje = datos?.mensaje || (motivo && MOTIVOS[motivo]) || MENSAJES[error];
-    const err = new ErrorApi({ status: res.status, error, mensaje, campos: datos?.campos, motivo });
+    const sinApi = datos === null || res.status === 502 || res.status === 504;
+    const err = new ErrorApi({ status: res.status, error, mensaje, campos: datos?.campos, motivo, sinApi });
     if (res.status === 401 && !silencioso401) for (const fn of alSalir) fn(err);
     throw err;
   }

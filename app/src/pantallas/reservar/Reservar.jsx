@@ -3,7 +3,7 @@
 // complete ficha books in one tap; with gaps, she only fills what is missing.
 import { createElement, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
-import { ArrowLeft, ArrowRight, X, UserRound, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, X, UserRound, Sparkles, MessageCircle, RefreshCw } from "lucide-react";
 import { useDisponibilidad, usePlanesPublicos, useReservaPublica } from "../../api/hooks/publico.js";
 import { useYo } from "../../api/hooks/auth.js";
 import { useMi, useReservarMi, useEditarPerfil, useFirmar } from "../../api/hooks/clienta.js";
@@ -60,6 +60,7 @@ export default function Reservar() {
   const [perfil, setPerfil] = useState(() => ({ ...PERFIL_VACIO, llego: COMO[String(atribucion.utm?.source || "").toLowerCase()] || "", ...(borrador.current?.perfil || {}) }));
   const [acuerdos, setAcuerdos] = useState(borrador.current?.acuerdos || {});
   const [errores, setErrores] = useState({});
+  const [sinApi, setSinApi] = useState(false); // the booking API is unreachable: booking goes on by WhatsApp
   const [resultado, setResultado] = useState(() => { try { return JSON.parse(sessionStorage.getItem(ULTIMA) || "null"); } catch { return null; } });
   const paso = ["clase", "tu", "ficha", "acuerdos"].includes(pasoUrl) || (pasoUrl === "listo" && resultado) ? pasoUrl : "clase";
   const [espera, setEspera] = useState(null);
@@ -129,6 +130,7 @@ export default function Reservar() {
       try { sessionStorage.setItem(ULTIMA, JSON.stringify(final)); sessionStorage.removeItem(BORRADOR); } catch { /* ignore */ }
       ir("listo");
     } catch (e) {
+      if (e.sinApi) { setSinApi(true); scrollTo({ top: 0, behavior: "smooth" }); return; }
       if (e.campos) {
         setErrores(e.campos);
         if (e.campos.nombre || e.campos.whatsapp || e.campos.correo) ir("tu");
@@ -158,6 +160,10 @@ export default function Reservar() {
     return <Marco paso="clase"><p className="lead">Primero elige tu clase.</p><Boton className="mt-6" onClick={() => ir("clase")}>Elegir clase</Boton></Marco>;
   }
 
+  if (sinApi) {
+    return <Marco paso={paso}><PorWhatsApp clase={clase} plan={plan || planPedido} nombre={perfil.nombre} referencia={atribucion.ref} reintentar={() => setSinApi(false)} /></Marco>;
+  }
+
   const cta = paso === "clase" ? (clienta && fichaLista ? "Reservar con mi plan" : "Continuar") : paso === "acuerdos" ? "Apartar mi columpio" : "Continuar";
 
   return (
@@ -175,13 +181,15 @@ export default function Reservar() {
                       <Sparkles size={16} className="text-teal" />{plan.nombre}<span className="text-muted">·</span><strong className="font-semibold">{dinero(plan.precio)}</strong>
                     </p>
                   )}
-                  {!clienta && (
+                  {!clienta && !disp.error?.sinApi && (
                     <button type="button" onClick={() => setEntrar(true)} className="mt-4 flex min-h-11 items-center gap-2 text-[0.9375rem] text-teal">
                       <UserRound size={17} /> <span className="underline underline-offset-4">¿Ya has venido? Entra con tu WhatsApp</span>
                     </button>
                   )}
                   <div className="mt-8">
-                    {disp.isPending ? <EsqueletoSelector /> : disp.isError ? <ErrorCaja error={disp.error} reintentar={disp.refetch} /> : (
+                    {disp.isPending ? <EsqueletoSelector /> : disp.isError ? (disp.error?.sinApi
+                      ? <PorWhatsApp plan={plan || planPedido} referencia={atribucion.ref} reintentar={disp.refetch} enLinea />
+                      : <ErrorCaja error={disp.error} reintentar={disp.refetch} />) : (
                       <SelectorClase clases={clases} seleccion={claseId} inicial={claseId} onElegir={(c) => { setClaseId(c.id); precargarPasos(); }} onEspera={(c) => setEspera(c)} />
                     )}
                   </div>
@@ -219,7 +227,7 @@ export default function Reservar() {
         </div>
 
         {/* desktop: the chosen class floats beside the form */}
-        <aside className="hidden lg:block">
+        <aside className={disp.error?.sinApi ? "hidden" : "hidden lg:block"}>
           <div className="sticky top-24">
             <Resumen clase={clase} plan={!clienta ? plan : null} />
             <Boton bloque tam="l" punto={paso === "acuerdos" || (clienta && fichaLista)} className="mt-4" onClick={siguiente} disabled={!clase} cargando={enviando} iconoFinal={paso !== "acuerdos" ? <ArrowRight size={18} /> : null}>{cta}</Boton>
@@ -229,7 +237,7 @@ export default function Reservar() {
 
       {/* phones: a floating bar with the choice and the next step */}
       <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(14px,env(safe-area-inset-bottom))] lg:hidden">
-        {(clase || paso !== "clase") && (
+        {(clase || paso !== "clase") && !disp.error?.sinApi && (
             <div className="sube vidrio mx-auto flex max-w-[560px] items-center gap-3 rounded-[28px] p-2 pl-5">
               <div className="min-w-0 flex-1">
                 {clase ? (
@@ -316,6 +324,31 @@ function EsqueletoSelector() {
       <div className="flex gap-2 overflow-hidden">{Array.from({ length: 6 }, (_, i) => <Esqueleto key={i} className="h-[84px] w-[58px] shrink-0 rounded-[22px]" />)}</div>
       <Esqueleto className="mt-6 h-4 w-40" />
       <div className="mt-4 grid gap-3">{Array.from({ length: 2 }, (_, i) => <Esqueleto key={i} className="h-[108px] rounded-[28px]" />)}</div>
+    </div>
+  );
+}
+
+/**
+ * When the booking API cannot be reached, nobody is left stranded: the booking goes on by WhatsApp
+ * with a prefilled message (the class she picked, her name, the attribution ref), as in the studio's
+ * first website. Ana confirms it by hand.
+ */
+function PorWhatsApp({ clase, plan, nombre, referencia, reintentar, enLinea = false }) {
+  const nombrePlan = typeof plan === "string" ? plan : plan?.nombre;
+  const quiero = !nombrePlan || /prueba/i.test(nombrePlan) ? "mi clase de prueba" : `con el plan ${nombrePlan}`;
+  const cuando = clase?.fecha ? ` el ${fechaLegible(clase.fecha)} a las ${horaLegible(clase.hora)}` : "";
+  const quien = nombre?.trim() ? `Soy ${nombre.trim()}. ` : "";
+  const texto = `Hola, ${quien}quiero reservar ${quiero} en Casa Lotus${cuando}.${referencia ? ` (ref:${referencia})` : ""}`;
+  const enlace = "https://wa.me/573128720888?text=" + encodeURIComponent(texto);
+  return (
+    <div className={enLinea ? "" : "mt-2"} role="status">
+      {!enLinea && <h1 className="titulo">Sigamos por WhatsApp.</h1>}
+      <div className="tarjeta-suave mt-6 flex flex-col items-start gap-4 p-6">
+        <p className="subtitulo">Las reservas en línea vuelven en un momento</p>
+        <p className="texto-s suave max-w-[44ch]">Mientras tanto, aparta tu columpio por WhatsApp: el mensaje ya va escrito{cuando ? " con tu clase" : ""} y Ana te confirma por ahí.</p>
+        <Boton variante="lima" tam="l" href={enlace} icono={<MessageCircle size={19} />} onClick={() => evento("cta", { ref: referencia || "APP-RESERVAR-WHATSAPP", respaldo: true })}>Reservar por WhatsApp</Boton>
+        {reintentar && <Boton variante="suave" tam="s" icono={<RefreshCw size={16} />} onClick={reintentar}>Intentar de nuevo</Boton>}
+      </div>
     </div>
   );
 }

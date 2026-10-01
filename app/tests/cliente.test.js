@@ -69,6 +69,17 @@ describe("pedir", () => {
     expect(e.mensaje).toMatch(/Sin conexión/);
   });
 
+  test("an unreachable API is flagged sinApi (network, proxy error, non-JSON answer); business errors are not", async () => {
+    usarTransporte(async () => { throw new TypeError("Failed to fetch"); });
+    expect((await api.get("/api/publico/disponibilidad").catch((x) => x)).sinApi).toBe(true);
+    usarTransporte(async () => new Response("<html>Bad Gateway</html>", { status: 502 }));
+    expect((await api.get("/api/publico/disponibilidad").catch((x) => x)).sinApi).toBe(true);
+    usarTransporte(async () => new Response("<!doctype html><title>404</title>", { status: 404 }));
+    expect((await api.get("/api/publico/disponibilidad").catch((x) => x)).sinApi).toBe(true);
+    usarTransporte(async () => new Response(JSON.stringify({ ok: false, error: "conflicto", motivo: "llena" }), { status: 409 }));
+    expect((await api.post("/api/publico/reservas", {}).catch((x) => x)).sinApi).toBe(false);
+  });
+
   test("401 tells the app the session ended, unless asked to stay quiet", async () => {
     const oyente = vi.fn();
     const quitar = alPerderSesion(oyente);
