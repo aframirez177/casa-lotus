@@ -318,4 +318,4 @@ Plantilla = { nombre, categoria: "UTILITY"|"MARKETING"|"AUTHENTICATION", idioma:
 
 ## 9. Site ↔ app hand-off
 
-Every booking CTA on the site links to `/app/reservar?ref=<REF>[&clase=<id>][&plan=Clase de prueba]`, keeping the visitor's UTM / click ids, which the site stores first-party in `sessionStorage["cl_atribucion"]` as `{ utm, clickIds, landing, ts }` and the app reads. Refs keep the v1 scheme (`WEB-HERO`, `WEB-CLASE-PILATES`, `WEB-HORARIO-SAB-0800`, `WEB-PLAN-8`, …).
+Every booking CTA on the site links to `/app/reservar?ref=<REF>[&clase=<id>][&plan=Clase de prueba]`, keeping the visitor's UTM / click ids, which the site stores first-party in `localStorage["cl_atribucion"]` as `{ utm, clickIds, landing, ts }` for **90 days** (Google Ads accepts conversions up to 90 days after the click), last non-empty click wins, and the app reads. The prefilled WhatsApp messages carry a short attribution code (`ref`) so chats that start on WhatsApp stay attributable. Refs keep the v1 scheme (`WEB-HERO`, `WEB-CLASE-PILATES`, `WEB-HORARIO-SAB-0800`, `WEB-PLAN-8`, …).
