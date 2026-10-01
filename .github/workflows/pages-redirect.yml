@@ -1,0 +1,63 @@
+# Casa Lotus · GitHub Pages now only redirects to https://casalotus.studio.
+#
+# The real site ships from deploy-droplet.yml. Pages stays up as a redirect so
+# old links keep working: anything already shared, the "La página web" link in
+# Ana's guide, and the favicon of Ana's panel (Panel.js, until its next publish).
+# Every path lands on the same path at the domain: /casa-lotus/privacidad → /privacidad.
+name: Redirect · GitHub Pages → casalotus.studio
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/pages-redirect.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the redirect
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Write the redirect page
+        run: |
+          mkdir -p redirect
+          cp src/favicon-32.png src/favicon.ico redirect/
+          cat > redirect/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>Casa Lotus · Yoga aéreo en Bogotá</title>
+          <meta name="robots" content="noindex">
+          <link rel="canonical" href="https://casalotus.studio/">
+          <script>location.replace("https://casalotus.studio" + location.pathname.replace(/^\/casa-lotus/, "") + location.search + location.hash)</script>
+          <meta http-equiv="refresh" content="0; url=https://casalotus.studio/">
+          <p>Casa Lotus ahora está en <a href="https://casalotus.studio/">casalotus.studio</a>.</p>
+          EOF
+          # Pages answers unknown paths with 404.html, so deep links redirect too.
+          cp redirect/index.html redirect/404.html
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: redirect
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

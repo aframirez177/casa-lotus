@@ -3,7 +3,7 @@
 # Deploy = push to `main`, or the "Run workflow" button in the Actions tab.
 # The secrets come from ~/dev/infra/scripts/mac/ci-key.sh. Their key is pinned
 # to rrsync on the server, so it can only write into /srv/sites/casalotus.studio.
-# GitHub Pages (deploy.yml) keeps running as a fallback until it is switched off.
+# GitHub Pages only redirects here now (pages-redirect.yml).
 name: Deploy · casalotus.studio
 
 on:
