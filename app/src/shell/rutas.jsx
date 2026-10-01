@@ -110,6 +110,7 @@ export const router = createBrowserRouter([
             { path: "ajustes", lazy: lazy(() => import("../pantallas/admin/Ajustes.jsx")) },
             { path: "cuenta", lazy: lazy(() => import("../pantallas/comun/Cuenta.jsx")) },
             { path: "registro", lazy: lazy(() => import("../pantallas/admin/Registro.jsx")) },
+            { path: "atribucion", lazy: lazy(() => import("../pantallas/admin/Atribucion.jsx")) },
           ],
         }],
       },

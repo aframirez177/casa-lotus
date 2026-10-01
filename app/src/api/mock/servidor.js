@@ -969,15 +969,44 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     return db.planes;
   }));
   ruta("GET", "/api/admin/registro", A(({ q }) => db.registro.filter((x) => !q.antes || x.ts < q.antes).slice(0, Number(q.limite) || 100)));
-  ruta("GET", "/api/admin/atribucion", A(() => {
-    const por = {};
-    for (const r of db.reservas.filter((x) => /^Web/.test(x.origen))) {
-      const ref = r.origen.replace(/^Web · /, "");
-      por[ref] = por[ref] || { ref, clics: 0, reservas: 0, confirmadas: 0, ingresos: 0 };
-      por[ref].reservas++; por[ref].clics += 4;
-      if (CONSUMEN.includes(r.estado)) { por[ref].confirmadas++; por[ref].ingresos += Number(db.compras.find((c) => c.id === r.compra)?.valor || 0); }
+  ruta("GET", "/api/admin/atribucion", A(({ q }) => {
+    const h = q.hasta || hoy(), d = q.desde || sumarDias(h, -30);
+    const desdeMs = momentoMs(d, "00:00"), hastaMs = momentoMs(sumarDias(h, 1), "00:00");
+    const porRef = new Map(), porCampana = new Map();
+    const fila = (mapa, clave, extra) => { if (!mapa.has(clave)) mapa.set(clave, { ...extra, clics: 0, reservas: 0, confirmadas: 0, ingresos: 0 }); return mapa.get(clave); };
+    const contadas = new Set();
+    for (const r of db.reservas) {
+      const t = Date.parse(r.creada);
+      if (!/^Web · /.test(r.origen) || t < desdeMs || t >= hastaMs || r.reagendadaDe) continue;
+      const ref = r.origen.slice(6) || "(sin ref)";
+      let a = {};
+      try { a = JSON.parse(r.atribucion || "{}").utm || {}; } catch { a = {}; }
+      const camp = a.campaign || "(sin campaña)";
+      const filas = [fila(porRef, ref, { ref }), fila(porCampana, camp + "|" + (a.source || "") + "|" + (a.medium || ""), { campana: camp, source: a.source || "", medium: a.medium || "" })];
+      let final = r;
+      for (let i = 0; i < 20; i++) { const sig = db.reservas.find((x) => x.reagendadaDe === final.id); if (!sig) break; final = sig; }
+      const confirmada = CONSUMEN.includes(final.estado);
+      let ingreso = 0;
+      if (confirmada && final.compra && !contadas.has(final.compra)) { contadas.add(final.compra); ingreso = Number(db.compras.find((c) => c.id === final.compra)?.valor) || 0; }
+      for (const f of filas) { f.reservas++; if (confirmada) f.confirmadas++; f.ingresos += ingreso; }
     }
-    return { porRef: Object.values(por), porCampana: [] };
+    // invented clicks: each booking came from a handful of visits, plus refs that only got clicks
+    const dias = Math.max(1, Math.round((hastaMs - desdeMs) / 86400000));
+    for (const f of porRef.values()) f.clics += f.reservas * 6 + 3;
+    for (const f of porCampana.values()) f.clics += f.reservas * 6 + 3;
+    for (const [ref, n] of [["WEB-HERO", 1.6], ["WEB-PRUEBA", 0.9], ["WEB-HORARIO-SAB-0800", 0.5], ["WEB-PLAN-8", 0.3], ["WEB-BARRA-MOVIL", 0.4]]) fila(porRef, ref, { ref }).clics += Math.round(n * dias);
+    fila(porCampana, "octubre|instagram|social", { campana: "octubre", source: "instagram", medium: "social" }).clics += Math.round(2.2 * dias);
+    const orden = (x, y) => y.ingresos - x.ingresos || y.reservas - x.reservas || y.clics - x.clics;
+    return { desde: d, hasta: h, porRef: [...porRef.values()].sort(orden), porCampana: [...porCampana.values()].sort(orden) };
+  }));
+  ruta("POST", "/api/admin/espera", A(({ b }) => {
+    const c = clase(b.clase), cl = clienta(b.clienta);
+    if (!c || !cl) falla(422, "validacion", "Elige la clase y la persona.");
+    if (db.espera.some((e) => e.clase === c.id && e.clienta === cl.id && e.estado === "Esperando")) conflicto("ya-reservada", "Ya está en la lista de espera de esta clase.");
+    const e = { id: "E-" + String(++db.contadores.E).padStart(4, "0"), creada: iso(ahora()), clase: c.id, clienta: cl.id, estado: "Esperando", notas: "" };
+    db.espera.push(e);
+    auditar("espera", e.id, `${cl.nombre} · ${c.id}`);
+    return { status: 201, cuerpo: esperaItem(e) };
   }));
   ruta("GET", "/api/admin/salud", A(() => ({ datos: "memoria", hoja: { ok: true, faltan: [] }, whatsapp: { modo: waModo() }, correo: { ok: true }, push: { activo: false, clavePublica: "", suscripciones: 0 }, version: "demo" })));
   ruta("POST", "/api/admin/push/suscribir", A(() => ({ status: 204 })));

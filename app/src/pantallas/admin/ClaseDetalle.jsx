@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, UserPlus, Pencil, CalendarX2, MessageCircle, MoreHorizontal, CircleDollarSign, Repeat } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useClaseAdmin, useReservarAdmin, useEditarClase, useCancelarClase, useTomarEspera, useEstadoEspera, useReagendarAdmin } from "../../api/hooks/admin.js";
+import { useClaseAdmin, useAgregarEspera, useReservarAdmin, useEditarClase, useCancelarClase, useTomarEspera, useEstadoEspera, useReagendarAdmin } from "../../api/hooks/admin.js";
 import { useDisponibilidad, useEstudio } from "../../api/hooks/publico.js";
 import { api, id as idUrl } from "../../api/cliente.js";
 import { foto, restaurar, ponerClase } from "../../api/hooks/comun.js";
@@ -57,7 +57,7 @@ export default function ClaseDetalle() {
             {(c.pasada || inicioClase(c) - Date.now() <= 3600000) && <HerramientasProfe clase={c} admin />}
             {c.estado !== "Cancelada" && (
               <div className="-mt-2 mb-10 flex flex-wrap gap-2">
-                {!c.pasada && <Boton tam="s" icono={<UserPlus size={16} />} onClick={() => setHoja("agregar")}>Agregar persona</Boton>}
+                {!c.pasada && <Boton tam="s" icono={<UserPlus size={16} />} onClick={() => setHoja("agregar")}>{c.libres > 0 ? "Agregar persona" : "Agregar a la lista de espera"}</Boton>}
                 <Boton tam="s" variante="suave" icono={<Pencil size={16} />} onClick={() => setHoja("editar")}>Editar</Boton>
                 {!c.pasada && <Boton tam="s" variante="fantasma" icono={<CalendarX2 size={16} />} onClick={() => setHoja("cancelar")}>Cancelar clase</Boton>}
               </div>
@@ -83,7 +83,7 @@ export default function ClaseDetalle() {
               </aside>
             </div>
 
-            <Hoja abierta={hoja === "agregar"} alCerrar={() => setHoja(null)} titulo="¿A quién reservamos?" descripcion="Si tiene clases en su plan, queda confirmada; si no, queda esperando el pago.">
+            <Hoja abierta={hoja === "agregar"} alCerrar={() => setHoja(null)} titulo={c.libres > 0 ? "¿A quién reservamos?" : "Lista de espera"} descripcion={c.libres > 0 ? "Si tiene clases en su plan, queda confirmada; si no, queda esperando el pago." : `${fechaLegible(c.fecha)}, ${horaLegible(c.hora)}`}>
               <Agregar clase={c} listo={() => setHoja(null)} />
             </Hoja>
             <Hoja abierta={hoja === "editar"} alCerrar={() => { setHoja(null); if (params.get("profe")) setParams({}, { replace: true }); }} titulo="Editar la clase">
@@ -101,8 +101,18 @@ export default function ClaseDetalle() {
 
 function Agregar({ clase: c, listo }) {
   const reservar = useReservarAdmin();
+  const esperar = useAgregarEspera();
   const { avisar } = useAvisos();
-  if (c.libres <= 0) return <p className="lead">La clase está llena. Sube los cupos en «Editar» o pídele que se una a la lista de espera.</p>;
+  if (c.libres <= 0) {
+    return (
+      <>
+        <p className="mb-4 texto-s text-ink">La clase está llena. Quien elijas queda en la lista de espera; si se libera un columpio, aparece arriba para avisarle. También puedes subir los cupos en «Editar».</p>
+        {esperar.isError && <p className="campo-error mb-3" role="alert">{esperar.error.mensaje}</p>}
+        <BuscarClienta excluir={[...c.gente.filter((g) => [ESTADO.CONFIRMADA, ESTADO.PENDIENTE].includes(g.estado)).map((g) => g.clienta), ...c.espera.map((e) => e.clienta)]}
+          onElegir={(cl) => esperar.mutate({ clienta: cl.id, clase: c.id }, { onSuccess: () => { avisar(`${primerNombre(cl.nombre)} quedó en la lista de espera.`); listo(); } })} />
+      </>
+    );
+  }
   return (
     <>
       {reservar.isError && <p className="campo-error mb-3" role="alert">{reservar.error.mensaje}</p>}
@@ -201,6 +211,8 @@ function HojaMover({ g, clase: c, cerrar }) {
   );
 }
 
+const desde = (h) => (h === "ahora" ? "Acaba de unirse" : h === "ayer" ? "En espera desde ayer" : h.startsWith("hace") ? "En espera desde " + h : "En espera desde el " + h);
+
 function Espera({ clase: c }) {
   const tomar = useTomarEspera();
   const estado = useEstadoEspera();
@@ -213,7 +225,7 @@ function Espera({ clase: c }) {
           <li key={e.id} className="tarjeta p-4">
             <div className="flex items-center gap-3">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-mist text-[0.8125rem] font-semibold text-navy">{i + 1}</span>
-              <div className="min-w-0 flex-1"><p className="font-medium text-navy">{e.nombre}</p><p className="texto-s suave">Espera {haceTexto(e.creada).replace("hace ", "desde hace ")}{e.estado === "Avisada" ? " · ya le avisaste" : ""}</p></div>
+              <div className="min-w-0 flex-1"><p className="font-medium text-navy">{e.nombre}</p><p className="texto-s suave">{desde(haceTexto(e.creada))}{e.estado === "Avisada" ? " · ya le avisaste" : ""}</p></div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {e.whatsapp && <Boton tam="xs" variante={c.libres > 0 ? "primario" : "suave"} href={enlaceWhatsApp(e.whatsapp, texto)} icono={<MessageCircle size={14} />} onClick={() => estado.mutate({ id: e.id, estado: "Avisada" })}>Avisar</Boton>}

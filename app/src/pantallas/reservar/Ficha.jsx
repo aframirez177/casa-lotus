@@ -1,41 +1,13 @@
 // Ana's form (her Google Form, now in the app): «Tú», «Tu ficha» and «Acuerdos». Shared by the booking
 // flow and the clienta's profile, so the same words and rules live in one place.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { ChevronDown, ShieldCheck, HeartPulse, Camera, FileText, Megaphone } from "lucide-react";
 import { Entrada, Opciones, Interruptor, formatoCelular } from "../../ui/Campos.jsx";
-import { CONSENTIMIENTOS, INTERESES, EXPERIENCIA, COMO_LLEGO, SALUD_SIN_DATOS, normalizaWhatsApp } from "../../lib/reglas.js";
+import { CONSENTIMIENTOS, INTERESES, EXPERIENCIA, COMO_LLEGO, SALUD_SIN_DATOS } from "../../lib/reglas.js";
 
-export const PERFIL_VACIO = {
-  nombre: "", whatsapp: "", correo: "", nacimiento: "", barrio: "", intereses: [], salud: "", eps: "",
-  contactoEmergencia: { nombre: "", whatsapp: "" }, experiencia: "", llego: "",
-};
-
-/** She wrote something about her health (not «Ninguna» nor «Prefiero contárselo…»). */
-export const escribioSalud = (salud) => Boolean(salud && !SALUD_SIN_DATOS.includes(salud));
-
-export function validarTu(p) {
-  const e = {};
-  if (!p.nombre || p.nombre.trim().length < 2) e.nombre = "Escribe tu nombre y apellido.";
-  if (!normalizaWhatsApp(p.whatsapp)) e.whatsapp = "Escribe tu celular de 10 dígitos, como 312 872 0888.";
-  if (p.correo && !/^\S+@\S+\.\S+$/.test(p.correo)) e.correo = "Revisa el correo.";
-  return e;
-}
-export function validarFicha(p) {
-  const e = {};
-  if (!p.salud || p.salud === "__contar") e.salud = "Cuéntanos si tienes alguna condición, o elige una opción.";
-  if (!p.contactoEmergencia?.nombre?.trim()) e.contactoNombre = "¿A quién llamamos si hace falta?";
-  if (!normalizaWhatsApp(p.contactoEmergencia?.whatsapp)) e.contactoWhatsapp = "Su celular de 10 dígitos.";
-  if (!p.experiencia) e.experiencia = "Elige una opción.";
-  return e;
-}
-export function validarAcuerdos(c) {
-  const e = {};
-  if (!c.descargo?.acepta) e.descargo = "Para tomar la clase necesitamos que lo aceptes.";
-  if (!c.datos?.acepta) e.datos = "Sin esta autorización no podemos guardar tu reserva.";
-  if (typeof c.imagen?.acepta !== "boolean") e.imagen = "Elige una de las dos opciones.";
-  return e;
-}
+export { PERFIL_VACIO, escribioSalud, validarTu, validarFicha, validarAcuerdos } from "./reglasFicha.js";
+import { escribioSalud } from "./reglasFicha.js";
 
 export function FormTu({ perfil, cambiar, errores = {} }) {
   return (
@@ -104,7 +76,10 @@ function Grupo({ titulo, ayuda, icono, children }) {
 
 /** The agreements, each one a floating card with its short text, the full text on demand, and the choice. */
 export function FormAcuerdos({ valor, cambiar, conSensibles, errores = {}, fechas, sinNovedades = false }) {
-  const firmar = (k, acepta) => cambiar({ ...valor, [k]: { acepta } });
+  // quick taps in a row must not undo each other: build on the latest choice, not on the last render
+  const ultimo = useRef(valor);
+  ultimo.current = valor;
+  const firmar = (k, acepta) => { const nuevo = { ...ultimo.current, [k]: { acepta } }; ultimo.current = nuevo; cambiar(nuevo); };
   return (
     <div className="space-y-3">
       <Acuerdo k="descargo" icono={<FileText size={18} />} valor={valor} firmar={firmar} error={errores.descargo} fecha={fechas?.descargo} enlace="/terminos/" />

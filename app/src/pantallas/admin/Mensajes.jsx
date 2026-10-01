@@ -20,8 +20,6 @@ import { haceTexto, duracionCorta } from "../../lib/fechas.js";
 import { horaLegible, partesBogota, primerNombre } from "../../lib/reglas.js";
 import { useEsEscritorio } from "../../ui/useMedia.js";
 
-// Ana's guide lives in her Google Drive (private): its link is set at build time.
-const GUIA = import.meta.env.VITE_GUIA_URL || "";
 
 export default function Mensajes() {
   const { id } = useParams();
@@ -53,16 +51,18 @@ function Desconectado({ estado }) {
             <span className="h-px w-10 border-t border-dashed border-navy/40" aria-hidden="true" />
             <span className="grid h-14 w-14 place-items-center rounded-[20px] bg-yoga text-navy"><MessageCircle size={26} /></span>
           </div>
-          <h2 className="titulo max-w-[16ch]">WhatsApp llega pronto a la app.</h2>
-          <p className="lead mt-4 max-w-[44ch]">Cuando esté conectado, aquí vas a leer y responder a tus clientas sin salir de Casa Lotus, con sus clases y su saldo al lado de cada conversación.</p>
+          <h2 className="titulo max-w-[16ch]">Estamos conectando tu WhatsApp.</h2>
+          <p className="lead mt-4 max-w-[44ch]">Cuando esté listo, aquí vas a leer y responder a tus clientas sin salir de Casa Lotus, con sus clases y su saldo al lado de cada conversación.</p>
           {estado.faltan?.length > 0 && (
             <div className="mt-8">
               <p className="etiqueta-sola mb-3">Lo que falta para conectarlo</p>
               <ul className="space-y-2">{estado.faltan.map((f) => <li key={f} className="flex items-center gap-3 text-ink"><span className="grid h-6 w-6 place-items-center rounded-full border border-line"><Plug size={12} className="text-muted" /></span>{f}</li>)}</ul>
             </div>
           )}
-          <p className="mt-8 texto-s suave">Mientras tanto, los botones de WhatsApp de toda la app abren tu WhatsApp con el mensaje listo.</p>
-          {GUIA ? <Boton className="mt-6" variante="suave" href={GUIA}>Ver la guía</Boton> : <Boton className="mt-6" variante="suave" a="/admin/ajustes#sistema">Ver el estado del sistema</Boton>}
+          <div className="mt-8 rounded-[22px] bg-mist p-5">
+            <p className="font-medium text-navy">Mientras tanto, sigue con tu teléfono</p>
+            <p className="texto-s mt-1 text-ink">Responde en WhatsApp como siempre. Los botones de WhatsApp de toda la app abren tu WhatsApp con el mensaje ya escrito.</p>
+          </div>
         </div>
       </section>
     </div>

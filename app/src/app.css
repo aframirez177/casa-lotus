@@ -232,6 +232,14 @@
 .atmosfera i:nth-child(2) { width: 55vmax; height: 45vmax; left: -25vmax; top: 30%; background: var(--color-blob); animation-duration: 32s; animation-delay: -8s; }
 .atmosfera i:nth-child(3) { width: 26vmax; height: 26vmax; right: -6vmax; bottom: -8vmax; background: var(--color-pilates); opacity: .35; animation-duration: 21s; animation-delay: -4s; }
 
+/* light CSS motion for the public booking flow (it ships without the motion library on first paint) */
+.entra-x { animation: entra-x 460ms var(--ease-out) both; }
+.sube { animation: sube 520ms var(--ease-out) both; }
+.aparece { animation: aparece 420ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 40ms); }
+@keyframes entra-x { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes sube { from { opacity: 0; transform: translateY(80px); } to { opacity: 1; transform: none; } }
+@keyframes aparece { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
 @keyframes pulso { 0%, 100% { box-shadow: 0 0 0 0 rgb(153 226 124 / .55); } 50% { box-shadow: 0 0 0 6px rgb(153 226 124 / 0); } }
 @keyframes cargando { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
 @keyframes brillo { from { background-position: 100% 0; } to { background-position: 0 0; } }

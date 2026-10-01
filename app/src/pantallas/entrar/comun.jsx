@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Campo } from "../../ui/Campos.jsx";
 import { Simbolo } from "../../ui/Logo.jsx";
 import { Link } from "react-router";
+import { ConMovimiento } from "../../ui/ConMovimiento.jsx";
 
 const COMUNES = ["1234567890", "12345678910", "contraseña", "contrasena", "password123", "casalotus", "qwertyuiop", "0123456789", "yogaaereo"];
 
@@ -48,7 +49,7 @@ export function CampoClave({ etiqueta = "Contraseña", valor, onCambio, error, a
 /** A quiet single-column page with the mark on top (sign-in, links). */
 export function PaginaSola({ children, ancho = "max-w-[460px]" }) {
   return (
-    <>
+    <ConMovimiento>
       <div className="atmosfera" aria-hidden="true"><i /><i /><i /></div>
       <main className={`mx-auto flex min-h-dvh w-full ${ancho} flex-col px-5 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)]`}>
         <Link to="/" className="mb-10 inline-flex w-fit items-center gap-2.5 rounded-lg text-navy md:mb-14" aria-label="Casa Lotus">
@@ -56,6 +57,6 @@ export function PaginaSola({ children, ancho = "max-w-[460px]" }) {
         </Link>
         {children}
       </main>
-    </>
+    </ConMovimiento>
   );
 }

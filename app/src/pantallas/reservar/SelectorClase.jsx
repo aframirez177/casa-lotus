@@ -1,7 +1,6 @@
 // The class picker: a week strip of days, then that day's classes as cards with swings filling up.
 // Used by the public booking, the clienta's «Reservar», and «Reagendar». Never shows a seat count.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { m } from "motion/react";
 import { Check, Hourglass, Lock } from "lucide-react";
 import { Columpios } from "../../ui/Columpios.jsx";
 import { colorClase, nombreClase, disponibilidad } from "../../lib/clases.js";
@@ -42,8 +41,7 @@ export function SelectorClase({ clases = [], seleccion, onElegir, onEspera, excl
             <button key={f} type="button" role="tab" aria-selected={activo} data-fecha={f} disabled={!cl.length}
               onClick={() => setDia(f)}
               aria-label={`${diaRelativo(f)}${cl.length ? (libres ? ", hay clases" : ", clases llenas") : ", sin clases"}`}
-              className={`relative flex h-[84px] w-[58px] shrink-0 flex-col items-center justify-center gap-1 rounded-[22px] transition-colors disabled:opacity-35 ${activo ? "text-paper" : "bg-white text-navy shadow-card"}`}>
-              {activo && <m.span layoutId="dia-activo" className="absolute inset-0 rounded-[22px] bg-navy" transition={{ type: "spring", stiffness: 480, damping: 38 }} />}
+              className={`relative flex h-[84px] w-[58px] shrink-0 flex-col items-center justify-center gap-1 rounded-[22px] transition-[background-color,color,box-shadow,transform] duration-300 ease-out disabled:opacity-35 ${activo ? "scale-[1.04] bg-navy text-paper shadow-float" : "bg-white text-navy shadow-card"}`}>
               <span className={`relative text-[0.6875rem] font-semibold uppercase tracking-[0.12em] ${activo ? "text-paper/75" : "text-muted"}`}>{f === hoy ? "Hoy" : DIAS[d.getUTCDay()].slice(0, 3)}</span>
               <span className="relative font-display text-[1.6rem] leading-none">{d.getUTCDate()}</span>
               <span className={`relative h-1.5 w-1.5 rounded-full ${!cl.length ? "bg-transparent" : libres ? "bg-lime" : activo ? "bg-paper/40" : "bg-line"}`} />
@@ -59,9 +57,9 @@ export function SelectorClase({ clases = [], seleccion, onElegir, onEspera, excl
 
       <ul className="grid gap-3">
         {lista.map((c, i) => (
-          <m.li key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 300, damping: 30, delay: i * 0.04 }}>
+          <li key={dia + c.id} className="aparece" style={{ "--i": i }}>
             <TarjetaClase clase={c} elegida={seleccion === c.id} onElegir={onElegir} onEspera={onEspera} />
-          </m.li>
+          </li>
         ))}
       </ul>
     </div>

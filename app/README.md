@@ -14,7 +14,7 @@ npm run dev          # http://localhost:5180/app/  → talks to the real API on 
 npm run dev:demo     # same, with the in-browser demo studio (no backend)
 ```
 
-On localhost you can also switch the demo on for a tab with `?demo=1` (and off with `?demo=0`).
+In dev you can also switch the demo on for a tab with `?demo=1` (and off with `?demo=0`).
 In the demo, `/app/entrar` shows three shortcuts (Ana, a profe, a student), the login code is `123456`,
 everyone is invented, and a new web booking rings Ana's bell about 25 s after she opens the app.
 «Ajustes → Estado del sistema» has a switch to see Mensajes as if WhatsApp were not connected.
@@ -32,7 +32,8 @@ npm test             # vitest: fetch wrapper, demo rules (book, cancel on time v
 npm run lint
 ```
 
-`VITE_GUIA_URL` (optional, build time) is the link to Ana's guide shown while WhatsApp is not connected.
+The demo adapter ships only in dev and in `build:demo`: `npm run build` drops it entirely (no `demo-*.js` in `dist/`),
+and `?demo=1` does nothing on a production build.
 
 ## Structure
 
@@ -58,7 +59,7 @@ src/
     reservar/              /reservar: class picker, ficha, agreements, result
     clienta/               /mi, /mi/clases, /mi/reservar, /mi/perfil
     profe/                 /profe, /profe/clase/:id
-    admin/                 /admin (Hoy), agenda, clase, horario, clientas, mensajes, pagos, equipo, ajustes, registro
+    admin/                 /admin (Hoy), agenda, clase, horario, clientas, mensajes, pagos, equipo, ajustes, registro, atribucion
     comun/                 class roster and tools (profe + admin), account screen
 tests/                     vitest
 ```
@@ -73,9 +74,11 @@ tests/                     vitest
 | `/app/reservar` | anyone | class → tú → tu ficha → acuerdos → payment instructions. Reads `?clase`, `?plan`, `?ref`, `?espera=1` and `localStorage["cl_atribucion"]` |
 | `/app/mi…` | clienta | next class + countdown, balance ring, quick book, waiting lists · mis clases · reservar · perfil |
 | `/app/profe…` | profe | next class, classes to mark · roster with ficha, Vino / No vino, add who came, close list, ask for a replacement, notes · cuenta |
-| `/app/admin…` | admin | Hoy · Agenda + class detail · Horario · Clientas (CRM) · Mensajes · Pagos · Equipo · Ajustes · Cuenta · Registro |
+| `/app/admin…` | admin | Hoy · Agenda + class detail · Horario · Clientas (CRM) · Mensajes · Pagos · Equipo · Ajustes · Cuenta · Registro · Resultados de la web (`/admin/atribucion`) |
 
-Each screen is its own chunk; `/app/reservar` loads only the booking flow on top of the shared runtime.
+Each screen is its own chunk. `/app/reservar` paints with React, the router, TanStack Query and the first
+step only (≈140 KB gzipped, ≈106 KB of it the three libraries): its forms, the result, the sheets and the motion
+library load when they are used, and motion's providers live in the role frames and sheets, not at the root.
 
 ## Notes
 

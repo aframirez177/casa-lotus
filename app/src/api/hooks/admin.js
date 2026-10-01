@@ -21,6 +21,7 @@ export const useRegistro = () => useQuery(q(K.registro, "/api/admin/registro", {
 /** Admin's class detail; shares the cache key with the profe view so every write patches both. */
 export const useClaseAdmin = (idc) => useQuery(q(K.profeClase(idc), `/api/admin/clases/${id(idc)}`, undefined, 15000, { enabled: Boolean(idc) }));
 export const usePushClave = () => useQuery(q(["admin", "push", "clave"], "/api/admin/push/clave", undefined, 60 * 60000));
+export const useAtribucion = (desde, hasta) => useQuery(q(K.atribucion(desde, hasta), "/api/admin/atribucion", { desde, hasta }, 60000, { placeholderData: keepPreviousData }));
 export const useSalud = () => useQuery(q(K.salud, "/api/admin/salud", undefined, 5 * 60000));
 export const useWaEstado = () => useQuery(q(K.waEstado, "/api/admin/whatsapp/estado", undefined, 60000));
 export const useConversaciones = (filtro, busca, enabled = true) => useQuery(q(K.waConversaciones(filtro, busca), "/api/admin/whatsapp/conversaciones", { filtro, q: busca }, 15000, { enabled, refetchInterval: 30000, placeholderData: keepPreviousData }));
@@ -82,6 +83,10 @@ export function useReservarAdmin() {
 export function useReagendarAdmin() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: ({ reserva, clase }) => api.post(`/api/admin/reservas/${id(reserva)}/reagendar`, { clase }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin"] }); qc.invalidateQueries({ queryKey: ["profe"] }); } });
+}
+export function useAgregarEspera() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (b) => api.post("/api/admin/espera", b), onSuccess: () => { qc.invalidateQueries({ queryKey: ["profe", "clase"] }); qc.invalidateQueries({ queryKey: ["admin"] }); } });
 }
 export function useTomarEspera() {
   const qc = useQueryClient();

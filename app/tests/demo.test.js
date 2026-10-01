@@ -180,3 +180,31 @@ describe("staff", () => {
     expect(get(`/api/profe/clases/${encodeURIComponent(ajena.id)}`).status).toBe(403);
   });
 });
+
+describe("admin follow-ups", () => {
+  test("attribution report: paid web bookings with their income, by ref and by campaign", () => {
+    s.entrarComo("admin");
+    const r = get(`/api/admin/atribucion?desde=${sumarDias(hoyClave(t), -89)}&hasta=${hoyClave(t)}`).cuerpo;
+    expect(Object.keys(r)).toEqual(["desde", "hasta", "porRef", "porCampana"]);
+    const pagadas = r.porRef.reduce((n, f) => n + f.confirmadas, 0);
+    expect(pagadas).toBeGreaterThan(0);
+    expect(r.porRef[0].ingresos).toBeGreaterThanOrEqual(r.porRef[r.porRef.length - 1].ingresos);
+    for (const f of r.porRef) expect(f.confirmadas).toBeLessThanOrEqual(f.reservas);
+  });
+  test("Ana adds someone to a full class's waiting list", () => {
+    s.entrarComo("admin");
+    const llena = s.db.clases.find((c) => inicioClase(c) > t && s.db.reservas.filter((r) => r.clase === c.id && ["Pendiente de pago", "Confirmada"].includes(r.estado)).length >= c.cupos);
+    const r = post("/api/admin/espera", { clienta: "C-0011", clase: llena.id });
+    expect(r.status).toBe(201);
+    expect(get(`/api/admin/clases/${encodeURIComponent(llena.id)}`).cuerpo.espera.some((e) => e.clienta === "C-0011")).toBe(true);
+    expect(post("/api/admin/espera", { clienta: "C-0011", clase: llena.id }).status).toBe(409);
+  });
+  test("an extra class on a holiday asks first (409 festivo), then goes through with forzar", () => {
+    s.entrarComo("admin");
+    const anio = hoyClave(t).slice(0, 4);
+    const r = post("/api/admin/clases", { fecha: `${anio}-12-25`, hora: "10:00", clase: "Yoga Aéreo" });
+    expect(r.status).toBe(409);
+    expect(r.cuerpo.motivo).toBe("festivo");
+    expect(post("/api/admin/clases", { fecha: `${anio}-12-25`, hora: "10:00", clase: "Yoga Aéreo", forzar: true }).status).toBe(201);
+  });
+});

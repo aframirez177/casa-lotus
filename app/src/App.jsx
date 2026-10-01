@@ -1,13 +1,11 @@
 import { StrictMode, useEffect } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { RouterProvider } from "react-router";
-import { LazyMotion, MotionConfig } from "motion/react";
 import { ProveedorAvisos } from "./ui/Avisos.jsx";
 import { alPerderSesion } from "./api/cliente.js";
 import { K } from "./api/claves.js";
 import { router } from "./shell/rutas.jsx";
 
-const cargarMotion = () => import("./ui/motion-funciones.js").then((r) => r.default);
 
 const qc = new QueryClient({
   defaultOptions: {
@@ -32,14 +30,10 @@ export function App() {
   return (
     <StrictMode>
       <QueryClientProvider client={qc}>
-        <MotionConfig reducedMotion="user">
-          <LazyMotion features={cargarMotion} strict>
-            <ProveedorAvisos>
-              <SesionPerdida />
-              <RouterProvider router={router} />
-            </ProveedorAvisos>
-          </LazyMotion>
-        </MotionConfig>
+        <ProveedorAvisos>
+          <SesionPerdida />
+          <RouterProvider router={router} />
+        </ProveedorAvisos>
       </QueryClientProvider>
     </StrictMode>
   );

@@ -1,25 +1,32 @@
 // /app/reservar — public booking: class → you → your ficha → agreements → payment instructions.
 // Reads ?clase, ?plan, ?ref, ?espera=1 and sessionStorage["cl_atribucion"]. A signed-in clienta with a
 // complete ficha books in one tap; with gaps, she only fills what is missing.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createElement, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
-import { AnimatePresence, m } from "motion/react";
 import { ArrowLeft, ArrowRight, X, UserRound, Sparkles } from "lucide-react";
-import { useDisponibilidad, usePlanesPublicos, useReservaPublica, useEsperaPublica } from "../../api/hooks/publico.js";
+import { useDisponibilidad, usePlanesPublicos, useReservaPublica } from "../../api/hooks/publico.js";
 import { useYo } from "../../api/hooks/auth.js";
-import { useMi, useReservarMi, useEsperaMi, useEditarPerfil, useFirmar } from "../../api/hooks/clienta.js";
+import { useMi, useReservarMi, useEditarPerfil, useFirmar } from "../../api/hooks/clienta.js";
 import { Simbolo } from "../../ui/Logo.jsx";
 import { Boton } from "../../ui/Boton.jsx";
-import { Hoja } from "../../ui/Hoja.jsx";
-import { Entrada, formatoCelular } from "../../ui/Campos.jsx";
 import { Esqueleto } from "../../ui/Esqueleto.jsx";
 import { ErrorCaja, TagClase } from "../../ui/Basicos.jsx";
 import { Columpios } from "../../ui/Columpios.jsx";
 import { useAvisos } from "../../ui/Avisos.jsx";
+import { formatoCelular } from "../../lib/celular.js";
 import { SelectorClase } from "./SelectorClase.jsx";
-import { FormTu, FormFicha, FormAcuerdos, PERFIL_VACIO, validarTu, validarFicha, validarAcuerdos, escribioSalud } from "./Ficha.jsx";
-import { Resultado } from "./Resultado.jsx";
-import { FlujoCodigo } from "../entrar/FlujoCodigo.jsx";
+import { PERFIL_VACIO, validarTu, validarFicha, validarAcuerdos, escribioSalud } from "./reglasFicha.js";
+
+// Only the first step ships with the page: the forms, the result, the sheets and the code login load when used.
+const conMovimiento = (cargar, nombre) => lazy(() => Promise.all([cargar(), import("../../ui/ConMovimiento.jsx")])
+  .then(([x, { ConMovimiento }]) => ({ default: (props) => createElement(ConMovimiento, null, createElement(x[nombre], props)) })));
+const FormTu = conMovimiento(() => import("./Ficha.jsx"), "FormTu");
+const FormFicha = conMovimiento(() => import("./Ficha.jsx"), "FormFicha");
+const FormAcuerdos = conMovimiento(() => import("./Ficha.jsx"), "FormAcuerdos");
+const Resultado = conMovimiento(() => import("./Resultado.jsx"), "Resultado");
+const HojaEspera = lazy(() => import("./HojaEspera.jsx"));
+const HojaEntrar = lazy(() => import("./HojaEntrar.jsx"));
+const precargarPasos = () => { import("./Ficha.jsx"); import("./Resultado.jsx"); };
 import { leerAtribucion, evento } from "../../lib/atribucion.js";
 import { dinero, primerNombre, SALUD_SIN_DATOS, fechaLegible, horaLegible } from "../../lib/reglas.js";
 import { nombreClase } from "../../lib/clases.js";
@@ -57,6 +64,8 @@ export default function Reservar() {
   const paso = ["clase", "tu", "ficha", "acuerdos"].includes(pasoUrl) || (pasoUrl === "listo" && resultado) ? pasoUrl : "clase";
   const [espera, setEspera] = useState(null);
   const [entrar, setEntrar] = useState(false);
+  const [hojasVistas, setHojasVistas] = useState({});
+  useEffect(() => { if (espera || entrar) setHojasVistas((v) => ({ ...v, ...(espera ? { espera: true } : {}), ...(entrar ? { entrar: true } : {}) })); }, [espera, entrar]);
   const reservaPublica = useReservaPublica();
   const reservarMi = useReservarMi();
   const editarPerfil = useEditarPerfil();
@@ -142,7 +151,7 @@ export default function Reservar() {
   }
 
   if (paso === "listo" && resultado) {
-    return <Marco paso="listo"><Resultado r={resultado} plan={plan} limpiar={() => { sessionStorage.removeItem(ULTIMA); setResultado(null); setClaseId(""); ir("clase"); }} /></Marco>;
+    return <Marco paso="listo"><Suspense fallback={<EsqueletoPaso />}><Resultado r={resultado} plan={plan} limpiar={() => { sessionStorage.removeItem(ULTIMA); setResultado(null); setClaseId(""); ir("clase"); }} /></Suspense></Marco>;
   }
   // a direct visit to a later step without a class goes back to the start
   if (paso !== "clase" && !clase && !disp.isPending) {
@@ -155,8 +164,8 @@ export default function Reservar() {
     <Marco paso={paso} pasos={pasosVisibles} indice={indice} atras={paso !== "clase" ? () => history.back() : null}>
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
         <div className="min-w-0">
-          <AnimatePresence mode="wait" initial={false}>
-            <m.div key={paso} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -14, transition: { duration: 0.14 } }} transition={{ type: "spring", stiffness: 320, damping: 32 }}>
+          <Suspense fallback={<EsqueletoPaso />}>
+            <div key={paso} className="entra-x">
               {paso === "clase" && (
                 <>
                   <h1 className="saludo">{clienta ? `Hola, ${primerNombre(clienta.nombre)}.` : "Aparta tu columpio."}</h1>
@@ -173,7 +182,7 @@ export default function Reservar() {
                   )}
                   <div className="mt-8">
                     {disp.isPending ? <EsqueletoSelector /> : disp.isError ? <ErrorCaja error={disp.error} reintentar={disp.refetch} /> : (
-                      <SelectorClase clases={clases} seleccion={claseId} inicial={claseId} onElegir={(c) => setClaseId(c.id)} onEspera={(c) => setEspera(c)} />
+                      <SelectorClase clases={clases} seleccion={claseId} inicial={claseId} onElegir={(c) => { setClaseId(c.id); precargarPasos(); }} onEspera={(c) => setEspera(c)} />
                     )}
                   </div>
                 </>
@@ -205,8 +214,8 @@ export default function Reservar() {
                   <div className="mt-8"><FormAcuerdos valor={acuerdos} cambiar={(v) => { setAcuerdos(v); setErrores({}); }} conSensibles={escribioSalud(perfil.salud)} errores={errores} /></div>
                 </>
               )}
-            </m.div>
-          </AnimatePresence>
+            </div>
+          </Suspense>
         </div>
 
         {/* desktop: the chosen class floats beside the form */}
@@ -220,10 +229,8 @@ export default function Reservar() {
 
       {/* phones: a floating bar with the choice and the next step */}
       <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(14px,env(safe-area-inset-bottom))] lg:hidden">
-        <AnimatePresence>
-          {(clase || paso !== "clase") && (
-            <m.div initial={{ y: 90, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 90, opacity: 0 }} transition={{ type: "spring", stiffness: 380, damping: 34 }}
-              className="vidrio mx-auto flex max-w-[560px] items-center gap-3 rounded-[28px] p-2 pl-5">
+        {(clase || paso !== "clase") && (
+            <div className="sube vidrio mx-auto flex max-w-[560px] items-center gap-3 rounded-[28px] p-2 pl-5">
               <div className="min-w-0 flex-1">
                 {clase ? (
                   <>
@@ -233,15 +240,15 @@ export default function Reservar() {
                 ) : <p className="text-[0.9375rem] text-muted">Elige una clase</p>}
               </div>
               <Boton tam="m" punto={paso === "acuerdos" || (clienta && fichaLista)} onClick={siguiente} disabled={!clase} cargando={enviando}>{paso === "acuerdos" ? "Apartar" : clienta && fichaLista && paso === "clase" ? "Reservar" : "Continuar"}</Boton>
-            </m.div>
-          )}
-        </AnimatePresence>
+            </div>
+        )}
       </div>
 
-      <HojaEspera clase={espera} cerrar={() => setEspera(null)} clienta={clienta} perfil={perfil} />
-      <Hoja abierta={entrar} alCerrar={() => setEntrar(false)} titulo="Entra con tu WhatsApp" descripcion="Te enviamos un código y seguimos con tu reserva.">
-        <FlujoCodigo compacto whatsappInicial={perfil.whatsapp} onListo={() => { setEntrar(false); avisar("¡Hola de nuevo! Ya estás dentro."); if (paso !== "clase") ir("clase"); }} />
-      </Hoja>
+      {/* sheets load the first time they open and then stay mounted, so they can animate out */}
+      <Suspense fallback={null}>
+        {(espera || hojasVistas.espera) && <HojaEspera clase={espera} cerrar={() => setEspera(null)} clienta={clienta} perfil={perfil} />}
+        {(entrar || hojasVistas.entrar) && <HojaEntrar abierta={entrar} whatsapp={perfil.whatsapp} cerrar={() => setEntrar(false)} alEntrar={() => { setEntrar(false); avisar("¡Hola de nuevo! Ya estás dentro."); if (paso !== "clase") ir("clase"); }} />}
+      </Suspense>
     </Marco>
   );
 }
@@ -262,7 +269,7 @@ function Marco({ children, paso, pasos = PASOS, indice = 0, atras }) {
               {pasos.map((p, i) => (
                 <li key={p.id} className="flex-1" aria-current={i === indice ? "step" : undefined}>
                   <span className="relative block h-1 overflow-hidden rounded-full bg-line">
-                    <m.span className="absolute inset-y-0 left-0 rounded-full bg-navy" initial={false} animate={{ width: i < indice ? "100%" : i === indice ? "50%" : "0%" }} transition={{ type: "spring", stiffness: 200, damping: 30 }} />
+                    <span className="absolute inset-y-0 left-0 rounded-full bg-navy transition-[width] duration-500 ease-out" style={{ width: i < indice ? "100%" : i === indice ? "50%" : "0%" }} />
                   </span>
                   <span className={`mt-1.5 hidden text-[0.6875rem] font-medium sm:block ${i <= indice ? "text-navy" : "text-muted"}`}>{p.texto}</span>
                 </li>
@@ -283,7 +290,7 @@ function Resumen({ clase, plan }) {
     <div className="tarjeta-suave p-6"><p className="subtitulo">Tu clase</p><p className="texto-s suave mt-1">Elige un día y una hora.</p></div>
   );
   return (
-    <m.div layout className="tarjeta-flota p-6">
+    <div className="tarjeta-flota p-6">
       <p className="etiqueta-sola">Tu clase</p>
       <p className="mt-3 font-display text-[2rem] leading-none text-navy first-letter:uppercase">{fechaLegible(clase.fecha)}</p>
       <p className="mt-2 text-lg text-ink">{horaLegible(clase.hora)}</p>
@@ -295,8 +302,12 @@ function Resumen({ clase, plan }) {
           <span className="font-display text-2xl text-navy">{dinero(plan.precio)}</span>
         </div>
       )}
-    </m.div>
+    </div>
   );
+}
+
+function EsqueletoPaso() {
+  return <div className="space-y-4 pt-2" aria-busy="true" aria-label="Cargando"><Esqueleto className="h-12 w-64" /><Esqueleto className="h-5 w-80 max-w-full" /><Esqueleto className="mt-6 h-40 rounded-[28px]" /></div>;
 }
 
 function EsqueletoSelector() {
@@ -308,51 +319,3 @@ function EsqueletoSelector() {
     </div>
   );
 }
-
-function HojaEspera({ clase, cerrar, clienta, perfil }) {
-  const [nombre, setNombre] = useState(perfil.nombre || "");
-  const [wa, setWa] = useState(perfil.whatsapp || "");
-  const [acepta, setAcepta] = useState(false);
-  const [listo, setListo] = useState(false);
-  const publica = useEsperaPublica();
-  const mia = useEsperaMi();
-  useEffect(() => { if (!clase) { setListo(false); publica.reset(); mia.reset(); } }, [clase]); // eslint-disable-line react-hooks/exhaustive-deps
-  const enviar = (e) => {
-    e.preventDefault();
-    const ok = { onSuccess: () => setListo(true) };
-    if (clienta) mia.mutate(clase.id, ok);
-    else publica.mutate({ clase: clase.id, nombre: nombre.trim(), whatsapp: wa.replace(/\D/g, ""), consentimientos: { datos: { acepta: true } } }, ok);
-  };
-  const error = publica.error || mia.error;
-  return (
-    <Hoja abierta={Boolean(clase)} alCerrar={cerrar} titulo={listo ? "Estás en la lista" : "Lista de espera"}
-      descripcion={clase ? `${fechaLegible(clase.fecha)}, ${horaLegible(clase.hora)} · ${nombreClase(clase)}` : ""}>
-      {listo ? (
-        <div>
-          <p className="lead">Si se libera un columpio, te escribimos por WhatsApp. Quien responde primero, lo toma.</p>
-          <Boton className="mt-6" bloque onClick={cerrar}>Elegir otra clase mientras tanto</Boton>
-        </div>
-      ) : (
-        <form onSubmit={enviar} className="space-y-5">
-          <div className="flex items-center gap-4 rounded-[22px] bg-mist p-4">
-            {clase && <Columpios clase={clase} />}
-            <p className="texto-s text-ink">Esta clase está llena. Déjanos tus datos y te avisamos si alguien cancela.</p>
-          </div>
-          {!clienta && (
-            <>
-              <Entrada etiqueta="Tu nombre" valor={nombre} onCambio={setNombre} autoComplete="name" required />
-              <Entrada etiqueta="Tu WhatsApp" valor={wa} onCambio={(v) => setWa(formatoCelular(v))} inputMode="tel" placeholder="312 872 0888" required error={error?.campos?.whatsapp} />
-              <label className="flex items-start gap-3 text-[0.875rem] text-ink">
-                <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[var(--color-navy)]" />
-                <span>Autorizo a Casa Lotus a usar mi nombre y WhatsApp para avisarme de este cupo. <a className="enlace" href="/privacidad/" target="_blank" rel="noopener">Privacidad</a></span>
-              </label>
-            </>
-          )}
-          {error && !error.campos && <p className="campo-error" role="alert">{error.mensaje}</p>}
-          <Boton type="submit" bloque punto cargando={publica.isPending || mia.isPending} disabled={!clienta && (!acepta || nombre.trim().length < 2 || wa.replace(/\D/g, "").length !== 10)}>Avisarme si se libera</Boton>
-        </form>
-      )}
-    </Hoja>
-  );
-}
-

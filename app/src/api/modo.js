@@ -1,6 +1,7 @@
 // Demo mode: VITE_API=mock at build time, or ?demo=1 on localhost (remembered for the tab; ?demo=0 turns it off).
 function calcular() {
   if (import.meta.env.VITE_API === "mock") return true;
+  if (!import.meta.env.DEV) return false; // production: never, whatever the URL says
   if (typeof location === "undefined") return false;
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) || location.hostname.endsWith(".localhost");
   if (!local) return false;

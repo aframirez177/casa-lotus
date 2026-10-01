@@ -5,7 +5,7 @@ import { NavLink, Link, useLocation, useOutlet } from "react-router";
 import { AnimatePresence, LayoutGroup, m } from "motion/react";
 import {
   Home, CalendarDays, CalendarPlus, UserRound, Sun, Users, MessageCircle, LayoutGrid, Clock3, Wallet, UsersRound,
-  Settings2, ScrollText, WifiOff, ChevronRight,
+  Settings2, ScrollText, WifiOff, ChevronRight, TrendingUp,
 } from "lucide-react";
 import { Marca, Simbolo } from "../ui/Logo.jsx";
 import { Avatar } from "../ui/Basicos.jsx";
@@ -13,6 +13,7 @@ import { Hoja } from "../ui/Hoja.jsx";
 import { useYo } from "../api/hooks/auth.js";
 import { Campana, useNovedadesEnVivo } from "./Campana.jsx";
 import { esDemo } from "../api/modo.js";
+import { ConMovimiento } from "../ui/ConMovimiento.jsx";
 
 const NAV = {
   clienta: [
@@ -33,6 +34,7 @@ const NAV = {
   ],
 };
 const MAS = [
+  { a: "/admin/atribucion", texto: "Resultados de la web", corto: "Resultados", ayuda: "Qué botones y campañas traen reservas pagadas", Icono: TrendingUp },
   { a: "/admin/horario", texto: "Horario", ayuda: "Las franjas de cada semana y las clases extra", Icono: Clock3 },
   { a: "/admin/pagos", texto: "Pagos", ayuda: "Lo que entró este mes, por medio y por plan", Icono: Wallet },
   { a: "/admin/equipo", texto: "Equipo", ayuda: "Profes, invitaciones y clases del mes", Icono: UsersRound },
@@ -90,6 +92,7 @@ function Marco({ rol }) {
   const enMas = rol === "admin" && MAS.some((x) => loc.pathname.startsWith(x.a));
 
   return (
+    <ConMovimiento>
     <LayoutGroup>
       <div className="atmosfera" aria-hidden="true"><i /><i /><i /></div>
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-full focus:bg-navy focus:px-4 focus:py-3 focus:text-paper">Saltar al contenido</a>
@@ -167,6 +170,7 @@ function Marco({ rol }) {
         </Hoja>
       )}
     </LayoutGroup>
+    </ConMovimiento>
   );
 }
 
@@ -189,7 +193,7 @@ function ItemRail({ it, activo }) {
       className="relative flex w-[72px] flex-col items-center gap-0.5 rounded-[18px] py-1.5 text-navy hover:bg-white/60">
       {activo && <m.span layoutId="rail-activo" className="absolute inset-0 rounded-[18px] bg-navy" transition={{ type: "spring", stiffness: 480, damping: 38 }} />}
       <Icono size={20} strokeWidth={1.7} className={`relative ${activo ? "text-paper" : ""}`} />
-      <span className={`relative text-[0.65rem] font-medium leading-tight ${activo ? "text-paper" : ""}`}>{it.texto}</span>
+      <span className={`relative text-[0.65rem] font-medium leading-tight ${activo ? "text-paper" : ""}`}>{it.corto || it.texto}</span>
     </NavLink>
   );
 }

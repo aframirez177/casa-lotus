@@ -5,13 +5,16 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, m, useDragControls } from "motion/react";
 import { X } from "lucide-react";
 import { useEsAncho } from "./useMedia.js";
+import { ConMovimiento } from "./ConMovimiento.jsx";
 
 const FOCO = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 let abiertas = 0;
 
 export function Hoja({ abierta, alCerrar, titulo, descripcion, etiqueta, children, pie, ancho = "max-w-[560px]", oscura = false }) {
   return createPortal(
-    <AnimatePresence>{abierta && <Panel {...{ alCerrar, titulo, descripcion, etiqueta, pie, ancho, oscura }}>{children}</Panel>}</AnimatePresence>,
+    <ConMovimiento>
+      <AnimatePresence>{abierta && <Panel {...{ alCerrar, titulo, descripcion, etiqueta, pie, ancho, oscura }}>{children}</Panel>}</AnimatePresence>
+    </ConMovimiento>,
     document.body,
   );
 }

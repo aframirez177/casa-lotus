@@ -8,7 +8,8 @@ import { App } from "./App.jsx";
 
 capturarInstalacion();
 
-if (esDemo) {
+// The demo adapter exists only in dev and in demo builds (VITE_API=mock): a production build drops it entirely.
+if ((import.meta.env.DEV || import.meta.env.VITE_API === "mock") && esDemo) {
   // the in-browser studio: invented people, the same rules as the server
   const { crearServidorDemo } = await import("./api/mock/servidor.js");
   const demo = crearServidorDemo();

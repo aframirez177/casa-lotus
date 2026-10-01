@@ -246,6 +246,14 @@ export function sembrar(ahora = Date.now()) {
     });
   }
 
+  // a trial that came from the web last week and was paid: the attribution screen's first sale
+  const lina = porNombre("Lina");
+  const webLina = reservas.find((x) => x.clienta === lina.id);
+  if (webLina) { webLina.origen = "Web · WEB-PRUEBA"; webLina.atribucion = JSON.stringify({ ref: "WEB-PRUEBA", utm: { source: "instagram", medium: "social", campaign: "octubre" } }); webLina.creada = iso(Math.min(ahora - 60000, Math.max(momentoMs(hoy, "00:10"), ahora - 20 * 3600000))); }
+  const daniela = porNombre("Daniela");
+  const webDaniela = reservas.filter((x) => x.clienta === daniela.id).sort((a, b) => (a.clase < b.clase ? -1 : 1))[0];
+  if (webDaniela) { webDaniela.origen = "Web · WEB-HERO"; webDaniela.atribucion = JSON.stringify({ ref: "WEB-HERO", utm: { source: "google", medium: "cpc", campaign: "yoga-aereo-bogota" } }); }
+
   // a class nobody teaches yet, a profe who cannot make it, and someone who came without a plan
   const lejana = futuras.find((c) => c.fecha >= sumarDias(hoy, 9) && c.dia === "Sábado" && c.hora === "09:15");
   if (lejana) lejana.profe = "";
