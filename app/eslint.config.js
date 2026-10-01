@@ -24,6 +24,7 @@ export default [
       "react-hooks/exhaustive-deps": "warn",
       "no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrors: "none" }],
       "no-empty": ["error", { allowEmptyCatch: true }],
+      "no-use-before-define": ["error", { functions: false, classes: false, variables: false }],
     },
   },
 ];

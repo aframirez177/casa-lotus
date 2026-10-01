@@ -17,6 +17,7 @@ import { foto, restaurar } from "../../api/hooks/comun.js";
 import { MEDIOS, dinero, fechaLegible, horaLegible, hoyClave, primerNombre } from "../../lib/reglas.js";
 import { duracionCorta, diaRelativo } from "../../lib/fechas.js";
 import { nombreClase } from "../../lib/clases.js";
+import { textoDetalle } from "../../lib/texto.js";
 
 export const ETAPAS = {
   lead: { texto: "Interesada", clase: "chip" },
@@ -91,10 +92,16 @@ export function HojaConfirmar({ p, cerrar }) {
     setPlan(inicial.nombre); setValor(String(inicial.precio));
   }, [p, planes.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const elegir = (n) => { setPlan(n); const x = lista.find((y) => y.nombre === n); if (x) setValor(String(x.precio)); };
-  const enviar = (conPago) => confirmar.mutate(
-    { reserva: p.reserva, pago: conPago ? { plan, medio, valor: Number(valor.replace(/\D/g, "")) } : undefined },
-    { onSuccess: () => { avisar(`Listo: ${primerNombre(p.nombre)} quedó confirmada.`); cerrar(); }, onError: (e) => avisar(e.mensaje, { tipo: "error" }) },
-  );
+  // mutateAsync: the toast shows even when the confirmed card (and this sheet with it) leaves the screen;
+  // a failure keeps the sheet open with the reason inside it.
+  const enviar = async (conPago) => {
+    const nombre = primerNombre(p.nombre);
+    try {
+      await confirmar.mutateAsync({ reserva: p.reserva, pago: conPago ? { plan, medio, valor: Number(valor.replace(/\D/g, "")) } : undefined });
+      avisar(`Listo: ${nombre} quedó confirmada.`);
+      cerrar();
+    } catch { /* shown below, from confirmar.error */ }
+  };
   return (
     <Hoja abierta={Boolean(p)} alCerrar={cerrar} titulo={p ? `Confirmar a ${primerNombre(p.nombre)}` : ""} descripcion={p ? `${fechaLegible(p.clase.fecha)}, ${horaLegible(p.clase.hora)}` : ""}>
       {p && (
@@ -137,8 +144,8 @@ export function FilaAlerta({ a }) {
     <li className="flex items-center gap-3 py-3">
       <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${color}`}><Icono size={18} strokeWidth={1.8} /></span>
       {destino ? (
-        <Link to={destino} className="min-w-0 flex-1 rounded-xl"><span className="block font-medium leading-snug text-navy">{a.titulo}</span><span className="block texto-s suave">{a.detalle}</span></Link>
-      ) : <div className="min-w-0 flex-1"><p className="font-medium leading-snug text-navy">{a.titulo}</p><p className="texto-s suave">{a.detalle}</p></div>}
+        <Link to={destino} className="min-w-0 flex-1 rounded-xl"><span className="block font-medium leading-snug text-navy">{textoDetalle(a.titulo)}</span><span className="block texto-s suave">{textoDetalle(a.detalle)}</span></Link>
+      ) : <div className="min-w-0 flex-1"><p className="font-medium leading-snug text-navy">{textoDetalle(a.titulo)}</p><p className="texto-s suave">{textoDetalle(a.detalle)}</p></div>}
       {a.accion?.tipo === "whatsapp" ? (
         <a href={a.accion.enlace} target="_blank" rel="noopener" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-navy text-paper hover:bg-navy-900" aria-label={`Escribir por WhatsApp: ${a.titulo}`}><MessageCircle size={18} /></a>
       ) : destino ? <ChevronRight size={18} className="shrink-0 text-muted" aria-hidden="true" /> : null}

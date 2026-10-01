@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { disponibilidad } from "../lib/clases.js";
 
-export function Columpios({ clase, cupos, ocupados, pendientes = 0, tam = "m", claro = false, conNumero = false, className = "" }) {
+export function Columpios({ clase, cupos, ocupados, pendientes = 0, tam = "m", claro = false, conNumero = false, decorativo = false, className = "" }) {
   const total = Number(cupos ?? clase?.cupos ?? 8);
   const llenos = Math.min(total, Number(ocupados ?? clase?.ocupados ?? 0));
   const antes = useRef(llenos);
@@ -22,7 +22,7 @@ export function Columpios({ clase, cupos, ocupados, pendientes = 0, tam = "m", c
   const etiqueta = conNumero ? `${llenos} de ${total} columpios ocupados` : clase ? disponibilidad(clase).texto : "";
   const firmes = Math.max(0, llenos - pendientes);
   return (
-    <span className={`columpios ${claro ? "columpios-claro" : ""} ${className}`} style={medidas} role="img" aria-label={etiqueta || undefined}>
+    <span className={`columpios ${claro ? "columpios-claro" : ""} ${className}`} style={medidas} {...(decorativo || !etiqueta ? { "aria-hidden": true } : { role: "img", "aria-label": etiqueta })}>
       {Array.from({ length: total }, (_, i) => (
         <i key={i} style={{ "--n": i }} className={`${i < firmes ? "lleno" : i < llenos ? "espera" : ""} ${nuevos.includes(i) ? "nuevo" : ""}`} />
       ))}

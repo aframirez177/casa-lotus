@@ -27,7 +27,7 @@ export default function Mensajes() {
   const escritorio = useEsEscritorio();
   if (estado.isPending) return <EsqueletoLista filas={5} />;
   if (estado.isError) return <ErrorCaja error={estado.error} reintentar={estado.refetch} />;
-  if (!estado.data.conectado || estado.data.modo === "desconectado") return <Desconectado estado={estado.data} />;
+  if (!estado.data.conectado || estado.data.modo === "desconectado") return <Desconectado />;
 
   return (
     <div className={escritorio ? "grid h-[calc(100dvh-7.25rem)] grid-cols-[360px_minmax(0,1fr)] gap-5" : ""}>
@@ -39,7 +39,7 @@ export default function Mensajes() {
   );
 }
 
-function Desconectado({ estado }) {
+function Desconectado() {
   return (
     <div className="max-w-[720px]">
       <Encabezado titulo="Mensajes" grande={false} />
@@ -53,12 +53,7 @@ function Desconectado({ estado }) {
           </div>
           <h2 className="titulo max-w-[16ch]">Estamos conectando tu WhatsApp.</h2>
           <p className="lead mt-4 max-w-[44ch]">Cuando esté listo, aquí vas a leer y responder a tus clientas sin salir de Casa Lotus, con sus clases y su saldo al lado de cada conversación.</p>
-          {estado.faltan?.length > 0 && (
-            <div className="mt-8">
-              <p className="etiqueta-sola mb-3">Lo que falta para conectarlo</p>
-              <ul className="space-y-2">{estado.faltan.map((f) => <li key={f} className="flex items-center gap-3 text-ink"><span className="grid h-6 w-6 place-items-center rounded-full border border-line"><Plug size={12} className="text-muted" /></span>{f}</li>)}</ul>
-            </div>
-          )}
+          <p className="mt-8 flex items-center gap-3 text-ink"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line"><Plug size={14} className="text-muted" /></span>Falta conectar la cuenta de WhatsApp Business. Álvaro se encarga.</p>
           <div className="mt-8 rounded-[22px] bg-mist p-5">
             <p className="font-medium text-navy">Mientras tanto, sigue con tu teléfono</p>
             <p className="texto-s mt-1 text-ink">Responde en WhatsApp como siempre. Los botones de WhatsApp de toda la app abren tu WhatsApp con el mensaje ya escrito.</p>

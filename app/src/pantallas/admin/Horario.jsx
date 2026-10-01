@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Plus, Users } from "lucide-react";
 import { useHorario, useCrearFranja, useEditarFranja, useDesactivarFranja } from "../../api/hooks/admin.js";
-import { Encabezado, ErrorCaja, TagClase } from "../../ui/Basicos.jsx";
+import { Encabezado, ErrorCaja } from "../../ui/Basicos.jsx";
 import { Esqueleto } from "../../ui/Esqueleto.jsx";
 import { Boton } from "../../ui/Boton.jsx";
 import { Hoja } from "../../ui/Hoja.jsx";
@@ -38,8 +38,8 @@ export default function Horario() {
                   {lista.map((s) => (
                     <button key={s.id} type="button" onClick={() => setEditar(s)} className={`tarjeta relative overflow-hidden p-4 text-left ${s.activa ? "" : "opacity-55"}`}>
                       <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5" style={{ background: colorClase(s.clase) }} />
-                      <p className="font-display text-[1.6rem] leading-none text-navy">{horaLegible(s.hora)}</p>
-                      <TagClase clase={s.clase || "Por confirmar"} className="mt-3" />
+                      <p className="flex items-baseline gap-1 whitespace-nowrap leading-none text-navy"><span className="font-display text-[1.45rem]">{horaLegible(s.hora).split(" ")[0]}</span><span className="text-[0.75rem] text-muted">{horaLegible(s.hora).split(" ").slice(1).join(" ")}</span></p>
+                      <p className="mt-2 text-[0.875rem] font-medium leading-tight text-navy">{s.clase || "Clase por confirmar"}</p>
                       <p className="mt-3 flex items-center gap-1.5 texto-s text-ink"><Users size={14} />{s.cupos} · {s.profe || "Profe por definir"}</p>
                       <p className="mt-1 text-[0.8125rem] text-muted">{s.activa ? `${s.proximas} ${s.proximas === 1 ? "clase creada" : "clases creadas"}` : "Desactivada"}</p>
                     </button>
@@ -79,7 +79,7 @@ function HojaFranja({ franja, abierta, cerrar }) {
   const err = (franja ? editar : crear).error;
   return (
     <Hoja abierta={abierta} alCerrar={cerrar} titulo={resultado ? "Franja desactivada" : franja ? `${franja.dia} · ${horaLegible(franja.hora)}` : "Nueva franja semanal"}
-      descripcion={resultado ? null : franja ? "Cambia la clase, la profe o los cupos." : "Se repite cada semana y crea sus clases de una vez. Los festivos se saltan solos."}>
+      descripcion={resultado ? null : franja ? "Cambia la clase, quién la dicta o los cupos." : "Se repite cada semana y crea sus clases de una vez. Los festivos se saltan solos."}>
       {resultado ? (
         <div className="space-y-4">
           <p className="lead">{resultado.canceladas ? `Se quitaron ${resultado.canceladas} clases sin reservas.` : "No había clases futuras sin reservas."}</p>

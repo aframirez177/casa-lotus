@@ -41,7 +41,7 @@ export default function HojaEspera({ clase, cerrar, clienta, perfil }) {
           {!clienta && (
             <>
               <Entrada etiqueta="Tu nombre" valor={nombre} onCambio={setNombre} autoComplete="name" required />
-              <Entrada etiqueta="Tu WhatsApp" valor={wa} onCambio={(v) => setWa(formatoCelular(v))} inputMode="tel" placeholder="312 872 0888" required error={error?.campos?.whatsapp} />
+              <Entrada etiqueta="Tu WhatsApp" valor={wa} onCambio={(v) => setWa(formatoCelular(v))} inputMode="tel" placeholder="300 123 4567" required error={error?.campos?.whatsapp} />
               <label className="flex items-start gap-3 text-[0.875rem] text-ink">
                 <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[var(--color-navy)]" />
                 <span>Autorizo a Casa Lotus a usar mi nombre y WhatsApp para avisarme de este cupo. <a className="enlace" href="/privacidad/" target="_blank" rel="noopener">Privacidad</a></span>

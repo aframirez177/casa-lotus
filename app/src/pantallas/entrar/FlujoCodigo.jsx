@@ -54,7 +54,7 @@ export function FlujoCodigo({ onListo, whatsappInicial = "", compacto = false, a
       <form className="space-y-5" onSubmit={enviar}>
         <Segmentado etiqueta="Cómo te enviamos el código" valor={canal} onCambio={(v) => { setCanal(v); setDato(""); }} opciones={[{ valor: "whatsapp", texto: "WhatsApp" }, { valor: "correo", texto: "Correo" }]} />
         {canal === "whatsapp" ? (
-          <Entrada etiqueta="Tu WhatsApp" valor={dato} onCambio={(v) => setDato(formatoCelular(v))} inputMode="tel" autoComplete="tel-national" placeholder="312 872 0888" data-autofoco="" error={pedir.error?.campos?.whatsapp} />
+          <Entrada etiqueta="Tu WhatsApp" valor={dato} onCambio={(v) => setDato(formatoCelular(v))} inputMode="tel" autoComplete="tel-national" placeholder="300 123 4567" data-autofoco="" error={pedir.error?.campos?.whatsapp} />
         ) : (
           <Entrada etiqueta="Tu correo" type="email" valor={dato} onCambio={setDato} autoComplete="email" placeholder="tu@correo.com" data-autofoco="" error={pedir.error?.campos?.correo} />
         )}

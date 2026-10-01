@@ -117,7 +117,8 @@
   .btn-niebla { --bg: var(--color-mist); --fg: var(--color-navy); --bd: transparent; }
   .btn-linea { --bg: transparent; --fg: var(--color-navy); --bd: color-mix(in srgb, var(--color-navy) 30%, transparent); }
   .btn-lima { --bg: var(--color-lime); --fg: var(--color-navy-900); font-weight: 600; }
-  .btn-peligro { --bg: var(--color-error-bg); --fg: var(--color-error); --bd: transparent; }
+  .btn-peligro { --bg: var(--color-error); --fg: var(--color-white); --bd: var(--color-error); font-weight: 600; }
+  @media (hover: hover) { .btn-peligro:hover:not(:disabled) { --bg: color-mix(in srgb, var(--color-error) 86%, black); } }
   .btn-fantasma { --bg: transparent; --fg: var(--color-navy); --bd: transparent; }
   .btn-s { min-height: 44px; padding: 0 1.05rem; font-size: .9375rem; gap: .45rem; }
   .btn-xs { min-height: 36px; padding: 0 .85rem; font-size: .875rem; gap: .4rem; }

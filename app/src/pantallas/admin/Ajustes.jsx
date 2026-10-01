@@ -10,7 +10,8 @@ import { Entrada, Interruptor } from "../../ui/Campos.jsx";
 import { useAvisos } from "../../ui/Avisos.jsx";
 import { InstalarTarjeta } from "../../shell/Instalar.jsx";
 import { suscribirPush, pushDisponible, permisoPush } from "../../lib/push.js";
-import { dinero } from "../../lib/reglas.js";
+import { dinero, normalizaWhatsApp } from "../../lib/reglas.js";
+import { formatoCelular } from "../../lib/celular.js";
 import { esDemo } from "../../api/modo.js";
 
 const GRUPOS = [
@@ -48,14 +49,17 @@ export default function Ajustes() {
 
 function FilaAjuste({ a }) {
   const guardar = useGuardarAjustes();
-  const [v, setV] = useState(a.valor);
-  const [ok, setOk] = useState(false);
-  useEffect(() => setV(a.valor), [a.valor]);
   const numerico = Boolean(UNIDAD[a.ajuste]);
   const dinero_ = a.ajuste === "Pago por clase a profes";
+  const celular = a.ajuste === "WhatsApp de reservas";
+  const [v, setV] = useState(celular ? formatoCelular(a.valor) : a.valor);
+  const [ok, setOk] = useState(false);
+  useEffect(() => setV(celular ? formatoCelular(a.valor) : a.valor), [a.valor, celular]);
   const enviar = () => {
-    if (String(v) === String(a.valor)) return;
-    guardar.mutate({ [a.ajuste]: v }, { onSuccess: () => { setOk(true); setTimeout(() => setOk(false), 1800); } });
+    const valor = celular ? normalizaWhatsApp(v) : v;
+    if (celular && !valor) { setV(formatoCelular(a.valor)); return; }
+    if (String(valor) === String(a.valor)) return;
+    guardar.mutate({ [a.ajuste]: valor }, { onSuccess: () => { setOk(true); setTimeout(() => setOk(false), 1800); } });
   };
   return (
     <li className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:gap-6">
@@ -64,8 +68,8 @@ function FilaAjuste({ a }) {
         <p className="texto-s suave">{a.ayuda}{dinero_ ? " Solo lo ves tú." : ""}</p>
       </div>
       <div className="flex items-center gap-2 sm:w-[240px]">
-        <input id={`aj-${a.ajuste}`} className="entrada !min-h-11 text-right" value={dinero_ && v ? dinero(v) : v} inputMode={numerico || dinero_ ? "numeric" : undefined}
-          onChange={(e) => setV(numerico || dinero_ ? e.target.value.replace(/\D/g, "") : e.target.value)} onBlur={enviar} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} placeholder={dinero_ ? "Sin definir" : ""} />
+        <input id={`aj-${a.ajuste}`} className="entrada !min-h-11 text-right" value={dinero_ && v ? dinero(v) : v} inputMode={celular ? "tel" : numerico || dinero_ ? "numeric" : undefined}
+          onChange={(e) => setV(celular ? formatoCelular(e.target.value) : numerico || dinero_ ? e.target.value.replace(/\D/g, "") : e.target.value)} onBlur={enviar} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} placeholder={dinero_ ? "Sin definir" : ""} />
         {UNIDAD[a.ajuste] && <span className="w-16 shrink-0 texto-s suave">{UNIDAD[a.ajuste]}</span>}
         <span className="grid h-6 w-6 shrink-0 place-items-center" aria-live="polite">{ok && <Check size={18} className="text-teal" aria-label="Guardado" />}{guardar.isError && <CircleAlert size={18} className="text-error" aria-label={guardar.error.mensaje} />}</span>
       </div>

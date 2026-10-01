@@ -45,13 +45,15 @@ function sinPendiente(qc, reserva) {
   return { instantanea };
 }
 
+/**
+ * Confirm a hold. The pending card is removed only after the server says yes (it owns the sheet that shows
+ * the result), so a failure stays visible inside the sheet instead of silently putting the card back.
+ */
 export function useConfirmar() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ reserva, pago }) => api.post(`/api/admin/reservas/${id(reserva)}/confirmar`, pago ? { pago } : {}),
-    onMutate: ({ reserva }) => sinPendiente(qc, reserva),
-    onError: (_e, _v, ctx) => restaurar(qc, ctx?.instantanea),
-    onSuccess: (r) => { trasReserva(qc, r); qc.invalidateQueries({ queryKey: ["admin", "pagos"] }); },
+    onSuccess: (r, { reserva }) => { sinPendiente(qc, reserva); trasReserva(qc, r); qc.invalidateQueries({ queryKey: ["admin", "pagos"] }); },
   });
 }
 export function useLiberar() {

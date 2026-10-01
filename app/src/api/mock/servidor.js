@@ -97,7 +97,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
   function claseEquipo(c) {
     const v = claseVista(c);
     const t = ahora(), ini = inicioClase(c);
-    const gente = db.reservas.filter((r) => r.clase === c.id && r.estado !== ESTADO.VENCIDA).map(asistente)
+    const gente = db.reservas.filter((r) => r.clase === c.id).map(asistente)
       .sort((a, b) => (OCUPAN.includes(b.estado) - OCUPAN.includes(a.estado)) || String(a.nombre).localeCompare(b.nombre));
     return {
       ...v, profe: c.profe || "", notas: c.notas || "", esHoy: c.fecha === hoy(), pasada: ini < t,
@@ -205,12 +205,20 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     if (conv) for (const m of conv.mensajes.slice(-3)) ev.push({ id: "LM-" + m.ts, ts: m.ts, tipo: "mensaje", titulo: m.direccion === "entrante" ? "Escribió por WhatsApp" : "Le escribiste por WhatsApp", detalle: m.texto || "(imagen)", clienta: cl.id, actor: { tipo: m.direccion === "entrante" ? "clienta" : "admin", nombre: m.direccion === "entrante" ? cl.nombre : "Ana" } });
     return ev.filter((e) => Date.parse(e.ts) <= ahora() + 60000).sort((a, b) => (a.ts < b.ts ? 1 : -1)).slice(0, 40);
   }
+  /** Admin only: where a web booking came from (never the click id itself). */
+  function atribucionDe(r) {
+    if (!/^Web · /.test(r.origen)) return null;
+    let a = {};
+    try { a = JSON.parse(r.atribucion || "{}"); } catch { a = {}; }
+    const clic = ["gclid", "gbraid", "wbraid", "fbclid"].find((k) => a.clickIds?.[k]) || null;
+    return { ref: a.ref || r.origen.slice(6), utm: a.utm || null, clic };
+  }
   function clientaDetalle(cl) {
     const conv = db.conversaciones.find((x) => x.clienta?.id === cl.id);
     return {
       ...clientaFila(cl), perfil: perfilDe(cl), consentimientos: cl.consentimientos || {}, notas: cl.notas || "",
       compras: db.compras.filter((c) => c.clienta === cl.id).map(compraVista).sort((a, b) => (a.fecha < b.fecha ? 1 : -1)),
-      reservas: db.reservas.filter((r) => r.clienta === cl.id).map(reservaClienta).sort((a, b) => (a.clase.id < b.clase.id ? 1 : -1)),
+      reservas: db.reservas.filter((r) => r.clienta === cl.id).map((r) => ({ ...reservaClienta(r), atribucion: atribucionDe(r) })).sort((a, b) => (a.clase.id < b.clase.id ? 1 : -1)),
       espera: db.espera.filter((e) => e.clienta === cl.id && e.estado === "Esperando").map(esperaItem),
       conversacion: conv ? { id: conv.id, noLeidos: conv.noLeidos, ultimoMensaje: ultimoMensaje(conv) } : undefined,
       linea: lineaDe(cl),
@@ -243,6 +251,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       { id: sid, actual: true, creada: iso(ahora()), ultimoUso: iso(ahora()), dispositivo: "Este navegador" },
       { id: "S-otro1", actual: false, creada: iso(ahora() - 9 * 86400000), ultimoUso: iso(ahora() - 2 * 86400000), dispositivo: "iPhone · Safari" },
       { id: "S-otro2", actual: false, creada: iso(ahora() - 30 * 86400000), ultimoUso: iso(ahora() - 12 * 86400000), dispositivo: "Mac · Chrome" },
+      ...Array.from({ length: 11 }, (_, i) => ({ id: "S-viejo" + i, actual: false, creada: iso(ahora() - (40 + i) * 86400000), ultimoUso: iso(ahora() - (20 + i) * 86400000), dispositivo: i % 2 ? "Android · Chrome" : "iPhone · Safari" })),
     ];
   }
   function cerrarSesion() {
@@ -357,7 +366,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     }
     for (const c of db.clases.filter((k) => k.estado !== "Cancelada" && inicioClase(k) > t && k.fecha <= sumarDias(h, 14))) {
       const ruta = "/app/admin/agenda/" + encodeURIComponent(c.id);
-      if (c.reemplazoPedido) lista.push({ id: "A-reemplazo-" + c.id, tipo: "necesita-reemplazo", prioridad: 1, titulo: `${primerNombre(c.profe) || "La profe"} no puede dictar`, detalle: `${fechaLegible(c.fecha)}, ${horaLegible(c.hora)}${c.reemplazoPedido.motivo ? " · " + c.reemplazoPedido.motivo : ""}`, clase: claseVista(c), accion: { tipo: "abrir", ruta: ruta + "?profe=1" } });
+      if (c.reemplazoPedido) lista.push({ id: "A-reemplazo-" + c.id, tipo: "necesita-reemplazo", prioridad: 1, titulo: `${primerNombre(c.profe) || "Tu profe"} no puede dictar`, detalle: `${fechaLegible(c.fecha)}, ${horaLegible(c.hora)}${c.reemplazoPedido.motivo ? " · " + c.reemplazoPedido.motivo : ""}`, clase: claseVista(c), accion: { tipo: "abrir", ruta: ruta + "?profe=1" } });
       else if (!c.profe) lista.push({ id: "A-sinprofe-" + c.id, tipo: "sin-profe", prioridad: 2, titulo: "Clase sin profe", detalle: `${fechaLegible(c.fecha)}, ${horaLegible(c.hora)} · ${c.clase || "clase"}`, clase: claseVista(c), accion: { tipo: "abrir", ruta } });
     }
     for (const r of db.reservas.filter((x) => x.estado === ESTADO.ASISTIO && !x.compra && clase(x.clase).fecha >= sumarDias(h, -14))) {
@@ -528,7 +537,11 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     abrirSesion({ rol: u.rol, id: u.id });
     return { usuario: yoUsuario({ rol: u.rol, id: u.id }) };
   });
-  ruta("GET", "/api/auth/sesiones", (ctx) => { exigir(ctx, "admin", "profe", "clienta"); return db.sesiones; });
+  ruta("GET", "/api/auth/sesiones", (ctx) => {
+    exigir(ctx, "admin", "profe", "clienta");
+    const orden = [...db.sesiones].sort((a, b) => (b.actual - a.actual) || (a.ultimoUso < b.ultimoUso ? 1 : -1));
+    return { sesiones: orden.slice(0, 10), total: db.sesiones.length };
+  });
   ruta("DELETE", "/api/auth/sesiones/:id", (ctx) => {
     exigir(ctx, "admin", "profe", "clienta");
     db.sesiones = ctx.p.id === "otras" ? db.sesiones.filter((s) => s.actual) : db.sesiones.filter((s) => s.id !== ctx.p.id);
@@ -651,14 +664,14 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const u = exigir(ctx, "profe", "admin");
     const c = clase(ctx.p.id);
     if (!c) falla(404, "no-existe", "Esa clase no existe.");
-    if (!esSuya(u, c)) falla(403, "sin-permiso", "Esta clase es de otra profe.");
+    if (!esSuya(u, c)) falla(403, "sin-permiso", "Esta clase no está a tu nombre.");
     return claseEquipo(c);
   });
   function marcar(ctx) {
     const r = reserva(ctx.p.id);
     if (!r) falla(404, "no-existe", "No encontramos esa reserva.");
     const c = clase(r.clase);
-    if (!esSuya(ctx.u, c)) falla(403, "sin-permiso", "Esta clase es de otra profe.");
+    if (!esSuya(ctx.u, c)) falla(403, "sin-permiso", "Esta clase no está a tu nombre.");
     if (![ESTADO.CONFIRMADA, ESTADO.ASISTIO, ESTADO.NO_VINO].includes(r.estado)) conflicto("estado", "Esta reserva no está confirmada.");
     if (ahora() < momentoMs(c.fecha, "00:00")) conflicto("tarde", "La asistencia se marca desde el día de la clase.");
     if (ctx.u.rol === "profe" && ahora() - inicioClase(c) > 48 * 3600000) conflicto("fuera-de-plazo", "Pasaron 48 horas: pídele a Ana que lo corrija.");
@@ -824,7 +837,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     if (q.segmento) lista = lista.filter((c) => c.segmentos.includes(q.segmento));
     if (q.q) { const t = sinAcentos(q.q), d = q.q.replace(/\D/g, ""); lista = lista.filter((c) => sinAcentos(c.nombre).includes(t) || (d.length >= 3 && c.whatsapp.includes(d)) || sinAcentos(c.correo).includes(t)); }
     const orden = q.orden || "nombre";
-    lista.sort(orden === "saldo" ? (a, b) => b.saldo.clases - a.saldo.clases : orden === "reciente" ? (a, b) => (a.desde < b.desde ? 1 : -1) : orden === "proxima" ? (a, b) => ((a.proxima?.id || "~") < (b.proxima?.id || "~") ? -1 : 1) : (a, b) => a.nombre.localeCompare(b.nombre));
+    lista.sort(orden === "saldo" ? (a, b) => b.saldo.clases - a.saldo.clases : orden === "reciente" ? (a, b) => (a.desde < b.desde ? 1 : -1) : orden === "proxima" ? (a, b) => ((a.proxima?.id || "~") < (b.proxima?.id || "~") ? -1 : 1) : orden === "visita" ? (a, b) => ((b.ultimaVisita || "") > (a.ultimaVisita || "") ? 1 : (b.ultimaVisita || "") < (a.ultimaVisita || "") ? -1 : 0) : (a, b) => a.nombre.localeCompare(b.nombre));
     return lista;
   }));
   ruta("GET", "/api/admin/segmentos", A(() => segmentosLista()));
@@ -1013,7 +1026,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
   ruta("DELETE", "/api/admin/push/suscribir", A(() => ({ status: 204 })));
   ruta("GET", "/api/admin/whatsapp/estado", A(() => {
     const modo = waModo();
-    return { conectado: modo !== "desconectado", modo, numero: modo === "desconectado" ? undefined : "+57 312 872 0888", nombreVerificado: modo === "desconectado" ? undefined : "Casa Lotus", plantillas: db.plantillas, faltan: modo === "desconectado" ? ["Token de acceso de Meta", "Número verificado", "Webhook"] : [] };
+    return { conectado: modo !== "desconectado", modo, numero: modo === "desconectado" ? undefined : "+57 312 872 0888", nombreVerificado: modo === "desconectado" ? undefined : "Casa Lotus", plantillas: db.plantillas, faltan: modo === "desconectado" ? ["WHATSAPP_TOKEN", "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_APP_SECRET"] : [] };
   }));
   ruta("GET", "/api/admin/whatsapp/conversaciones", A(({ q }) => {
     if (waModo() === "desconectado") falla(503, "no-configurado", "WhatsApp todavía no está conectado.");

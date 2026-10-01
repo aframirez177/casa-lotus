@@ -50,8 +50,8 @@ export default function ClaseDetalle() {
             <CabeceraClase clase={c} />
             {c.reemplazoPedido && c.estado !== "Cancelada" && (
               <div className="-mt-2 mb-6 flex flex-wrap items-center gap-3 rounded-[22px] bg-error-bg p-4 text-error">
-                <p className="min-w-0 flex-1">{c.profe || "La profe"} no puede dictarla{c.reemplazoPedido.motivo ? `: ${c.reemplazoPedido.motivo}` : "."}</p>
-                <Boton tam="s" onClick={() => setHoja("editar")}>Asignar otra profe</Boton>
+                <p className="min-w-0 flex-1">{c.profe || "Tu profe"} no puede dictarla{c.reemplazoPedido.motivo ? `: ${c.reemplazoPedido.motivo}` : "."}</p>
+                <Boton tam="s" onClick={() => setHoja("editar")}>Asignar profe</Boton>
               </div>
             )}
             {(c.pasada || inicioClase(c) - Date.now() <= 3600000) && <HerramientasProfe clase={c} admin />}
@@ -162,7 +162,7 @@ function HojaCancelarClase({ clase: c, abierta, cerrar }) {
       ) : (
         <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); cancelar.mutate({ id: c.id, motivo }, { onSuccess: (r) => setAfectadas(r.afectadas) }); }}>
           <p className="text-ink">{c.ocupados ? `Hay ${c.ocupados === 1 ? "1 persona" : c.ocupados + " personas"}. Sus reservas se cancelan y la clase vuelve a cada plan. Después te muestro a quién avisar.` : "No hay nadie reservado."}</p>
-          <Entrada etiqueta="Motivo" opcional valor={motivo} onCambio={setMotivo} placeholder="Poca gente, festivo, la profe está enferma…" ayuda="Va en el mensaje que les envías." />
+          <Entrada etiqueta="Motivo" opcional valor={motivo} onCambio={setMotivo} placeholder="Poca gente, festivo, alguien del equipo enfermo…" ayuda="Va en el mensaje que les envías." />
           {cancelar.isError && <p className="campo-error" role="alert">{cancelar.error.mensaje}</p>}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Boton variante="suave" onClick={fin}>No, volver</Boton>

@@ -47,7 +47,7 @@ export default function Agenda() {
 
       {isPending ? <div className="grid gap-3 lg:grid-cols-7">{Array.from({ length: 7 }, (_, i) => <Esqueleto key={i} className="h-36 rounded-[28px]" />)}</div>
         : error ? <ErrorCaja error={error} reintentar={refetch} /> : (
-          <div className="grid gap-8 lg:grid-cols-7 lg:gap-3">
+          <div className="grid gap-8 pb-16 lg:grid-cols-7 lg:gap-3 lg:pb-0">
             {dias.map((f) => {
               const lista = data.filter((c) => c.fecha === f);
               const esHoy = f === hoy;
@@ -69,8 +69,8 @@ export default function Agenda() {
 
       {/* floating «+» on phones */}
       <m.button type="button" onClick={() => setNueva(true)} aria-label="Agregar una clase" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 22, delay: 0.2 }}
-        className="fixed right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-navy text-paper shadow-glass lg:hidden" style={{ bottom: "calc(max(14px, env(safe-area-inset-bottom)) + 84px)" }}>
-        <Plus size={24} />
+        className="fixed right-4 z-30 grid h-12 w-12 place-items-center rounded-full bg-navy text-paper shadow-glass lg:hidden" style={{ bottom: "calc(max(14px, env(safe-area-inset-bottom)) + 86px)" }}>
+        <Plus size={22} />
       </m.button>
 
       <HojaNueva abierta={nueva} cerrar={() => setNueva(false)} onFranja={() => { setNueva(false); navegar("/admin/horario?nueva=1"); }} />

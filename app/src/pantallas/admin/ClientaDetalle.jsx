@@ -19,6 +19,12 @@ import { FormTu, FormFicha, PERFIL_VACIO } from "../reservar/Ficha.jsx";
 import { enlaceWhatsApp, fechaLegible, horaLegible, partesBogota, whatsappLegible, CONSENTIMIENTOS, ESTADO, dinero, primerNombre } from "../../lib/reglas.js";
 import { haceTexto, diaRelativo } from "../../lib/fechas.js";
 import { nombreClase } from "../../lib/clases.js";
+import { textoDetalle } from "../../lib/texto.js";
+import { nombreRef } from "../../lib/refs.js";
+
+const CLICS = { gclid: "Google Ads", gbraid: "Google Ads", wbraid: "Google Ads", fbclid: "Meta" };
+/** «Por la web: Portada · google / cpc · clic de Google Ads». */
+const textoAtribucion = (a) => ["Por la web: " + nombreRef(a.ref), a.utm?.source && `${a.utm.source}${a.utm.medium ? " / " + a.utm.medium : ""}`, a.utm?.campaign && `campaña ${a.utm.campaign}`, a.clic && `clic de ${CLICS[a.clic] || a.clic}`].filter(Boolean).join(" · ");
 
 const fechaDe = (iso) => (iso ? fechaLegible(partesBogota(Date.parse(iso)).fecha) : "");
 
@@ -40,8 +46,8 @@ export default function ClientaDetalle() {
           <Avatar nombre={c.nombre} tam={72} />
           <div className="min-w-0">
             <h1 className="titulo">{c.nombre}</h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2 texto-s suave">
-              <Etapa etapa={c.etapa} /><span>{c.whatsappTexto}</span>{c.llego && <span>· llegó por {c.llego}</span>}<span>· desde {fechaLegible(c.desde).replace(/^\S+ /, "")}</span>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 texto-s suave">
+              <Etapa etapa={c.etapa} /><span className="whitespace-nowrap">{c.whatsappTexto}</span>{c.llego && <span>Llegó por {c.llego}</span>}<span>Desde el {fechaLegible(c.desde).replace(/^\S+ /, "")}</span>
             </div>
           </div>
         </div>
@@ -81,7 +87,7 @@ export default function ClientaDetalle() {
             {proximas.length ? (
               <ul className="space-y-2">{proximas.map((r) => (
                 <li key={r.id}><Link to={`/admin/agenda/${encodeURIComponent(r.clase.id)}`} className="tarjeta flex items-center gap-3 p-4">
-                  <div className="min-w-0 flex-1"><p className="font-medium text-navy first-letter:uppercase">{diaRelativo(r.clase.fecha)} · {horaLegible(r.clase.hora)}</p><p className="texto-s suave">{nombreClase(r.clase)}</p></div>
+                  <div className="min-w-0 flex-1"><p className="font-medium text-navy first-letter:uppercase">{diaRelativo(r.clase.fecha)} · {horaLegible(r.clase.hora)}</p><p className="texto-s suave">{nombreClase(r.clase)}</p>{r.atribucion && <p className="mt-1 text-[0.8125rem] text-teal">{textoAtribucion(r.atribucion)}</p>}</div>
                   <span className={`chip ${r.estado === ESTADO.PENDIENTE ? "chip-aviso" : "chip-ok"}`}>{r.estado === ESTADO.PENDIENTE ? "Espera pago" : "Confirmada"}</span>
                 </Link></li>
               ))}</ul>
@@ -96,8 +102,8 @@ export default function ClientaDetalle() {
                   return (
                     <li key={e.id} className="relative pb-5 last:pb-0">
                       <span className="absolute -left-[39px] grid h-7 w-7 place-items-center rounded-full bg-white text-navy shadow-card"><Icono size={14} /></span>
-                      <p className="font-medium text-navy">{e.titulo}</p>
-                      {e.detalle && <p className="texto-s text-ink">{e.detalle}</p>}
+                      <p className="font-medium text-navy">{textoDetalle(e.titulo)}</p>
+                      {textoDetalle(e.detalle) && <p className="texto-s text-ink">{textoDetalle(e.detalle)}</p>}
                       <p className="text-[0.8125rem] text-muted">{haceTexto(e.ts)}</p>
                     </li>
                   );

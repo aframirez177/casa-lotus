@@ -27,7 +27,9 @@ export default function Cuenta() {
   useEffect(() => { if (yo) { setNombre(yo.nombre || ""); setWa(formatoCelular(yo.whatsapp || "")); } }, [yo]);
   if (!yo) return null;
   const sucio = nombre !== yo.nombre || wa.replace(/\D/g, "") !== String(yo.whatsapp || "").replace(/^57/, "");
-  const otras = (sesiones.data || []).filter((s) => !s.actual);
+  const lista = sesiones.data?.sesiones || [];
+  const total = sesiones.data?.total ?? lista.length;
+  const otras = lista.filter((s) => !s.actual);
 
   return (
     <div className="max-w-[720px]">
@@ -39,7 +41,7 @@ export default function Cuenta() {
       <Seccion titulo="Tus datos">
         <form className="tarjeta grid gap-5 p-5 sm:p-6" onSubmit={(e) => { e.preventDefault(); editar.mutate({ nombre: nombre.trim(), whatsapp: wa.replace(/\D/g, "") }, { onSuccess: () => avisar("Guardado."), onError: (er) => avisar(er.mensaje, { tipo: "error" }) }); }}>
           <Entrada etiqueta="Nombre" valor={nombre} onCambio={setNombre} autoComplete="name" />
-          <Entrada etiqueta="WhatsApp" valor={wa} onCambio={(v) => setWa(formatoCelular(v))} inputMode="tel" placeholder="300 000 0000" />
+          <Entrada etiqueta="WhatsApp" valor={wa} onCambio={(v) => setWa(formatoCelular(v))} inputMode="tel" placeholder="300 123 4567" />
           <div className="flex flex-wrap gap-2">
             <Boton type="submit" disabled={!sucio} cargando={editar.isPending}>Guardar</Boton>
             <Boton variante="suave" icono={<KeyRound size={17} />} onClick={() => setClave(true)}>Cambiar contraseña</Boton>
@@ -48,16 +50,17 @@ export default function Cuenta() {
       </Seccion>
 
       <Seccion titulo="Sesiones abiertas" ayuda="Los dispositivos donde has entrado. Si no reconoces alguno, ciérralo."
-        accion={otras.length > 0 ? <Boton tam="s" variante="suave" cargando={cerrar.isPending && cerrar.variables === "otras"} onClick={() => cerrar.mutate("otras", { onSuccess: () => avisar("Cerraste las demás sesiones.") })}>Cerrar las demás</Boton> : null}>
+        accion={otras.length > 0 || total > lista.length ? <Boton tam="s" variante="suave" cargando={cerrar.isPending && cerrar.variables === "otras"} onClick={() => cerrar.mutate("otras", { onSuccess: () => avisar("Cerraste las demás sesiones.") })}>Cerrar las demás</Boton> : null}>
         {sesiones.isPending ? <Esqueleto className="h-32 rounded-[28px]" /> : (
           <ul className="tarjeta divide-y divide-line px-5">
-            {(sesiones.data || []).map((s) => (
+            {[...lista].sort((a, b) => (b.actual - a.actual) || String(b.ultimoUso).localeCompare(String(a.ultimoUso))).slice(0, 10).map((s) => (
               <li key={s.id} className="flex items-center gap-4 py-4">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-mist text-navy">{/iphone|android|móvil/i.test(s.dispositivo) ? <Smartphone size={18} /> : <Monitor size={18} />}</span>
                 <div className="min-w-0 flex-1"><p className="font-medium text-navy">{s.dispositivo}{s.actual && <span className="chip chip-ok ml-2 align-middle">Esta</span>}</p><p className="texto-s suave">Último uso {haceTexto(s.ultimoUso)}</p></div>
                 {!s.actual && <Boton tam="xs" variante="fantasma" onClick={() => cerrar.mutate(s.id)}>Cerrar</Boton>}
               </li>
             ))}
+            {total > Math.min(10, lista.length) && <li className="py-4 texto-s suave">y {total - Math.min(10, lista.length)} más. «Cerrar las demás» las cierra todas menos esta.</li>}
           </ul>
         )}
       </Seccion>

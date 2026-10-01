@@ -50,8 +50,13 @@ export function useAceptarInvitacion(token) {
 export function useCambiarPassword() {
   return useMutation({ mutationFn: (b) => api.post("/api/auth/password", b) });
 }
+/** The 10 most recently used sessions (the current one always included) and how many there are in total. */
 export function useSesiones() {
-  return useQuery({ queryKey: K.sesiones, queryFn: () => api.get("/api/auth/sesiones"), staleTime: 60000 });
+  return useQuery({
+    queryKey: K.sesiones,
+    queryFn: async () => { const r = await api.get("/api/auth/sesiones"); return Array.isArray(r) ? { sesiones: r, total: r.length } : r; },
+    staleTime: 60000,
+  });
 }
 export function useCerrarSesionRemota() {
   const qc = useQueryClient();
@@ -59,7 +64,11 @@ export function useCerrarSesionRemota() {
     mutationFn: (idSesion) => api.del(`/api/auth/sesiones/${id(idSesion)}`),
     onMutate: async (idSesion) => {
       const antes = qc.getQueryData(K.sesiones);
-      qc.setQueryData(K.sesiones, (l) => (l || []).filter((s) => (idSesion === "otras" ? s.actual : s.id !== idSesion)));
+      qc.setQueryData(K.sesiones, (d) => {
+        if (!d) return d;
+        const sesiones = d.sesiones.filter((s) => (idSesion === "otras" ? s.actual : s.id !== idSesion));
+        return { sesiones, total: idSesion === "otras" ? sesiones.length : Math.max(sesiones.length, d.total - 1) };
+      });
       return { antes };
     },
     onError: (_e, _v, ctx) => qc.setQueryData(K.sesiones, ctx?.antes),

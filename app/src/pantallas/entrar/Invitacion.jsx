@@ -23,7 +23,7 @@ export default function Invitacion() {
         : error ? (
           <>
             <h1 className="titulo">Esta invitación ya no sirve</h1>
-            <p className="lead mt-3">{error.mensaje || "Venció o ya se usó."} Pídele a Ana que te envíe una nueva.</p>
+            <p className="lead mt-3">{error.status === 0 || error.status >= 500 ? error.mensaje : "Venció o ya se usó. Pídele a Ana que te envíe una nueva."}</p>
           </>
         ) : (
           <>

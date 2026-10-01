@@ -11,6 +11,7 @@ import { useYo } from "../api/hooks/auth.js";
 import { Hoja } from "../ui/Hoja.jsx";
 import { useAvisos } from "../ui/Avisos.jsx";
 import { haceTexto } from "../lib/fechas.js";
+import { textoDetalle } from "../lib/texto.js";
 import { Vacio } from "../ui/Basicos.jsx";
 
 export const ICONOS_EVENTO = {
@@ -85,7 +86,7 @@ export function useNovedadesEnVivo(activo) {
       for (const clave of QUE_REFRESCAR[e.tipo] || [K.tablero]) qc.invalidateQueries({ queryKey: clave });
       const mio = e.actor?.id && e.actor.id === yoRef.current?.id;
       if (!mio && ["reserva-web", "reserva", "cancelacion", "reagenda", "espera", "mensaje"].includes(e.tipo)) {
-        avisar(`${e.titulo}${e.detalle ? " · " + e.detalle : ""}`, {
+        avisar(`${textoDetalle(e.titulo)}${textoDetalle(e.detalle) ? " · " + textoDetalle(e.detalle) : ""}`, {
           tipo: "nuevo", duracion: 8000,
           accion: e.tipo === "reserva-web" ? { texto: "Ver", fn: () => navegar("/admin") } : e.clienta ? { texto: "Ver", fn: () => navegar("/admin/clientas/" + e.clienta) } : undefined,
         });
@@ -146,7 +147,7 @@ export function Campana({ vivo }) {
                         <span className="font-medium text-navy">{e.titulo}</span>
                         <span className="shrink-0 text-[0.8125rem] text-muted">{haceTexto(e.ts)}</span>
                       </span>
-                      {e.detalle && <span className="mt-0.5 block texto-s text-ink">{e.detalle}</span>}
+                      {textoDetalle(e.detalle) && <span className="mt-0.5 block texto-s text-ink">{textoDetalle(e.detalle)}</span>}
                     </span>
                   </button>
                 </li>

@@ -13,7 +13,7 @@ export function FormTu({ perfil, cambiar, errores = {} }) {
   return (
     <div className="space-y-5">
       <Entrada etiqueta="Nombre y apellido" valor={perfil.nombre} onCambio={(v) => cambiar({ nombre: v })} autoComplete="name" error={errores.nombre} autoCapitalize="words" />
-      <Entrada etiqueta="WhatsApp" valor={perfil.whatsapp} onCambio={(v) => cambiar({ whatsapp: formatoCelular(v) })} inputMode="tel" autoComplete="tel-national" placeholder="312 872 0888"
+      <Entrada etiqueta="WhatsApp" valor={perfil.whatsapp} onCambio={(v) => cambiar({ whatsapp: formatoCelular(v) })} inputMode="tel" autoComplete="tel-national" placeholder="300 123 4567"
         ayuda="Por aquí te confirmamos y te recordamos la clase." error={errores.whatsapp} />
       <Entrada etiqueta="Correo" opcional type="email" valor={perfil.correo} onCambio={(v) => cambiar({ correo: v })} autoComplete="email" placeholder="tu@correo.com"
         ayuda="Para recordatorios y para entrar a la app sin contraseña." error={errores.correo} />
@@ -42,7 +42,7 @@ export function FormFicha({ perfil, cambiar, errores = {} }) {
       <Grupo titulo="Contacto de emergencia" ayuda="Alguien a quien llamar si algo pasa en clase.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Entrada etiqueta="Nombre" valor={ce.nombre} onCambio={(v) => cambiar({ contactoEmergencia: { ...ce, nombre: v } })} autoComplete="off" error={errores.contactoNombre} />
-          <Entrada etiqueta="Su WhatsApp" valor={ce.whatsapp ? formatoCelular(ce.whatsapp) : ""} onCambio={(v) => cambiar({ contactoEmergencia: { ...ce, whatsapp: formatoCelular(v) } })} inputMode="tel" placeholder="300 000 0000" error={errores.contactoWhatsapp} />
+          <Entrada etiqueta="Su WhatsApp" valor={ce.whatsapp ? formatoCelular(ce.whatsapp) : ""} onCambio={(v) => cambiar({ contactoEmergencia: { ...ce, whatsapp: formatoCelular(v) } })} inputMode="tel" placeholder="300 123 4567" error={errores.contactoWhatsapp} />
         </div>
         <Entrada className="mt-4" etiqueta="EPS" opcional valor={perfil.eps} onCambio={(v) => cambiar({ eps: v })} placeholder="Sura, Sanitas, Compensar…" />
       </Grupo>

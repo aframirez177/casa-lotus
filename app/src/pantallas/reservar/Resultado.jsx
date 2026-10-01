@@ -55,14 +55,14 @@ export function Resultado({ r, limpiar }) {
           <p className="numero mt-1 text-[3.25rem] !text-paper">{dinero(r.pago.monto)}</p>
           <div className="mt-5 rounded-[22px] bg-paper/8 p-4">
             <p className="text-[0.8125rem] text-paper/70">{(r.pago.medios || []).join(" · ")} a la llave</p>
-            <div className="mt-1 flex items-center justify-between gap-3">
-              <p className="font-display text-[1.75rem] tracking-tight text-paper" data-seleccionable>{r.pago.llave}</p>
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <p className="whitespace-nowrap font-display text-[clamp(1.4rem,7.2vw,1.75rem)] tracking-tight text-paper" data-seleccionable>{r.pago.llave}</p>
               <button type="button" onClick={copiar} className="flex min-h-11 items-center gap-2 rounded-full bg-paper/10 px-4 text-[0.875rem] text-paper hover:bg-paper/15" aria-live="polite">
                 {copiado ? <><Check size={16} className="text-lime" /> Copiada</> : <><Copy size={16} /> Copiar</>}
               </button>
             </div>
           </div>
-          <Boton variante="lima" bloque tam="l" punto className="mt-5" href={r.pago.waEnlace} icono={<MessageCircle size={18} />}>Enviar comprobante por WhatsApp</Boton>
+          <Boton variante="lima" bloque tam="l" className="mt-5 !whitespace-normal text-center" href={r.pago.waEnlace} icono={<MessageCircle size={19} />} aria-label="Enviar comprobante por WhatsApp">Enviar comprobante</Boton>
           <p className="mt-4 rounded-[18px] border border-paper/15 px-4 py-3 text-[0.875rem] text-paper/85">Si ya tienes un plan activo, no pagues: Ana confirma tu reserva con tu plan.</p>
           {Number.isFinite(vence) && (
             <p className="mt-4 text-center text-[0.875rem] text-paper/75" aria-live="off">

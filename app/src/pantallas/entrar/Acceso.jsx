@@ -1,5 +1,5 @@
 // /app/acceso/:token — the private link Ana sends. The server sets the session and redirects to /app/mi.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { esDemo } from "../../api/modo.js";
@@ -14,7 +14,10 @@ export default function Acceso() {
   const navegar = useNavigate();
   const qc = useQueryClient();
   const [error, setError] = useState(null);
+  const usado = useRef(false); // the link is single-use: one request, even when React runs effects twice (StrictMode) or remounts
   useEffect(() => {
+    if (usado.current) return;
+    usado.current = true;
     if (!esDemo) { location.replace(`/api/auth/enlace/${id(token)}`); return; }
     api.get(`/api/auth/enlace/${id(token)}`).then((r) => { qc.setQueryData(K.yo, r.usuario); navegar("/mi", { replace: true }); }).catch(setError);
   }, [token, navegar, qc]);

@@ -8,6 +8,16 @@ import { DIAS, MESES, fechaUTC, hoyClave, sumarDias, horaLegible } from "../../l
 import { diaRelativo } from "../../lib/fechas.js";
 import { Vacio } from "../../ui/Basicos.jsx";
 
+/** How a day reads in the strip: «hay cupo», «sin cupo» (full), «reservas cerradas» (past the cut-off) or «clases canceladas». */
+export function textoDia(clases = []) {
+  if (!clases.length) return "sin clases";
+  if (clases.some((c) => c.reservable)) return "hay cupo";
+  const cancelada = (c) => c.estado === "Cancelada" || c.motivo === "cancelada";
+  if (clases.every(cancelada)) return "clases canceladas";
+  if (clases.some((c) => !cancelada(c) && c.motivo !== "tarde" && (c.motivo === "llena" || c.libres <= 0))) return "sin cupo";
+  return "reservas cerradas";
+}
+
 export function SelectorClase({ clases = [], seleccion, onElegir, onEspera, excluir = [], dias = 21, inicial }) {
   const hoy = hoyClave();
   const porFecha = useMemo(() => {
@@ -35,12 +45,13 @@ export function SelectorClase({ clases = [], seleccion, onElegir, onEspera, excl
         {fechas.map((f) => {
           const cl = porFecha[f] || [];
           const libres = cl.some((c) => c.reservable);
+          const estadoDia = textoDia(cl);
           const activo = f === dia;
           const d = fechaUTC(f);
           return (
             <button key={f} type="button" role="tab" aria-selected={activo} data-fecha={f} disabled={!cl.length}
               onClick={() => setDia(f)}
-              aria-label={`${diaRelativo(f)}${cl.length ? (libres ? ", hay clases" : ", clases llenas") : ", sin clases"}`}
+              aria-label={`${diaRelativo(f)}, ${estadoDia}`}
               className={`relative flex h-[84px] w-[58px] shrink-0 flex-col items-center justify-center gap-1 rounded-[22px] transition-[background-color,color,box-shadow,transform] duration-300 ease-out disabled:opacity-35 ${activo ? "scale-[1.04] bg-navy text-paper shadow-float" : "bg-white text-navy shadow-card"}`}>
               <span className={`relative text-[0.6875rem] font-semibold uppercase tracking-[0.12em] ${activo ? "text-paper/75" : "text-muted"}`}>{f === hoy ? "Hoy" : DIAS[d.getUTCDay()].slice(0, 3)}</span>
               <span className="relative font-display text-[1.6rem] leading-none">{d.getUTCDate()}</span>
@@ -51,7 +62,7 @@ export function SelectorClase({ clases = [], seleccion, onElegir, onEspera, excl
       </div>
 
       <p className="mb-4 mt-3 text-[0.9375rem] text-muted" aria-live="polite">
-        <span className="font-medium capitalize text-navy">{diaRelativo(dia)}</span>
+        <span className="inline-block font-medium text-navy first-letter:uppercase">{diaRelativo(dia)}</span>
         {diaRelativo(dia) === "hoy" || diaRelativo(dia) === "mañana" ? ` · ${fechaUTC(dia).getUTCDate()} de ${MESES[fechaUTC(dia).getUTCMonth()]}` : ""}
       </p>
 
@@ -83,7 +94,7 @@ export function TarjetaClase({ clase: c, elegida, onElegir, onEspera }) {
       </span>
       <span className="flex min-w-0 flex-1 flex-col justify-center gap-2.5">
         <span className="font-medium leading-tight text-navy">{nombreClase(c)}</span>
-        <Columpios clase={c} tam="s" />
+        <Columpios clase={c} tam="s" decorativo />
         <span className={`inline-flex items-center gap-1.5 text-[0.8125rem] font-medium ${disp.tono === "pocos" ? "text-aviso" : llena ? "text-navy" : cerrada ? "text-muted" : "text-teal"}`}>
           {llena ? <Hourglass size={14} /> : cerrada ? <Lock size={14} /> : null}{disp.texto}
         </span>

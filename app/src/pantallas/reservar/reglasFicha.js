@@ -12,7 +12,7 @@ export const escribioSalud = (salud) => Boolean(salud && !SALUD_SIN_DATOS.includ
 export function validarTu(p) {
   const e = {};
   if (!p.nombre || p.nombre.trim().length < 2) e.nombre = "Escribe tu nombre y apellido.";
-  if (!normalizaWhatsApp(p.whatsapp)) e.whatsapp = "Escribe tu celular de 10 dígitos, como 312 872 0888.";
+  if (!normalizaWhatsApp(p.whatsapp)) e.whatsapp = "Escribe tu celular de 10 dígitos, como 300 123 4567.";
   if (p.correo && !/^\S+@\S+\.\S+$/.test(p.correo)) e.correo = "Revisa el correo.";
   return e;
 }
