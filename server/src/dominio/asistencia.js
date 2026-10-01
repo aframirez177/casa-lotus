@@ -63,7 +63,7 @@ export async function registrarAsistente(ctx, actor, idClase, idClienta) {
     tx.auditar("asistencia.sin-reserva", id, { clase: c.id, clienta: p.id, sinPlan: !compra });
     const cuando = R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora);
     tx.publicar(compra
-      ? { tipo: "asistencia", titulo: "Vino sin reserva: " + p.nombre, detalle: cuando + " · la registró " + (actor.nombre || "la profe"), clienta: p.id, clase: c.id }
+      ? { tipo: "asistencia", titulo: "Vino sin reserva: " + p.nombre, detalle: cuando + " · registrada por " + (actor.nombre || "el equipo"), clienta: p.id, clase: c.id }
       : {
         tipo: "asistencia", titulo: "Vino sin plan: " + p.nombre, detalle: cuando + " · no le quedan clases: falta cobrarle.", clienta: p.id, clase: c.id,
         ruta: "/app/admin/clientas/" + p.id, push: true,

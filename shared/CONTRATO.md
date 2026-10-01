@@ -164,7 +164,7 @@ Consent texts and their versions live in `shared/consentimientos.js` (site rende
 | POST | `/api/auth/restablecer` | `{ token, nueva }` | `{ usuario }` + cookie |
 | GET | `/api/auth/invitacion/:token` | — | `{ nombre, correo, rol }` |
 | POST | `/api/auth/invitacion/:token` | `{ password }` | `{ usuario }` + cookie |
-| GET | `/api/auth/sesiones` | — | `[{ id, actual, creada, ultimoUso, dispositivo }]` |
+| GET | `/api/auth/sesiones` | — | `{ sesiones: [{ id, actual, creada, ultimoUso, dispositivo }], total }` (§10) |
 | DELETE | `/api/auth/sesiones/:id` | — | `204` (`:id = "otras"` closes every other session) |
 | PATCH | `/api/auth/cuenta` | `{ nombre?, whatsapp?, bio?, foto? }` (staff) | `{ usuario }` |
 
@@ -197,7 +197,7 @@ Consent texts and their versions live in `shared/consentimientos.js` (site rende
 | GET | `/api/admin/tablero` | — | `Tablero` (below) |
 | GET | `/api/admin/novedades` | `?desde=ISO` | `{ ahora, eventos: Evento[] }` — the bell (also pushed by SSE and Web Push) |
 | GET | `/api/admin/stream` | — | Server-Sent Events: `evento` messages with `Evento` |
-| GET | `/api/admin/agenda` | `?desde&hasta` | `ClaseEquipo[]` |
+| GET | `/api/admin/agenda` | `?desde&hasta` | `ClaseEquipo[]` (plus older classes with attendance still to mark, §10) |
 | POST | `/api/admin/clases` | `{ fecha, hora, clase, profe, cupos?, notas? }` | `201 ClaseEquipo` (Tipo = Extra; refuses holidays unless `forzar`, and an existing id) |
 | PATCH | `/api/admin/clases/:id` | `{ clase?, profe?, cupos?, notas? }` | `ClaseEquipo` (cupos never below ocupados) |
 | POST | `/api/admin/clases/:id/cancelar` | `{ motivo }` | `{ clase, afectadas: Asistente[] (with waTexto to notify) }` |
@@ -205,7 +205,7 @@ Consent texts and their versions live in `shared/consentimientos.js` (site rende
 | POST | `/api/admin/horario` | `{ dia, hora, clase, profe, cupos, activa, desde? }` | `201 { slot, clasesCreadas: number }` (generates its classes right away) |
 | PATCH | `/api/admin/horario/:id` | partial slot + `aplicarAFuturas?: boolean` | `{ slot, clasesActualizadas }` |
 | DELETE | `/api/admin/horario/:id` | — | sets Activa = No; future classes without bookings are cancelled; returns `{ canceladas, conReservas: ClaseEquipo[] }` |
-| GET | `/api/admin/clientas` | `?segmento=&q=&orden=` | `ClientaFila[]` |
+| GET | `/api/admin/clientas` | `?segmento=&etapa=&q=&orden=` | `ClientaFila[]` (§10) |
 | GET | `/api/admin/segmentos` | — | `[{ id, nombre, descripcion, total }]` |
 | GET | `/api/admin/clientas/:id` | — | `ClientaDetalle` |
 | POST | `/api/admin/clientas` | `Perfil & { notas?, consentimientos? }` | `201 ClientaDetalle` |
@@ -345,5 +345,10 @@ Every booking CTA on the site links to `/app/reservar?ref=<REF>[&clase=<id>][&pl
 | `PendientePago.plan` | the plan she asked for: the public booking's `plan` (default «Clase de prueba»), stored as `plan` inside the «Atribución» JSON (no new column); other pending bookings: her last plan, or the trial |
 | `POST /api/admin/clases` on a holiday | 409 `{ ok: false, error: "conflicto", motivo: "festivo", mensaje: "El 12 de octubre es festivo (Día de la Raza). ¿Crearla igual?" }`; the same body with `forzar: true` creates it |
 | `POST /api/admin/espera` `{ clienta, clase }` | `201 EsperaItem` — any class not cancelled and not started (even with swings left); 409 `ya-reservada` (already waiting or booked), 409 `cancelada`, 409 `empezo`, 404 unknown class or clienta |
+| `GET /api/admin/clientas` | `orden` = `nombre` (default) \| `reciente` (newest first) \| `saldo` (most classes first) \| `proxima` (soonest booked class first, nobody booked last) \| `visita` (most recent visit first, never came last). `segmento` filters by segment only, so the list length equals its `/api/admin/segmentos` total; `etapa` = `lead` \| `prueba` \| `activa` \| `en-riesgo` \| `inactiva` filters by stage. Unknown values → 422 |
+| `ClaseEquipo.gente` | admins also get «Cancelada» and «Vencida» bookings (with their `estado`); profes only who is coming («Pendiente de pago», «Confirmada», «Asistió», «No vino», «Cancelada tarde») |
+| `GET /api/auth/sesiones` | `{ sesiones, total }`: the 10 most recently used (the current one always included) and how many live sessions there are; expired sessions are deleted by the daily job |
+| `GET /api/admin/agenda?desde&hasta` | default today − 7 → today + 21; also returns classes up to 14 days before `desde` that still have attendance to mark («Por marcar») |
+| `ClientaDetalle.reservas[].atribucion` | admin only: `{ ref, utm: { source?, medium?, campaign?, term?, content? }, clic: "gclid" \| "gbraid" \| "wbraid" \| "fbclid" \| null } \| null` — which click id the booking carried, never its value; `null` for app/panel bookings |
 
 Alert `accion.ruta` values are full paths (`/app/admin/…`), the same strings used as Web Push URLs.

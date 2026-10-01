@@ -3,7 +3,7 @@
 // soloLectura, and a handler that calls the SAME domain functions the REST routes use.
 // Write tools need an actor and are audited with actor.tipo = "ia".
 import * as E from "../dominio/esquemas.js";
-import { listarClientas, segmentos, verClienta, SEGMENTOS } from "../dominio/clientas.js";
+import { listarClientas, segmentos, verClienta, SEGMENTOS, ETAPAS, ORDENES_CLIENTAS } from "../dominio/clientas.js";
 import { agenda, disponibilidad, verClase, editarClase } from "../dominio/clases.js";
 import { reservar, cancelar, reagendar, confirmar, listarEspera, unirseEspera, tomarCupo, asistencia } from "../dominio/reservas.js";
 import { listarProfes } from "../dominio/asignacion.js";
@@ -32,7 +32,8 @@ export const HERRAMIENTAS = [
     entrada: z.object({
       segmento: z.enum(SEGMENTOS.map((s) => s.id)).optional().describe("id del segmento, por ejemplo «poquitas» o «prueba»"),
       q: z.string().max(80).optional().describe("texto a buscar en nombre, WhatsApp, correo o etiquetas"),
-      orden: z.enum(["nombre", "reciente", "saldo", "visita"]).optional(),
+      etapa: z.enum(ETAPAS).optional().describe("lead, prueba, activa, en-riesgo o inactiva"),
+      orden: z.enum(ORDENES_CLIENTAS).optional().describe("nombre, reciente, saldo, proxima (próxima clase primero) o visita (última visita primero)"),
     }),
     descripcion: "Busca clientas por segmento y/o texto. Devuelve para cada una su etapa (lead, prueba, activa, en-riesgo, inactiva), saldo de clases, próxima clase y última visita. No incluye datos de salud.",
     manejar: (ctx, _a, i) => listarClientas(ctx, i),
@@ -106,13 +107,13 @@ export const HERRAMIENTAS = [
   },
   {
     nombre: "listar_profes", rol: "admin", soloLectura: true, entrada: vacio,
-    descripcion: "Las profes del equipo (y administradoras que dan clase) con el nombre que se usa en el horario. Solo a ellas se les puede asignar una clase.",
+    descripcion: "Profes del equipo (y personas administradoras que dan clase) con el nombre que se usa en el horario. Solo a estas personas se les puede asignar una clase.",
     manejar: (ctx) => listarProfes(ctx),
   },
   {
     nombre: "asignar_profe", rol: "admin", soloLectura: false,
     entrada: z.object({ clase: E.claseId, profe: z.string().max(60).describe("nombre en el horario de alguien del equipo activo, o «Por confirmar»") }),
-    descripcion: "Asigna la profe de una clase. Solo acepta a alguien activo del equipo (ver listar_profes) o «Por confirmar». Cierra el pedido de reemplazo de esa clase y le avisa a la nueva profe.",
+    descripcion: "Asigna quién dicta una clase. Solo acepta a alguien activo del equipo (ver listar_profes) o «Por confirmar». Cierra el pedido de reemplazo de esa clase y le avisa a la persona asignada.",
     manejar: (ctx, a, i) => editarClase(ctx, a, i.clase, { profe: i.profe }),
   },
   {

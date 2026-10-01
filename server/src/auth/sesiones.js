@@ -68,13 +68,27 @@ export function dispositivo(ua = "") {
   return nav ? so + " · " + nav : so;
 }
 
-export function listarSesiones(ctx, sesion) {
-  const filas = sesion.rol === "clienta"
-    ? ctx.db.prepare("SELECT * FROM sesiones WHERE clienta = ? AND rol = 'clienta' AND vence > ? ORDER BY ultimo_uso DESC").all(sesion.clienta, ctx.ahora())
-    : ctx.db.prepare("SELECT * FROM sesiones WHERE usuario = ? AND vence > ? ORDER BY ultimo_uso DESC").all(sesion.usuario, ctx.ahora());
-  return filas.map((s) => ({
-    id: s.id, actual: s.id === sesion.id, creada: new Date(s.creada).toISOString(), ultimoUso: new Date(s.ultimo_uso).toISOString(), dispositivo: dispositivo(s.ua),
-  }));
+/** Every live session of this person (newest use first). */
+export function sesionesDe(ctx, sesion) {
+  return sesion.rol === "clienta"
+    ? ctx.db.prepare("SELECT * FROM sesiones WHERE clienta = ? AND rol = 'clienta' AND vence > ? ORDER BY ultimo_uso DESC, creada DESC").all(sesion.clienta, ctx.ahora())
+    : ctx.db.prepare("SELECT * FROM sesiones WHERE usuario = ? AND vence > ? ORDER BY ultimo_uso DESC, creada DESC").all(sesion.usuario, ctx.ahora());
+}
+
+/** GET /api/auth/sesiones: the 10 most recent (this one always among them) and how many there are. */
+export function listarSesiones(ctx, sesion, limite = 10) {
+  const todas = sesionesDe(ctx, sesion);
+  const recientes = todas.slice(0, limite);
+  if (!recientes.some((s) => s.id === sesion.id)) {
+    const actual = todas.find((s) => s.id === sesion.id);
+    if (actual) recientes.splice(limite - 1, 1, actual);
+  }
+  return {
+    total: todas.length,
+    sesiones: recientes.map((s) => ({
+      id: s.id, actual: s.id === sesion.id, creada: new Date(s.creada).toISOString(), ultimoUso: new Date(s.ultimo_uso).toISOString(), dispositivo: dispositivo(s.ua),
+    })),
+  };
 }
 
 /** Cookie options. `Secure` is off only in development over plain http. */

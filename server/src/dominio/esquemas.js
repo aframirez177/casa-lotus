@@ -12,7 +12,7 @@ export const texto = (max, { min = 0, mensaje } = {}) =>
     .pipe(z.string().min(min, { error: mensaje || (min > 1 ? "Escribe al menos " + min + " letras." : "Este dato es obligatorio.") })
       .max(max, { error: "Máximo " + max + " caracteres." }));
 
-export const MSJ_WHATSAPP = "Escribe un celular de 10 dígitos que empiece por 3, como 312 872 0888.";
+export const MSJ_WHATSAPP = "Escribe un celular de 10 dígitos que empiece por 3, como 300 123 4567.";
 export const whatsapp = z.string({ error: MSJ_WHATSAPP }).max(30, { error: MSJ_WHATSAPP })
   .transform((s) => normalizaWhatsApp(s)).refine(Boolean, { error: MSJ_WHATSAPP });
 

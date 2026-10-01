@@ -104,13 +104,13 @@ export async function tablero(ctx) {
     if (rp) {
       add({
         id: "necesita-reemplazo:" + c.id, tipo: "necesita-reemplazo", prioridad: 1, titulo: "Buscar reemplazo: " + R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora),
-        detalle: (c.profe || "La profe") + " no puede dar esta clase" + (rp.motivo ? ": " + rp.motivo : "."), clase: vistaClase(M, c, ahora),
+        detalle: (c.profe || "Quien la dicta") + " no puede dar esta clase" + (rp.motivo ? ": " + rp.motivo : "."), clase: vistaClase(M, c, ahora),
         accion: { tipo: "abrir", ruta: ruta + "?profe=1" },
       });
     } else if (sinProfe(c.profe) && R.inicioClase(c) - ahora <= 7 * 86400000) {
       add({
         id: "sin-profe:" + c.id, tipo: "sin-profe", prioridad: 2, titulo: "Clase sin profe: " + R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora),
-        detalle: (nombreClase(c) || "Clase") + ": asígnale una profe.", clase: vistaClase(M, c, ahora), accion: { tipo: "abrir", ruta },
+        detalle: (nombreClase(c) || "Clase") + ": asígnale profe.", clase: vistaClase(M, c, ahora), accion: { tipo: "abrir", ruta },
       });
     }
     const n = M.ocupados(c.id);

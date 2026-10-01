@@ -5,7 +5,7 @@ import { z, correo, whatsapp, texto } from "../dominio/esquemas.js";
 import { validar } from "./validar.js";
 import { exigir } from "../auth/middleware.js";
 import {
-  crearSesion, ponerCookie, borrarCookie, cerrarSesion, cerrarSesionesDeUsuario, cerrarSesionesDeClienta, listarSesiones,
+  crearSesion, ponerCookie, borrarCookie, cerrarSesion, cerrarSesionesDeUsuario, cerrarSesionesDeClienta, listarSesiones, sesionesDe,
 } from "../auth/sesiones.js";
 import {
   entrar, cambiarPassword, recuperar, restablecer, verInvitacion, aceptarInvitacion, editarCuenta, vistaUsuario, porId,
@@ -130,7 +130,7 @@ export function rutasAuth(ctx) {
       else cerrarSesionesDeUsuario(ctx, s.usuario, s.id);
       return res.status(204).end();
     }
-    const mias = listarSesiones(ctx, s).map((x) => x.id);
+    const mias = sesionesDe(ctx, s).map((x) => x.id);
     if (!mias.includes(req.params.id)) throw noExiste("Esa sesión no existe.");
     cerrarSesion(ctx, req.params.id);
     if (req.params.id === s.id) borrarCookie(ctx, req, res);

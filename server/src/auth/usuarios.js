@@ -197,7 +197,7 @@ export function editarCuenta(ctx, usuarioId, cambios) {
 /** CLI bootstrap (scripts/crear-admin.mjs): an admin and her one-time setup link. */
 export function crearAdminInicial(ctx, { correo, nombre }) {
   let u = porCorreo(ctx, correo);
-  if (u && u.rol !== "admin") throw new ErrorApp("conflicto", "Ese correo ya es de una profe.");
+  if (u && u.rol !== "admin") throw new ErrorApp("conflicto", "Ese correo ya es de alguien del equipo.");
   if (!u) {
     const id = "U-" + idCorto(6);
     ctx.db.prepare("INSERT INTO usuarios (id, rol, nombre, correo, activa, creada) VALUES (?, 'admin', ?, ?, 1, ?)").run(id, nombre, correo, ctx.ahora());

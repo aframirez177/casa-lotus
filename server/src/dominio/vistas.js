@@ -84,8 +84,9 @@ export function vistaClaseEquipo(M, c, ahora, { conSalud = true, actor } = {}) {
   const base = vistaClase(M, c, ahora, { real: true });
   const hoy = R.hoyClave(ahora);
   const pasada = esPasada(c, ahora);
+  // a profe sees who is coming; the admin also sees cancelled and expired bookings (with their state)
   const gente = M.reservasDeClase(c.id)
-    .filter((r) => r.estado !== R.ESTADO.VENCIDA && r.estado !== R.ESTADO.CANCELADA)
+    .filter((r) => actor?.tipo !== "profe" || (r.estado !== R.ESTADO.VENCIDA && r.estado !== R.ESTADO.CANCELADA))
     .map((r) => vistaAsistente(M, r, c, { conSalud }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   const espera = M.esperaDeClase(c.id).filter((e) => e.estado === "Esperando" || e.estado === "Avisada")

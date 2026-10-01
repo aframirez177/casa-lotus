@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { arrancar, entrarComo, reservaWeb, whatsappFalso, ADMIN, PROFE } from "./ayuda.mjs";
 import { hashPassword, verificarPassword, passwordDebil } from "../src/auth/claves.js";
+import { tareaDiaria } from "../src/tareas/index.js";
 
 test("passwords: scrypt with salt, constant-time check, weak ones refused", async () => {
   const h1 = await hashPassword("una frase larga y rara");
@@ -71,10 +72,23 @@ test("staff sign-in: generic errors, rate limit, CSRF, roles, sessions, deactiva
     assert.equal((await web.get("/api/admin/clientas")).status, 403);
 
     // sessions: list, close others
+    // sessions: the 10 most recent (this one always included) and the total
+    for (let i = 0; i < 12; i++) {
+      s.ctx.db.prepare("DELETE FROM limites").run();
+      await s.cliente().post("/api/auth/entrar", { correo: ADMIN.correo, password: ADMIN.password });
+    }
     const ses = await c.get("/api/auth/sesiones");
-    assert.ok(ses.json.length >= 2 && ses.json.some((x) => x.actual));
+    assert.ok(ses.json.total >= 14, "total " + ses.json.total);
+    assert.equal(ses.json.sesiones.length, 10);
+    assert.ok(ses.json.sesiones.some((x) => x.actual), "this session is always listed");
     assert.equal((await c.del("/api/auth/sesiones/otras")).status, 204);
-    assert.equal((await c.get("/api/auth/sesiones")).json.length, 1);
+    const una = (await c.get("/api/auth/sesiones")).json;
+    assert.equal(una.total, 1);
+    assert.equal(una.sesiones.length, 1);
+    // the daily job prunes expired sessions
+    s.ctx.db.prepare("INSERT INTO sesiones (id, token_hash, rol, usuario, creada, ultimo_uso, vence) VALUES ('viejo', 'h-viejo', 'admin', ?, 0, 0, 1)").run(yo.id);
+    await tareaDiaria(s.ctx);
+    assert.equal(s.ctx.db.prepare("SELECT COUNT(*) AS n FROM sesiones WHERE id = 'viejo'").get().n, 0);
 
     // deactivating a profe kills her open sessions at once
     const eq = await c.get("/api/admin/equipo");

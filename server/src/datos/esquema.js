@@ -85,7 +85,7 @@ export const AJUSTES = [
   ["WhatsApp de reservas", "573128720888", "El número al que se envían los comprobantes."],
   ["Llave de pago", "319 328 8469", "La llave de Nequi, DaviPlata y Bre-B. Nunca números de cuenta."],
   ["Correo para avisos", "casalotusbogota@gmail.com", "Aquí llega un correo cada vez que alguien reserva en la web. Déjalo vacío para no recibirlos."],
-  ["Pago por clase a profes", "", "Lo que se le paga a la profe por cada clase dictada. Solo lo ve el equipo administrador. Vacío: no se muestra."],
+  ["Pago por clase a profes", "", "Lo que se paga por cada clase dictada. Solo lo ve el equipo administrador. Vacío: no se muestra."],
 ];
 
 export const AJUSTES_NUMERICOS = new Set([

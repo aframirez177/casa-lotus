@@ -5,7 +5,7 @@ import { validar } from "./validar.js";
 import { exigir } from "../auth/middleware.js";
 import { tablero } from "../dominio/tablero.js";
 import { agenda, verClase, crearClaseExtra, editarClase, cancelarClase, horario, crearSlot, editarSlot, desactivarSlot } from "../dominio/clases.js";
-import { listarClientas, segmentos, verClienta, crearClienta, editarClienta } from "../dominio/clientas.js";
+import { listarClientas, segmentos, verClienta, crearClienta, editarClienta, SEGMENTOS, ETAPAS, ORDENES_CLIENTAS } from "../dominio/clientas.js";
 import { reservar, confirmar, asistencia, cancelar, liberar, reagendar, listarEspera, tomarCupo, estadoEspera, unirseEspera } from "../dominio/reservas.js";
 import { pagosDelMes, registrarPago, planes, editarPlan } from "../dominio/pagos.js";
 import { verAjustes, editarAjustes } from "../dominio/ajustes.js";
@@ -79,7 +79,10 @@ export function rutasAdmin(ctx) {
 
   /* ── clientas ── */
   r.get("/clientas", async (req, res) => {
-    const q = validar(z.object({ segmento: z.string().max(40).optional(), q: z.string().max(80).optional(), orden: z.enum(["nombre", "reciente", "saldo", "visita"]).optional() }), req.query);
+    const q = validar(z.object({
+      segmento: z.enum(SEGMENTOS.map((s) => s.id), { error: "Ese segmento no existe." }).optional(), etapa: z.enum(ETAPAS, { error: "Esa etapa no existe." }).optional(),
+      q: z.string().max(80).optional(), orden: z.enum(ORDENES_CLIENTAS, { error: "Elige una opción de la lista." }).optional(),
+    }), req.query);
     res.json(await listarClientas(ctx, q));
   });
   r.get("/segmentos", async (_req, res) => res.json(await segmentos(ctx)));

@@ -88,13 +88,21 @@ const ORDENES = {
   nombre: (a, b) => a.nombre.localeCompare(b.nombre, "es"),
   reciente: (a, b) => (a.desde < b.desde ? 1 : a.desde > b.desde ? -1 : 0),
   saldo: (a, b) => b.saldo.clases - a.saldo.clases || a.nombre.localeCompare(b.nombre, "es"),
-  visita: (a, b) => (a.ultimaVisita < b.ultimaVisita ? 1 : a.ultimaVisita > b.ultimaVisita ? -1 : 0),
+  // next booked class first; nobody booked goes last
+  proxima: (a, b) => (a.proxima && b.proxima ? (a.proxima.id < b.proxima.id ? -1 : a.proxima.id > b.proxima.id ? 1 : 0) : a.proxima ? -1 : b.proxima ? 1 : 0)
+    || a.nombre.localeCompare(b.nombre, "es"),
+  // last visit, most recent first; never came goes last
+  visita: (a, b) => (a.ultimaVisita < b.ultimaVisita ? 1 : a.ultimaVisita > b.ultimaVisita ? -1 : 0) || a.nombre.localeCompare(b.nombre, "es"),
 };
+export const ORDENES_CLIENTAS = Object.keys(ORDENES);
+export const ETAPAS = ["lead", "prueba", "activa", "en-riesgo", "inactiva"];
 
-export async function listarClientas(ctx, { segmento, q, orden } = {}) {
+export async function listarClientas(ctx, { segmento, etapa, q, orden } = {}) {
   const M = await modelo(ctx), ahora = ctx.ahora();
   let filas = M.clientas.map((c) => filaClienta(M, c, ahora));
-  if (segmento) filas = filas.filter((f) => f.segmentos.includes(segmento) || f.etapa === segmento);
+  // a segment filters by segment only (its count is the one /api/admin/segmentos reports); stages have ?etapa=
+  if (segmento) filas = filas.filter((f) => f.segmentos.includes(segmento));
+  if (etapa) filas = filas.filter((f) => f.etapa === etapa);
   const t = sinTilde(q || "");
   if (t) {
     const digitos = t.replace(/\D/g, "");
@@ -138,10 +146,25 @@ function linea(ctx, M, c) {
   return out.filter((e) => e.ts).sort((a, b) => (a.ts < b.ts ? 1 : -1)).slice(0, 100);
 }
 
+/**
+ * Where a booking came from, for admins: the CTA ref, the utm values and which click id it carried
+ * («gclid» etc.), never the click id itself. Null for bookings made in the app or the panel.
+ */
+export function atribucionReserva(r) {
+  const a = r.atribucion || {};
+  const ref = /^Web · /.test(r.origen) ? r.origen.slice(6) : "";
+  const utm = {};
+  for (const k of ["source", "medium", "campaign", "term", "content"]) if (a[k]) utm[k] = a[k];
+  const clic = ["gclid", "gbraid", "wbraid", "fbclid"].find((k) => a[k]) || null;
+  if (!ref && !clic && !Object.keys(utm).length) return null;
+  return { ref, utm, clic };
+}
+
 export function detalleClienta(ctx, M, c) {
   const ahora = ctx.ahora(), hoy = R.hoyClave(ahora);
   const f = filaClienta(M, c, ahora);
-  const reservas = M.reservasDeClienta(c.id).slice().sort((a, b) => (a.clase < b.clase ? 1 : -1)).map((r) => vistaReservaClienta(M, r, ahora));
+  const reservas = M.reservasDeClienta(c.id).slice().sort((a, b) => (a.clase < b.clase ? 1 : -1))
+    .map((r) => ({ ...vistaReservaClienta(M, r, ahora), atribucion: atribucionReserva(r) }));
   const d = {
     ...f, perfil: perfilDe(c), consentimientos: c.consentimientos, notas: c.notas,
     compras: M.comprasDeClienta(c.id).slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1)).map((p) => vistaCompra(M, p, hoy)),

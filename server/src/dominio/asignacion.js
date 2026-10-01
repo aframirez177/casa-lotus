@@ -76,7 +76,7 @@ export async function pedirReemplazo(ctx, actor, idClase, motivo = "") {
   ctx.novedades.publicar({
     actor, tipo: "clase", clase: c.id, push: true, ruta: "/app/admin/agenda/" + encodeURIComponent(c.id) + "?profe=1",
     titulo: "Necesita reemplazo: " + R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora),
-    detalle: (actor.nombre || "La profe") + (motivo ? ": " + motivo : " no puede dar esta clase."),
+    detalle: (actor.nombre || "Alguien del equipo") + (motivo ? ": " + motivo : " no puede dar esta clase."),
   });
   return vistaClaseEquipo(await modelo(ctx), c, ahora, { actor });
 }
