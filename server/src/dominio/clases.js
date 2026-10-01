@@ -56,6 +56,7 @@ export async function crearClaseExtra(ctx, actor, { fecha, hora, clase, profe: p
       "ID": id, "Fecha": fecha, "Día": R.diaDeSemana(fecha), "Hora": hora, "Clase": clase, "Profe": profe, "Cupos": cupos || M.ajustes["Cupos por clase"],
       "Estado": "Programada", "Notas": notas, "Tipo": "Extra",
     });
+    ctx.db.prepare("DELETE FROM reemplazos WHERE clase = ?").run(id); // a new class never inherits an old request with the same id
     tx.auditar("clase.extra", id, { clase, profe, cupos, festivo: festivo || null });
     tx.publicar({ tipo: "clase", titulo: "Clase extra: " + R.fechaCorta(fecha) + " · " + R.horaLegible(hora), detalle: clase + (profe ? " con " + profe : ""), clase: id });
     if (!sinProfe(profe)) {
@@ -107,6 +108,7 @@ export async function cancelarClase(ctx, actor, id, { motivo = "" } = {}) {
     const avisar = afectadasAntes.filter((r) => [R.ESTADO.PENDIENTE, R.ESTADO.CONFIRMADA].includes(r.estado)).map((r) => r.id);
     const gente = vistaClaseEquipo(M, c, tx.ahora).gente;
     await tx.actualizar("Clases", c._fila, { "Estado": "Cancelada", "Notas": motivo || c.notas });
+    ctx.db.prepare("DELETE FROM reemplazos WHERE clase = ?").run(id); // a cancelled class needs no substitute
     for (const r of afectadasAntes) await tx.actualizar("Reservas", r._fila, { "Estado": R.ESTADO.CANCELADA, "Notas": "Clase cancelada" });
     for (const e of M.esperaDeClase(id).filter((x) => x.estado === "Esperando" || x.estado === "Avisada")) {
       await tx.actualizar("Espera", e._fila, { "Estado": "Ya no", "Notas": "Clase cancelada" });

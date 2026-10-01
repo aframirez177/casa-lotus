@@ -93,6 +93,8 @@ export async function crearContexto(config, opciones = {}) {
     for (const c of CUENTAS_DEV) {
       if (!db.prepare("SELECT 1 FROM usuarios WHERE correo = ?").get(c.correo)) await crearUsuarioConPassword(ctx, c);
     }
+    // the fake Sheet is new on every start, so requests tied to its classes start over too
+    db.prepare("DELETE FROM reemplazos").run();
     // the demo studio also has a substitute request: the profe of the full class cannot teach it
     const llena = sembrado?.clases?.llena;
     const quien = sembrado?.profeLlena && db.prepare("SELECT id FROM usuarios WHERE nombre_horario = ?").get(sembrado.profeLlena);

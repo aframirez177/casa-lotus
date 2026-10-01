@@ -44,7 +44,7 @@ export default defineConfig({
   webServer: [
     { command: "npm run dev", cwd: "../server", url: "http://localhost:8787/api/salud", reuseExistingServer: true, timeout: 60_000, env: SIN_WHATSAPP },
     { command: "npm run dev", cwd: "../app", url: "http://localhost:5180/app/", reuseExistingServer: true, timeout: 60_000 },
-    { command: "npm run dev", cwd: "../site", url: "http://localhost:4321/", reuseExistingServer: true, timeout: 90_000 },
+    { command: "npx astro dev --ignore-lock", cwd: "../site", url: "http://localhost:4321/", reuseExistingServer: true, timeout: 90_000 },
     // the app's production build (service worker), only for tests/pwa.spec.js
     { command: "node scripts/app-prod.mjs", cwd: ".", url: APP_PROD + "/app/", reuseExistingServer: true, timeout: 240_000 },
   ],

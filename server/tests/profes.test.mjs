@@ -197,3 +197,22 @@ test("profe home summary and push subscription", async () => {
     await s2.cerrar();
   }
 });
+
+test("cancelling a class drops its substitute request (a class with that id never inherits it)", async () => {
+  const s = await arrancar({ semilla: "demo" });
+  try {
+    const ana = s.cliente();
+    await entrarComo(ana, ADMIN);
+    const ximena = s.cliente();
+    await entrarComo(ximena, PROFE);
+    const suya = (await ximena.get("/api/profe/clases")).json.find((c) => !c.pasada && c.profe === "Ximena");
+    assert.equal((await ximena.post("/api/profe/clases/" + enc(suya.id) + "/reemplazo", { motivo: "Viaje" })).status, 200);
+    assert.ok(s.ctx.db.prepare("SELECT 1 FROM reemplazos WHERE clase = ?").get(suya.id));
+    const r = await ana.post("/api/admin/clases/" + enc(suya.id) + "/cancelar", { motivo: "Prueba" });
+    assert.equal(r.status, 200, r.texto);
+    assert.equal(s.ctx.db.prepare("SELECT 1 FROM reemplazos WHERE clase = ?").get(suya.id), undefined);
+    assert.equal((await ana.get("/api/admin/tablero")).json.alertas.filter((a) => a.tipo === "necesita-reemplazo" && a.clase?.id === suya.id).length, 0);
+  } finally {
+    await s.cerrar();
+  }
+});

@@ -1,5 +1,10 @@
 # Casa Lotus · QA findings (platform v2, 2026-10-01)
 
+> **Status 2026-10-01 (after fixes):** every P1, P2 and P3 below is fixed in server/ and app/.
+> Re-run: **89 passed · 0 failed · 9 skipped** (the API security tests run once, on desktop).
+> One extra bug found on the re-run and fixed: a substitute request kept in SQLite could attach to a new class with
+> the same id; cancelling a class now drops it, and the dev studio clears them when it reseeds.
+
 Run against the dev servers (API memory driver, WhatsApp off), Chrome 375×812 (touch) and 1280×800.
 Suite: `npm test` in `e2e/` → **75 passed · 14 failed · 9 skipped · 0 flaky** (two consecutive full runs, same result).
 The 14 failures are 7 product bugs × 2 viewports; each test is listed with its finding. Skipped = the API
