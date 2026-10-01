@@ -1,0 +1,20 @@
+{
+  "name": "casa-lotus-e2e",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end and visual QA for the Casa Lotus platform (site + app + API), with Playwright on the local Google Chrome.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:movil": "playwright test --project=movil",
+    "test:escritorio": "playwright test --project=escritorio",
+    "capturas": "node scripts/capturas.mjs",
+    "app-prod": "node scripts/app-prod.mjs",
+    "reporte": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
