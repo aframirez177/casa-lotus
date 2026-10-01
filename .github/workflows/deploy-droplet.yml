@@ -1,0 +1,50 @@
+# Casa Lotus · publish the site to https://casalotus.studio (Álvaro's droplet).
+#
+# Deploy = push to `main`, or the "Run workflow" button in the Actions tab.
+# The secrets come from ~/dev/infra/scripts/mac/ci-key.sh. Their key is pinned
+# to rrsync on the server, so it can only write into /srv/sites/casalotus.studio.
+# GitHub Pages (deploy.yml) keeps running as a fallback until it is switched off.
+name: Deploy · casalotus.studio
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: droplet
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and upload
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # copies src → dist; fails on missing files or absolute paths, warns on pending content
+      - name: Build
+        run: npm run build
+
+      - name: Upload to the droplet
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # rrsync roots this key at the site folder, so "./" is /srv/sites/casalotus.studio
+          rsync -rltz --delete --chmod=D755,F644 dist/ "deploy@$DEPLOY_HOST:./"
+
+      - name: Check the live site
+        run: curl -fsS -o /dev/null -w "https://casalotus.studio → %{http_code}\n" https://casalotus.studio/
