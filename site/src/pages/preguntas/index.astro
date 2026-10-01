@@ -1,0 +1,31 @@
+---
+// /preguntas/: every FAQ once, grouped. The whole page is the FAQPage JSON-LD.
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import Faq from "../../components/ui/Faq.astro";
+import Cierre from "../../components/ui/Cierre.astro";
+import { PAGINAS, GRUPOS_FAQ } from "../../data/paginas";
+import { whatsapp } from "../../lib/enlaces";
+const p = PAGINAS.preguntas;
+---
+<Base pagina={p}>
+  <PageHero pagina={p} cta={false}>
+    <nav slot="nota" class="chips" aria-label="Temas" data-in style="--i:3">
+      {GRUPOS_FAQ.map((g) => <a class="chip" href={`#${g.id}`}>{g.titulo}</a>)}
+    </nav>
+  </PageHero>
+
+  <section class="section section--first" data-bg="paper">
+    <div class="wrap faq-grupos">
+      {GRUPOS_FAQ.map((g) => (
+        <div class="faq-grupo" id={g.id}>
+          <h2>{g.titulo}</h2>
+          <Faq items={g.items} nombre={g.id} />
+        </div>
+      ))}
+      <p class="note">¿No encontraste tu respuesta? <a class="link-arrow" data-wa="WEB-PREGUNTAS-WHATSAPP" href={whatsapp("WEB-PREGUNTAS-WHATSAPP")}>Escríbenos por WhatsApp</a></p>
+    </div>
+  </section>
+
+  <Cierre ref="WEB-PREGUNTAS-CIERRE" />
+</Base>

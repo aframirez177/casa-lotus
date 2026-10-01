@@ -1,0 +1,46 @@
+---
+// Footer: brand, the site map (every page one tap away, for people and crawlers), contact.
+import Marca from "./Marca.astro";
+import { PIE } from "../../data/paginas";
+import { ESTUDIO } from "../../data/estudio";
+import { whatsapp } from "../../lib/enlaces";
+
+interface Props { inicio?: boolean }
+const { inicio = false } = Astro.props;
+const anio = new Date().getFullYear();
+---
+<footer class="footer">
+  <div class="wrap footer__grid">
+    <a class="brand brand--footer" href={inicio ? "#inicio" : "/"} aria-label="Casa Lotus, volver al inicio">
+      <Marca />
+    </a>
+    {PIE.map((col) => (
+      <nav class="footer__nav" aria-label={col.titulo}>
+        <p class="footer__label">{col.titulo}</p>
+        <ul>{col.enlaces.map((l) => <li><a href={l.ruta}>{l.nombre}</a></li>)}</ul>
+      </nav>
+    ))}
+    <div class="footer__contact">
+      <div>
+        <p class="footer__label">Reservas</p>
+        <p><a data-wa="WEB-FOOTER" href={whatsapp("WEB-FOOTER")}>WhatsApp {ESTUDIO.whatsappTexto}</a></p>
+      </div>
+      <div>
+        <p class="footer__label">Pagos</p>
+        <p>{ESTUDIO.mediosPago.join(" · ")}<br>{ESTUDIO.llavePago}</p>
+      </div>
+      <div>
+        <p class="footer__label">Dónde</p>
+        <p data-todo>Bogotá · te enviamos la dirección al reservar</p>
+      </div>
+      <div>
+        <p class="footer__label">Síguenos</p>
+        <p><a href={ESTUDIO.redes.instagram} rel="noopener" target="_blank">Instagram</a> · <a href={ESTUDIO.redes.tiktok} rel="noopener" target="_blank">TikTok</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="wrap footer__legal">
+    <p>© {anio} Casa Lotus · Centro autorizado AÉREO® · Bogotá, Colombia</p>
+    <p><a href="/terminos/">Términos</a> · <a href="/privacidad/">Tratamiento de datos</a> · <a href="/app/">Mi cuenta</a></p>
+  </div>
+</footer>

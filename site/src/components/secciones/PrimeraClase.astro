@@ -1,0 +1,52 @@
+---
+// Your first class (v1): the price sized to its column, three steps on a line that draws as you read.
+// The steps now describe the online booking (class → ficha → payment receipt by WhatsApp).
+import ClipNota from "../ui/ClipNota.astro";
+import { reservar } from "../../lib/enlaces";
+import { PRUEBA, ESTUDIO, PLANES, dinero, porClase } from "../../data/estudio";
+interface Props {
+  ref?: string;
+  video?: boolean;
+  eyebrow?: string;
+  /** false on /clase-de-prueba/, whose hero already shows the price: the head becomes a title */
+  precio?: boolean;
+  titulo?: string;
+}
+const { ref = "WEB-PRUEBA", video = true, eyebrow = "Tu primera clase", precio = true, titulo = "Tres pasos y estás en el aire." } = Astro.props;
+const mejor = PLANES.find((p) => p.mejor)!;
+---
+<section class="section first" id="primera-clase" data-bg="mist">
+  <div class="wrap first__grid">
+    <header class="first__head">
+      <p class="eyebrow" data-reveal>{eyebrow}</p>
+      {precio ? (
+        <>
+          <p class="price" data-reveal><span class="price__cur">$</span><span data-count={PRUEBA.precio}>{dinero(PRUEBA.precio).slice(1)}</span></p>
+          <p class="lead" data-reveal>Cuesta prácticamente lo mismo que una clase del plan de {mejor.clases} ({dinero(porClase(mejor))}). Así pruebas sin comprometerte.</p>
+        </>
+      ) : (
+        <h2 class="display h2" data-split>{titulo}</h2>
+      )}
+      <a class="btn btn--primary" data-cta={ref} data-magnetic data-cursor="Reservar" href={reservar(ref, { plan: PRUEBA.nombre })} data-reveal><span class="dot" aria-hidden="true"></span>Reservar mi clase de prueba</a>
+      {video && <ClipNota />}
+    </header>
+
+    <ol class="steps" data-steps>
+      <li class="step">
+        <span class="step__n">1</span>
+        <h3 class="h3">Elige tu horario</h3>
+        <p>Mira los <a href="/horarios/">horarios</a> y aparta tu columpio en línea: eliges la clase y llenas tu ficha en un par de minutos.</p>
+      </li>
+      <li class="step">
+        <span class="step__n">2</span>
+        <h3 class="h3">Paga y envía el comprobante</h3>
+        <p>{ESTUDIO.mediosPago.slice(0, -1).join(", ")} o {ESTUDIO.mediosPago.at(-1)} al <span class="nowrap">{ESTUDIO.llavePago}</span>. Mándanos la captura al WhatsApp <span class="nowrap">{ESTUDIO.whatsappTexto}</span> y tu cupo queda confirmado.</p>
+      </li>
+      <li class="step">
+        <span class="step__n">3</span>
+        <h3 class="h3">Llega diez minutos antes</h3>
+        <p>Con ropa deportiva ajustada que cubra piernas y axilas, sin haber comido en las dos horas previas y con tu botella de agua.</p>
+      </li>
+    </ol>
+  </div>
+</section>

@@ -1,0 +1,95 @@
+---
+// /nosotros/: Ana Caona, the profes, the space, and the pillars «alimentar el cuerpo, la mente y el alma».
+// Bios and photos of the team are pending with Ana (data-todo): nothing invented.
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import HeroFoto from "../../components/ui/HeroFoto.astro";
+import Foto from "../../components/ui/Foto.astro";
+import Sello from "../../components/ui/Sello.astro";
+import Cierre from "../../components/ui/Cierre.astro";
+import Testimonios from "../../components/secciones/Testimonios.astro";
+import Preguntas from "../../components/secciones/Preguntas.astro";
+import { PAGINAS } from "../../data/paginas";
+import { ESTUDIO } from "../../data/estudio";
+import calma from "../../assets/fotos/sala-calma.jpg";
+import invertida from "../../assets/fotos/sala-invertida.jpg";
+import estiramiento from "../../assets/fotos/sala-estiramiento.jpg";
+const p = PAGINAS.nosotros;
+const PILARES = [
+  { n: "01", titulo: "El cuerpo", texto: "Fuerza, flexibilidad y conciencia corporal, en el aire y sin impacto.", c: "var(--c-pilates)" },
+  { n: "02", titulo: "La mente", texto: "Respiración y atención plena para bajar el ritmo y soltar el estrés.", c: "var(--c-multinivel)" },
+  { n: "03", titulo: "El alma", texto: "Una comunidad pequeña, de puertas abiertas, donde siempre hay alguien pendiente de ti.", c: "var(--c-yoga)" },
+];
+---
+<Base pagina={p}>
+  <PageHero pagina={p} seda secundario={{ texto: "Conoce las clases", href: "/clases/" }}>
+    <HeroFoto slot="media" src={calma} alt="Alumna sentada en el tapete con los ojos cerrados, entre las telas de los columpios" color="var(--c-yoga)" tag="Bogotá" />
+  </PageHero>
+
+  <section class="section section--tight" id="pilares" data-bg="paper">
+    <div class="wrap">
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>Lo que nos mueve</p>
+        <h2 class="display h2" data-split>Alimentar el cuerpo, la mente y el alma.</h2>
+      </header>
+      <div class="pilares">
+        {PILARES.map((x) => (
+          <article class="pilar" style={`--c: ${x.c}`} data-reveal>
+            <span class="pilar__n" aria-hidden="true">{x.n}</span>
+            <h3>{x.titulo}</h3>
+            <p>{x.texto}</p>
+            <svg viewBox="0 0 865 763" aria-hidden="true"><use href="#lotus-base"/><use href="#lotus-petalo-der"/><use href="#lotus-petalo-izq"/><use href="#lotus-centro"/></svg>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight" id="ana" data-bg="mist">
+    <div class="wrap split">
+      <header class="split__head">
+        <p class="eyebrow" data-reveal>Quién está detrás</p>
+        <h2 class="display h2" data-split>{ESTUDIO.ana.nombre}.</h2>
+      </header>
+      <div class="prosa" data-reveal data-todo>
+        <p>Casa Lotus es el estudio de {ESTUDIO.ana.nombre} en Bogotá: un espacio boutique de Método Aéreo, centro autorizado AÉREO®.</p>
+        <p>Aquí se practica en grupos pequeños, con cupos limitados, para que cada clase sea semipersonalizada y nadie se quede sin acompañamiento.</p>
+        {/* data-todo: Ana's own story (how and why Casa Lotus started, her training) goes here, in her words */}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight" id="profes" data-bg="paper">
+    <div class="wrap split">
+      <header class="split__head">
+        <p class="eyebrow" data-reveal>El equipo</p>
+        <h2 class="display h2" data-split>Tus profes.</h2>
+      </header>
+      <div class="prosa" data-reveal data-todo>
+        <p>Todo el equipo de profes está certificado en el Método Aéreo. Te acompañan desde tu primera vez en el aire, adaptan cada postura a tu cuerpo y están pendientes de ti durante toda la clase.</p>
+        {/* data-todo: names, photos and a two-line bio per profe, pending with Ana (and each profe's consent) */}
+        <Sello reveal={false} />
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight" id="la-sala" data-bg="paper">
+    <div class="wrap">
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>El espacio</p>
+        <h2 class="display h2" data-split>Una sala para soltar.</h2>
+        <p class="lead section__lead" data-reveal>Luz natural, los columpios colgados del techo, los murales en línea de la casa y todo lo que necesitas para practicar, tapete incluido.</p>
+      </header>
+      <div class="fotos">
+        <figure data-media><Foto src={invertida} alt="Alumna colgada de cabeza en el columpio junto a la pared verde menta" sizes="(max-width: 760px) 58vw, 700px" /></figure>
+        <figure data-media><Foto src={estiramiento} alt="Alumna estirando en el tapete, con una pierna en el columpio, durante una clase" sizes="(max-width: 760px) 42vw, 500px" /></figure>
+      </div>
+    </div>
+  </section>
+
+  <Testimonios titulo="Lo que dicen de la casa." />
+
+  <Preguntas items={p.faq ?? []} titulo="Para conocernos." />
+
+  <Cierre ref="WEB-NOSOTROS-CIERRE" titulo="Ven a conocer la casa." />
+</Base>

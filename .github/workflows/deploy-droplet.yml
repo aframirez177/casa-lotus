@@ -1,6 +1,7 @@
-# Casa Lotus · publish the site to https://casalotus.studio (Álvaro's droplet).
+# Casa Lotus · publish the site (/) and the app (/app/) to https://casalotus.studio (Álvaro's droplet).
 #
 # Deploy = push to `main`, or the "Run workflow" button in the Actions tab.
+# The API (/api) is a container and ships separately from the Mac: scripts/desplegar-api.sh.
 # The secrets come from ~/dev/infra/scripts/mac/ci-key.sh. Their key is pinned
 # to rrsync on the server, so it can only write into /srv/sites/casalotus.studio.
 # GitHub Pages only redirects here now (pages-redirect.yml).
@@ -20,18 +21,39 @@ concurrency:
 
 jobs:
   deploy:
-    name: Build and upload
+    name: Build, check and upload
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            site/package-lock.json
+            app/package-lock.json
+            server/package-lock.json
 
-      # copies src → dist; fails on missing files or absolute paths, warns on pending content
-      - name: Build
-        run: npm run build
+      - name: Shared rules
+        run: node --test shared/tests/*.test.mjs
+
+      - name: API tests
+        working-directory: server
+        run: npm ci && npm test
+
+      - name: Site
+        working-directory: site
+        run: npm ci && npm run build
+
+      - name: App
+        working-directory: app
+        run: npm ci && npm test --if-present && npm run build
+
+      # assembles site → dist/ and app → dist/app/; fails on missing pieces, OG images over
+      # 300 KB, internal pages or private figures in the bundle
+      - name: Assemble and check
+        run: node scripts/construir.mjs --sin-build
 
       - name: Upload to the droplet
         env:
@@ -47,4 +69,7 @@ jobs:
           rsync -rltz --delete --chmod=D755,F644 dist/ "deploy@$DEPLOY_HOST:./"
 
       - name: Check the live site
-        run: curl -fsS -o /dev/null -w "https://casalotus.studio → %{http_code}\n" https://casalotus.studio/
+        run: |
+          for path in / /clase-de-prueba/ /app/ /manifest.webmanifest; do
+            curl -fsS -o /dev/null -w "https://casalotus.studio$path → %{http_code}\n" "https://casalotus.studio$path"
+          done

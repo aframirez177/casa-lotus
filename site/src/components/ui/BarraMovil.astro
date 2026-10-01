@@ -1,0 +1,8 @@
+---
+// Mobile CTA bar: appears after the hero, hides at the closing section (sitio.js).
+import { reservar } from "../../lib/enlaces";
+import { PRUEBA, dinero } from "../../data/estudio";
+---
+<a class="mobile-cta" data-cta="WEB-BARRA-MOVIL" data-mobile-cta href={reservar("WEB-BARRA-MOVIL", { plan: PRUEBA.nombre })}>
+  <span>Clase de prueba <strong>{dinero(PRUEBA.precio)}</strong></span><span class="mobile-cta__go">Reservar</span>
+</a>

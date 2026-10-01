@@ -1,0 +1,57 @@
+---
+// /metodo-aereo/: what the Método Aéreo is and what «centro autorizado AÉREO®» means.
+// The official seal is the licensed artwork (aereo-negro.png), never redrawn.
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import Sello from "../../components/ui/Sello.astro";
+import Otras from "../../components/ui/Otras.astro";
+import Cierre from "../../components/ui/Cierre.astro";
+import Sala from "../../components/secciones/Sala.astro";
+import Preguntas from "../../components/secciones/Preguntas.astro";
+import { PAGINAS } from "../../data/paginas";
+import { VIDEOS } from "../../data/estudio";
+const p = PAGINAS["metodo-aereo"];
+const v = VIDEOS.metodo;
+---
+<Base pagina={p}>
+  <PageHero pagina={p} secundario={{ texto: "Ver las clases", href: "/clases/" }}>
+    <figure slot="media" class="hero-media" style="--c: var(--c-stretch); --i: 2" data-in>
+      <div class="hero-media__frame">
+        <video muted playsinline loop preload="none" width={v.ancho} height={v.alto} poster={v.poster} data-src={v.archivo} aria-label="Una alumna pasa por varias posturas invertidas en el columpio"></video>
+      </div>
+      <figcaption class="tag hero-media__tag">Centro autorizado</figcaption>
+    </figure>
+  </PageHero>
+
+  <section class="section section--tight" id="que-es" data-bg="mist">
+    <div class="wrap split">
+      <header class="split__head">
+        <p class="eyebrow" data-reveal>Qué es</p>
+        <h2 class="display h2" data-split>Un método, muchas clases.</h2>
+      </header>
+      <div class="prosa" data-reveal>
+        <p>El Método Aéreo es un sistema de entrenamiento en suspensión que integra yoga, pilates y estiramiento, con un columpio de tela que sostiene parte de tu peso.</p>
+        <p>Se abre en muchos tipos de clase. En Casa Lotus damos hoy Yoga Aéreo, Yoga Aéreo multinivel, Pilates Aéreo y Stretch Aéreo, y todas son aptas para principiantes.</p>
+        <h3>Centro autorizado AÉREO®</h3>
+        <p data-todo>AÉREO® es una marca registrada. Ser centro autorizado significa que en Casa Lotus todo el equipo de profes está certificado en el método y que cada clase sigue su forma de trabajar, adaptada a tu cuerpo.</p>
+        <Sello grande reveal={false} />
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tight" id="clases-del-metodo" data-bg="paper">
+    <div class="wrap">
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>Las clases</p>
+        <h2 class="display h2" data-split>Cuatro formas de practicarlo.</h2>
+      </header>
+      <Otras />
+    </div>
+  </section>
+
+  <Sala />
+
+  <Preguntas items={p.faq ?? []} titulo="Sobre el método." />
+
+  <Cierre ref="WEB-METODO-CIERRE" />
+</Base>

@@ -1,0 +1,58 @@
+---
+// /clase-de-prueba/: the main conversion page for ads. Price, what you get, how booking and payment
+// work, Ana's trial rules, schedule, proof, FAQ. Every CTA hands off to the app with a ref.
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import Cierre from "../../components/ui/Cierre.astro";
+import PrimeraClase from "../../components/secciones/PrimeraClase.astro";
+import Horarios from "../../components/secciones/Horarios.astro";
+import Testimonios from "../../components/secciones/Testimonios.astro";
+import Preguntas from "../../components/secciones/Preguntas.astro";
+import { PAGINAS } from "../../data/paginas";
+import { PRUEBA, PLANES, REGLAS_PRUEBA, dinero, porClase } from "../../data/estudio";
+const p = PAGINAS["clase-de-prueba"];
+const mejor = PLANES.find((x) => x.mejor)!;
+---
+<Base pagina={p}>
+  <PageHero pagina={p} seda secundario={{ texto: "Ver horarios", href: "#horarios" }}>
+    <aside slot="media" class="price-card" data-in style="--i:2" aria-label="Precio de la clase de prueba">
+      <p class="eyebrow">Clase de prueba</p>
+      <p class="price"><span class="price__cur">$</span>{dinero(PRUEBA.precio).slice(1)}</p>
+      <ul class="price-card__list">
+        <li>Yoga, pilates o stretch aéreo: tú eliges el horario.</li>
+        <li>Apta para principiantes, sin experiencia previa.</li>
+        <li>Cupos limitados: tu profe pendiente de ti.</li>
+        <li>Tapete y columpio incluidos.</li>
+      </ul>
+      <p class="page-hero__note">Cuesta prácticamente lo mismo que una clase del plan de {mejor.clases} (<strong>{dinero(porClase(mejor))}</strong>).</p>
+    </aside>
+  </PageHero>
+
+  <PrimeraClase ref="WEB-PRUEBA-PASOS" eyebrow="Cómo reservas" precio={false} />
+
+  <section class="section section--tight" id="antes-de-volar" data-bg="paper">
+    <div class="wrap">
+      <header class="section__head" data-float>
+        <p class="eyebrow" data-reveal>Antes de volar</p>
+        <h2 class="display h2" data-split>Prepárate para tu clase de prueba.</h2>
+        <p class="lead section__lead" data-reveal>Nueve cosas que cuidan tu práctica y este espacio. Gracias por leerlas antes de venir.</p>
+      </header>
+      <ol class="reglas">
+        {REGLAS_PRUEBA.map((r) => (
+          <li class="regla" data-reveal data-todo={r.todo ? true : undefined}>
+            <h3>{r.titulo}</h3>
+            <p>{r.texto}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <Horarios titulo="Elige tu horario." lead="Aparta tu columpio en línea y te lo guardamos mientras nos envías el comprobante. Cada columpio relleno es un cupo tomado." />
+
+  <Testimonios titulo="Así les fue." eyebrow="Testimonios" />
+
+  <Preguntas items={p.faq ?? []} titulo="Antes de tu primera vez." />
+
+  <Cierre ref="WEB-PRUEBA-CIERRE" titulo="Tu columpio te está esperando." lead="Una clase completa, con tu profe al lado. Si te gusta, te contamos los planes." />
+</Base>

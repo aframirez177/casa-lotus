@@ -1,0 +1,48 @@
+---
+// Plans (v1): monthly / quarterly toggle (radiogroup, arrow keys), animated prices, price per class,
+// quarterly saving. The CTA hands off to the app with the Sheet's plan name, following the toggle.
+import { reservar } from "../../lib/enlaces";
+import { PLANES, ESTUDIO, dinero, porClase } from "../../data/estudio";
+interface Props { cabeza?: boolean; titulo?: string }
+const { cabeza = true, titulo = "Entre más vienes, menos pagas por clase." } = Astro.props;
+---
+<section class:list={["section plans", { "section--first": !cabeza }]} id="planes" data-bg="mist">
+  <div class="wrap">
+    <header class="section__head section__head--row" data-float>
+      <div>
+        <p class="eyebrow" data-reveal>{cabeza ? "Planes 2026" : "Elige tu plan"}</p>
+        {cabeza && <h2 class="display h2" data-split>{titulo}</h2>}
+      </div>
+      <div class="toggle" role="radiogroup" aria-label="Tipo de plan" data-toggle data-reveal>
+        <button type="button" role="radio" aria-checked="true" data-period="mes">Mensual</button>
+        <button type="button" role="radio" aria-checked="false" data-period="trimestre">Trimestral</button>
+        <span class="toggle__pill" aria-hidden="true"></span>
+      </div>
+    </header>
+
+    <div class="plans__grid" data-plans>
+      {PLANES.map((p) => {
+        const ref = `WEB-PLAN-${p.clases}`;
+        const mes = reservar(ref, { plan: `${p.clases} clases al mes` });
+        const tri = reservar(ref, { plan: `Trimestral · ${p.clases} al mes` });
+        return (
+          <article class:list={["plan", { "plan--best": p.mejor }]} data-classes={p.clases} data-mes={p.mes} data-trimestre={p.trimestre}>
+            {p.mejor && <span class="plan__badge">Mejor precio por clase</span>}
+            <p class="plan__n"><span>{p.clases}</span> clases al mes</p>
+            <p class="plan__price" data-price>{dinero(p.mes)}</p>
+            <p class="plan__per" data-per>{dinero(porClase(p))} por clase</p>
+            <p class="plan__save" data-save></p>
+            <a class:list={["btn", p.mejor ? "btn--primary" : "btn--line"]} data-cta={ref} href={mes} data-href-mes={mes} data-href-trimestre={tri} data-magnetic>
+              {p.mejor && <span class="dot" aria-hidden="true"></span>}Quiero este plan
+            </a>
+          </article>
+        );
+      })}
+    </div>
+
+    <div class="pay" data-reveal>
+      <p><strong>Pagos:</strong> {ESTUDIO.mediosPago.slice(0, -1).join(", ")} o {ESTUDIO.mediosPago.at(-1)} al <span class="nowrap">{ESTUDIO.llavePago}</span>. Si prefieres transferencia bancaria, te enviamos los datos por WhatsApp.</p>
+      <p>Los planes son personales, no se congelan y su vigencia corre desde la fecha de inicio. No hacemos reembolsos.</p>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,15 @@
+/*
+ * Tailwind v4 for new components, on the shared theme (web/shared/tema.css, the same one the app uses).
+ * No preflight: main.css carries the site's own reset (Ana approved v1 as it renders), and its rules are
+ * unlayered, so they always win over these layered utilities where both touch the same property.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "../../../shared/tema.css";
+
+/* Fonts come from Astro's font pipeline (self-hosted, preloaded, metric-matched fallbacks). */
+@theme inline {
+  --font-display: var(--font-momo-display), system-ui, sans-serif;
+  --font-sans: var(--font-momo-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+}

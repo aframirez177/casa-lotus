@@ -1,0 +1,89 @@
+---
+// /privacidad/: data-processing policy under Ley 1581 de 2012 / Decreto 1377 de 2013 (now in Decreto
+// 1074 de 2015). Consent texts come from shared/consentimientos.js, the same ones the app shows and the
+// server stores by version. #datos-sensibles is linked from the booking flow.
+import Base from "../../layouts/Base.astro";
+import PageHero from "../../components/ui/PageHero.astro";
+import { PAGINAS } from "../../data/paginas";
+import { ESTUDIO } from "../../data/estudio";
+import { CONSENTIMIENTOS, RESPONSABLE } from "../../../../shared/consentimientos.js";
+const p = PAGINAS.privacidad;
+const { datos, sensibles, imagen } = CONSENTIMIENTOS;
+const TOC = [
+  ["responsable", "Responsable y encargado"],
+  ["que-datos", "Qué datos pedimos"],
+  ["para-que", "Para qué los usamos"],
+  ["datos-sensibles", "Datos de salud"],
+  ["imagen", "Fotos y videos"],
+  ["navegacion", "Tu visita a la web"],
+  ["donde", "Dónde se guardan"],
+  ["derechos", "Tus derechos"],
+  ["como", "Cómo ejercerlos"],
+];
+---
+<Base pagina={p}>
+  <PageHero pagina={p} cta={false} />
+
+  <section class="section section--first" data-bg="paper">
+    <div class="wrap legal-grid">
+      <nav class="toc" aria-label="En esta página">
+        <p>En esta página</p>
+        {TOC.map(([id, t]) => <a href={`#${id}`}>{t}</a>)}
+      </nav>
+      <div class="prosa">
+        <h2 id="responsable">Responsable y encargado</h2>
+        <p data-todo><strong>Responsable del tratamiento:</strong> {RESPONSABLE.nombre}, estudio de yoga, pilates y stretch aéreo en {RESPONSABLE.ciudad}. Contacto: <a href={`mailto:${RESPONSABLE.correo}`}>{RESPONSABLE.correo}</a> y WhatsApp <a href={`https://wa.me/${RESPONSABLE.whatsapp}`}>{ESTUDIO.whatsappTexto}</a>.</p>
+        <p><strong>Encargado del tratamiento:</strong> Álvaro Ramírez, que administra la plataforma web de reservas y calcula de qué anuncio o página llega cada reserva. Trata estos datos por cuenta de Casa Lotus y solo para lo que dice esta política (Ley 1581 de 2012).</p>
+
+        <h2 id="que-datos">Qué datos pedimos</h2>
+        <ul>
+          <li><strong>Al reservar:</strong> tu nombre, tu WhatsApp, tu correo, tu fecha de nacimiento, tu barrio, tu EPS, un contacto de emergencia, tu experiencia, tus intereses, cómo nos conociste y la clase que eliges.</li>
+          <li><strong>Sobre tu salud,</strong> solo si quieres contárnosla (ver <a href="#datos-sensibles">datos de salud</a>).</li>
+          <li><strong>Al pagar:</strong> el plan, la fecha, el valor y el medio de pago. No guardamos números de tarjeta ni claves.</li>
+          <li><strong>En tu cuenta:</strong> tus reservas, asistencias, cancelaciones y los mensajes que nos escribes por WhatsApp.</li>
+        </ul>
+
+        <h2 id="para-que">Para qué los usamos</h2>
+        <p>{datos.texto}</p>
+        <p>También usamos de qué anuncio o página llegaste para saber qué canal trajo tu reserva, decidir dónde anunciarnos y reportar a Google Ads, de forma agregada, que una reserva pagada fue una conversión (ver <a href="#navegacion">tu visita a la web</a>). No vendemos ni compartimos tus datos con terceros para su propio uso.</p>
+        <p class="fecha">Versión del texto de autorización: {datos.version}.</p>
+
+        <h2 id="datos-sensibles">Datos de salud</h2>
+        <p>{sensibles.texto}</p>
+        <p>La Ley 1581 de 2012 (artículos 5 y 6) considera sensibles los datos de salud: su tratamiento requiere tu autorización explícita, y puedes negarte a darla sin que eso te impida tomar clase. Si escribes algo sobre tu salud en tu ficha, te pedimos esa autorización aparte, con este texto: «{sensibles.corto}»</p>
+        <p class="fecha">Versión del texto de autorización: {sensibles.version}.</p>
+
+        <h2 id="imagen">{imagen.titulo}</h2>
+        <p>{imagen.corto} Al reservar eliges si estás de acuerdo o no; ninguna de las dos respuestas cambia tu reserva. Si no quieres aparecer, no publicamos fotos ni videos donde se te reconozca, y puedes cambiar tu respuesta cuando quieras.</p>
+
+        <h2 id="navegacion">Tu visita a la web</h2>
+        <ul>
+          <li>Si llegas desde un anuncio o un enlace de campaña, tu navegador guarda <strong>hasta 90 días</strong> (en su almacenamiento local) de qué campaña llegaste y el identificador del clic del anuncio, por ejemplo el de Google Ads. También anota qué botón tocaste. Mientras no reserves, eso no dice quién eres.</li>
+          <li><strong>Si reservas,</strong> esos identificadores viajan con tu reserva y quedan guardados junto a ella. Desde ese momento son datos personales tuyos.</li>
+          <li>Los usamos para saber qué anuncio o página trajo tu reserva y para <strong>reportar a Google Ads</strong> que una reserva pagada fue una conversión, enviando el identificador del clic, la fecha y el valor (nunca tu nombre ni tu WhatsApp). Ese reporte es una transferencia de datos a Google, fuera de Colombia (artículo 26 de la Ley 1581 de 2012).</li>
+          <li>No usamos cookies de publicidad ni de terceros. Si tienes cuenta, usamos una sola cookie técnica para mantener tu sesión abierta.</li>
+          <li>Puedes borrar esos identificadores cuando quieras limpiando los datos de este sitio en tu navegador.</li>
+        </ul>
+
+        <h2 id="donde">Dónde se guardan</h2>
+        <p>En las herramientas de Google de la cuenta de Casa Lotus (Hojas de cálculo, Drive y Gmail) y en el servidor de la plataforma de reservas de Casa Lotus. Algunos de estos servicios guardan la información fuera de Colombia, con medidas de seguridad adecuadas. Solo tienen acceso quienes administran el estudio; tu profe ve tu ficha solo para las clases que dicta. Guardamos tus datos mientras seas parte de Casa Lotus y el tiempo que exija la ley.</p>
+
+        <h2 id="derechos">Tus derechos</h2>
+        <p>Según el artículo 8 de la Ley 1581 de 2012, puedes:</p>
+        <ul>
+          <li>Conocer, actualizar y corregir tus datos.</li>
+          <li>Pedir prueba de la autorización que nos diste.</li>
+          <li>Saber cómo los hemos usado.</li>
+          <li>Revocar la autorización o pedir que los borremos, cuando no haya un deber legal de conservarlos.</li>
+          <li>Presentar quejas ante la Superintendencia de Industria y Comercio.</li>
+          <li>Acceder a ellos gratis.</li>
+        </ul>
+
+        <h2 id="como">Cómo ejercerlos</h2>
+        <p>Escríbenos a <a href={`mailto:${RESPONSABLE.correo}`}>{RESPONSABLE.correo}</a> o al WhatsApp {ESTUDIO.whatsappTexto}. Respondemos las consultas en máximo 10 días hábiles y los reclamos en máximo 15 días hábiles, como indican los artículos 14 y 15 de la Ley 1581 de 2012.</p>
+
+        <p class="fecha" data-todo>Vigente desde el 1 de octubre de 2026. Versión anterior: 29 de septiembre de 2026.</p>
+      </div>
+    </div>
+  </section>
+</Base>

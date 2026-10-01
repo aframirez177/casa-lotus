@@ -1,0 +1,33 @@
+---
+// The closing room (v1): navy, breathing light behind a still outline of the mark, one CTA.
+import { reservar, whatsapp } from "../../lib/enlaces";
+import { PRUEBA, dinero } from "../../data/estudio";
+
+interface Props {
+  titulo?: string;
+  lead?: string;
+  ref: string;
+  texto?: string;
+  plan?: string | null;
+}
+const {
+  titulo = "Tu columpio te está esperando.",
+  lead,
+  ref,
+  texto = `Reservar mi clase de prueba · ${dinero(PRUEBA.precio)}`,
+  plan = PRUEBA.nombre,
+} = Astro.props;
+---
+<section class="closing" id="reservar" data-bg="navy">
+  <div class="closing__atmos" aria-hidden="true" data-closing-atmos>
+    <i class="glow glow--a"></i><i class="glow glow--b"></i><i class="glow glow--c"></i>
+    <svg class="closing__lotus" viewBox="-60 -60 985 883"><use href="#lotus-base"/><use href="#lotus-petalo-izq"/><use href="#lotus-petalo-der"/><use href="#lotus-centro"/></svg>
+  </div>
+  <div class="wrap closing__inner">
+    <h2 class="display closing__title" data-split>{titulo}</h2>
+    {lead && <p class="closing__lead" data-reveal>{lead}</p>}
+    <a class="btn btn--lime" data-cta={ref} data-magnetic data-cursor="Reservar" href={reservar(ref, plan ? { plan } : {})}>{texto}</a>
+    <a class="closing__alt" data-wa={`${ref}-WHATSAPP`} data-wa-text="Hola Casa Lotus, quiero reservar mi clase de prueba" href={whatsapp(`${ref}-WHATSAPP`, "Hola Casa Lotus, quiero reservar mi clase de prueba")}>Prefiero reservar por WhatsApp</a>
+    <slot />
+  </div>
+</section>

@@ -1,0 +1,13 @@
+---
+// Visible breadcrumb (its BreadcrumbList JSON-LD comes from lib/schema.ts, same data).
+interface Props { migas: { nombre: string; ruta: string }[] }
+const { migas } = Astro.props;
+const lista = [{ nombre: "Inicio", ruta: "/" }, ...migas];
+---
+<nav class="migas" aria-label="Ruta de navegación" data-in style="--i:0">
+  <ol>
+    {lista.map((m, i) => i === lista.length - 1
+      ? <li><span aria-current="page">{m.nombre}</span></li>
+      : <li><a href={m.ruta}>{m.nombre}</a></li>)}
+  </ol>
+</nav>

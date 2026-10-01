@@ -1,0 +1,102 @@
+---
+// Every page: head (SEO, social, icons, PWA, fonts, JSON-LD), the ambient layers, header, footer,
+// mobile CTA bar, the video viewer, and the site script. Per-page text comes from data/paginas.ts.
+import { Font } from "astro:assets";
+import "../styles/global.css";
+import "../styles/tokens.css";
+import "lenis/dist/lenis.css";
+import "../styles/main.css";
+import "../styles/paginas.css";
+import Sprite from "../components/ui/Sprite.astro";
+import Ambiente from "../components/ui/Ambiente.astro";
+import Header from "../components/ui/Header.astro";
+import Footer from "../components/ui/Footer.astro";
+import BarraMovil from "../components/ui/BarraMovil.astro";
+import Visor from "../components/ui/Visor.astro";
+import { SITIO } from "../data/estudio";
+import type { Pagina } from "../data/paginas";
+import { grafo, jsonSeguro } from "../lib/schema";
+import { transcripciones } from "../lib/transcripciones";
+
+interface Props {
+  pagina: Pagina;
+  /** absolute URL of the class photo for the Service node */
+  imagenServicio?: string;
+}
+const { pagina, imagenServicio } = Astro.props;
+const canonical = SITIO + pagina.ruta;
+const indexar = pagina.indexar !== false;
+const og = `${SITIO}/og/${pagina.clave}.png`;
+const ld = jsonSeguro(grafo(pagina, { imagenServicio, transcripciones: transcripciones() }));
+const esInicio = pagina.ruta === "/";
+---
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{pagina.titulo}</title>
+  <meta name="description" content={pagina.descripcion}>
+  {indexar && <link rel="canonical" href={canonical}>}
+  <meta name="robots" content={indexar ? "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" : "noindex, follow"}>
+  {indexar && <link rel="alternate" hreflang="es-CO" href={canonical}>}
+  {indexar && <link rel="alternate" hreflang="x-default" href={canonical}>}
+  <meta name="theme-color" content="#F6F8FC">
+  <meta name="color-scheme" content="light">
+  <meta name="format-detection" content="telephone=no">
+
+  <Font cssVariable="--font-momo-display" preload />
+  <Font cssVariable="--font-momo-sans" preload />
+
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="application-name" content="Casa Lotus">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Casa Lotus">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="sitemap" type="application/xml" href="/sitemap-index.xml">
+
+  <meta property="og:type" content={pagina.ogTipo ?? "website"}>
+  <meta property="og:site_name" content="Casa Lotus">
+  <meta property="og:locale" content="es_CO">
+  <meta property="og:url" content={canonical}>
+  <meta property="og:title" content={pagina.titulo}>
+  <meta property="og:description" content={pagina.og.descripcion}>
+  <meta property="og:image" content={og}>
+  <meta property="og:image:secure_url" content={og}>
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content={pagina.og.alt}>
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content={pagina.titulo}>
+  <meta name="twitter:description" content={pagina.og.descripcion}>
+  <meta name="twitter:image" content={og}>
+  <meta name="twitter:image:alt" content={pagina.og.alt}>
+
+  <!-- Hide reveal targets only while JS can animate them. If the site script fails to load, motion turns
+       off at once (the error listener); the timer is only the last resort, generous for phones on 4G. -->
+  <script is:inline>(function(){var d=document.documentElement;d.classList.add("js");addEventListener("error",function(e){var t=e.target;if(t&&t.tagName==="SCRIPT"&&!d.classList.contains("motion-on"))d.classList.add("motion-off")},true);setTimeout(function(){if(!d.classList.contains("motion-on"))d.classList.add("motion-off")},6000)})()</script>
+  <script is:inline type="application/ld+json" set:html={ld} />
+  <slot name="head" />
+</head>
+<body>
+  <Sprite />
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <Ambiente />
+  <Header actual={pagina.ruta} inicio={esInicio} />
+  <main id="contenido">
+    <slot />
+  </main>
+  <Footer inicio={esInicio} />
+  <BarraMovil />
+  <Visor />
+  <slot name="final" />
+  <script>
+    import "../scripts/sitio.js";
+  </script>
+</body>
+</html>

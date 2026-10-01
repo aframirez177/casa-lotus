@@ -1,0 +1,15 @@
+---
+// FAQ accordion (native <details>; sitio.js animates the height and keeps one open).
+// The same items feed the FAQPage JSON-LD (lib/schema.ts), so what is marked up is what is shown.
+import type { Faq } from "../../data/paginas";
+interface Props { items: Faq[]; nombre?: string }
+const { items, nombre = "faq" } = Astro.props;
+---
+<div class="accordion" data-accordion>
+  {items.map((f) => (
+    <details class="qa" name={nombre}>
+      <summary>{f.pregunta}</summary>
+      <div class="qa__a"><p data-todo={f.todo ? true : undefined}>{f.respuesta}</p></div>
+    </details>
+  ))}
+</div>
