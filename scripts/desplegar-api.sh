@@ -17,7 +17,8 @@ echo "→ tests"
 node --test shared/tests/*.test.mjs >/dev/null
 
 echo "→ subir código a $SERVER:$DESTINO"
-$SSH "deploy@$SERVER" "mkdir -p $DESTINO/server/data"
+# the container runs as the non-root `node` user (uid 1000) and writes SQLite into data/
+$SSH "deploy@$SERVER" "mkdir -p $DESTINO/server/data && sudo chown 1000:1000 $DESTINO/server/data"
 rsync -rlptz --delete -e "$SSH" --exclude .DS_Store --exclude 'tests/' ./shared/ "deploy@$SERVER:$DESTINO/shared/"
 rsync -rlptz --delete -e "$SSH" \
   --exclude .DS_Store --exclude node_modules --exclude 'data/' --exclude '.env' --exclude '.env.*' --exclude 'tests/' \
