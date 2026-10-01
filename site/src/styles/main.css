@@ -136,11 +136,10 @@ section[id] { scroll-margin-top: 88px; }
 /* the ribbon that flies in: same width as the mark's stroke (70 units), round ends */
 /* paper veil: one fixed layer painted as a single radial gradient (JS rebuilds the stops every frame), so the
    discs stay crisp at any size and cost one repaint. Above the header, under the grain (the paper gets its tooth). */
-/* paper discs: contained around the mark, behind it and behind the headline (the copy paints above them);
-   the page is never covered (2026-10-01, Álvaro). scripts/entrada.js paints them. */
-.paper-veil { position: absolute; inset: -60%; z-index: 0; pointer-events: none; }
-.hero__mark svg { z-index: 1; }
-.hero__copy { position: relative; z-index: 2; }
+/* paper veil: one fixed layer painted as a single radial gradient (scripts/entrada.js rebuilds the stops
+   every frame), so the discs stay crisp at any size and cost one repaint. Above the header, under the grain
+   (the paper gets its tooth). Home only; the full-screen version is Álvaro's call (2026-10-01). */
+.paper-veil { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
 html.motion-off .paper-veil { display: none; }
 .ribbon-fly { fill: none; stroke: currentColor; stroke-width: 70; stroke-linecap: round; stroke-linejoin: round; }
 .ribbon-measure { display: none; }

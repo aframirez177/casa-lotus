@@ -2,9 +2,11 @@
 // A navy ribbon, exactly as wide as the mark's stroke, flies in from beyond the screen and winds into the
 // infinity: a dash the length of the infinity slides along lead-in + infinity until it covers the
 // infinity alone. Then, in paper: four discs are born one after another on the infinity's crossing
-// (palest first, lime on top), grow, and one empty disc opens from the centre through all four. Since
-// 2026-10-01 the discs stay around the mark, behind it and behind the headline: the page is never covered.
-// The real SVG takes over from the ribbon, the petals bloom from their base, and the mark never moves again.
+// (palest first, lime on top) and all keep growing, never pausing, until the lime covers the screen. The
+// real mark takes over from the ribbon under them. Then one empty disc opens from the centre through all
+// four and the page shows through it with the logo in the middle; the petals bloom from their base.
+// Same gesture, timings, colours and contact shades as v1 (docs/design-system.md, «Load»), now with no
+// library: one rAF loop that only writes (the crossing is re-measured on scroll/resize, never per frame).
 const root = document.documentElement;
 const mark = document.querySelector("[data-lotus-draw]");
 
@@ -41,7 +43,6 @@ if (mark) {
     };
     // all layout reads first, in one go (no forced reflow later)
     const m = mark.getScreenCTM().inverse();
-    const r = mark.getBoundingClientRect(), vr = veil?.getBoundingClientRect();
     const toMark = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
     const S = toMark(innerWidth + 40, -40), J = centre[0];
     const tx = centre[1][0] - J[0], ty = centre[1][1] - J[1], tl = Math.hypot(tx, ty);
@@ -55,20 +56,28 @@ if (mark) {
     fly.style.strokeDashoffset = inf;
     fly.style.opacity = 1;
 
-    // paper discs, painted as one radial gradient inside the veil (around the mark)
+    // paper discs, painted as one radial gradient on the fixed veil
     const PAPER = ["#D6E1E6", "#B2D4E0", "#B7DFC5", "#D2F3A2"]; // bottom → top: line, sky, mint, lime (tokens.css)
     const rgb = PAPER.map((hx) => [1, 3, 5].map((k) => parseInt(hx.slice(k, k + 2), 16)));
     const sheets = PAPER.map(() => ({ h: 0, R: 0 })); // h: hole radius · R: outer radius (px)
-    // every disc follows the same curve from its own birth: R = unit·A·(e^(age/T) − 1)
+    // every disc follows the same curve from its own birth: R = unit·A·(e^(age/T) − 1). Its speed only
+    // ever rises, so no disc waits for the others; the gap between births sets the rings' width.
     const A = 0.35, T = 0.44, GAP = 0.19;
-    const unit = r.width / 2;
-    const cx = vr ? r.left + r.width / 2 - vr.left : 0, cy = vr ? r.top + r.height * 0.755 - vr.top : 0; // the infinity's crossing
-    const cover = unit * 1.15; // just past the infinity's ends: contained around the mark
+    let cx = 0, cy = 0, unit = 0, cover = 0;
+    const place = () => {
+      const r = mark.getBoundingClientRect();
+      cx = r.left + r.width / 2; cy = r.top + r.height * 0.755; // the infinity's crossing
+      unit = r.width / 2;
+      cover = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy)) + 48;
+    };
+    place();
+    addEventListener("scroll", place, { passive: true });
+    addEventListener("resize", place);
     const f = (n) => Math.round(n * 10) / 10;
     const shade = (i, a) => (i < 0 ? `rgb(22 84 114/${a})` : `rgb(${rgb[i].map((v, k) => Math.round(v + ([22, 84, 114][k] - v) * a)).join(" ")})`);
     let last = "";
     const paint = (clock) => {
-      sheets.forEach((s, i) => { const age = clock - i * GAP; s.R = age > 0 ? Math.min(unit * A * Math.expm1(age / T), cover) : 0; });
+      sheets.forEach((s, i) => { const age = clock - i * GAP; s.R = age > 0 ? unit * A * Math.expm1(age / T) : 0; });
       const on = sheets.filter((s) => s.R - s.h > 0.5);
       if (!on.length) { if (last) { veil.style.background = ""; last = ""; } return; }
       const xs = [...new Set([0, ...on.flatMap((s) => [s.h, s.R])])].sort((a, b) => a - b);
@@ -85,14 +94,12 @@ if (mark) {
         const prev = segs[k - 1], next = segs[k + 1], a = s.a, b = s.b === Infinity ? s.a + 1 : s.b;
         const w = Math.min(12, (b - a) * 0.45), AS = 0.13, paper = s.top >= 0;
         const inL = paper && prev && prev.top > s.top, inR = paper && next && next.top > s.top;
-        // outside every disc the veil is transparent (the page shows), not the navy shade
-        const col = (i, al) => (i < 0 ? "transparent" : shade(i, al));
-        stops.push(`${col(s.top, inL ? AS : 0)} ${f(k ? a + 0.4 : a)}px`);
-        if (inL) stops.push(`${col(s.top, AS * 0.35)} ${f(a + w * 0.4)}px`, `${col(s.top, 0)} ${f(a + w)}px`);
-        if (inR) stops.push(`${col(s.top, 0)} ${f(b - w)}px`, `${col(s.top, AS * 0.35)} ${f(b - w * 0.4)}px`);
-        if (s.b !== Infinity) stops.push(`${col(s.top, inR ? AS : 0)} ${f(b - 0.4)}px`);
+        stops.push(`${shade(s.top, inL ? AS : 0)} ${f(k ? a + 0.4 : a)}px`);
+        if (inL) stops.push(`${shade(s.top, AS * 0.35)} ${f(a + w * 0.4)}px`, `${shade(s.top, 0)} ${f(a + w)}px`);
+        if (inR) stops.push(`${shade(s.top, 0)} ${f(b - w)}px`, `${shade(s.top, AS * 0.35)} ${f(b - w * 0.4)}px`);
+        if (s.b !== Infinity) stops.push(`${shade(s.top, inR ? AS : 0)} ${f(b - 0.4)}px`);
       });
-      const h0 = Math.min(...on.map((s) => s.h)), R1 = Math.max(...on.map((s) => s.R)), bl = 6, SA = 0.14;
+      const h0 = Math.min(...on.map((s) => s.h)), R1 = Math.max(...on.map((s) => s.R)), bl = 6, SA = 0.18;
       const cast = h0 > 0
         ? `transparent ${f(Math.max(0, h0 - bl))}px, rgb(22 84 114/${SA}) ${f(h0 + bl)}px, rgb(22 84 114/${SA}) ${f(R1 - bl)}px, transparent ${f(R1 + bl)}px`
         : `rgb(22 84 114/${SA}) ${f(Math.max(0, R1 - bl))}px, transparent ${f(R1 + bl)}px`;
@@ -100,11 +107,11 @@ if (mark) {
       if (bg !== last) { veil.style.background = bg; last = bg; }
     };
 
-    // timeline (seconds), as v1
-    const age = (rr) => T * Math.log1p(rr / A);
-    const t0 = 0.1, flight = 2.3, land = t0 + flight;
-    const covered = (PAPER.length - 1) * GAP + age((cover / unit) * 1.02);
-    const start = land - 0.4, open = start + covered - 0.35, reveal = 1.1, swap = start + age(1.2);
+    // timeline (seconds), exactly v1's (its GSAP timeline had a 0.1 s delay, then t0 = 0.1)
+    const age = (rr) => T * Math.log1p(rr / A); // age at which a disc reaches rr·unit
+    const t0 = 0.2, flight = 2.3, land = t0 + flight;
+    const covered = (PAPER.length - 1) * GAP + age((cover / unit) * 1.02); // the lime reaches the corners
+    const start = land - 0.4, open = start + covered - 0.5, reveal = 1.3, swap = start + age(1.2);
     const fin = open + 0.4 + 0.12 * (petals.length - 1) + 1.5;
     const clamp = (v) => Math.max(0, Math.min(1, v));
     const power2Out = (p) => 1 - (1 - p) ** 2;
@@ -123,7 +130,8 @@ if (mark) {
       if (veil && t >= start) {
         const hole = t >= open ? power2InOut(clamp((t - open) / reveal)) * (cover + 24) : 0;
         sheets.forEach((s) => (s.h = hole));
-        if (t <= open + reveal + 0.05) paint(t - start); else if (veil.style.display !== "none") veil.style.display = "none";
+        // the discs clock runs covered + 0.5 s, linear (v1); the veil drops once the hole is past the corners
+        if (t <= open + reveal + 0.05) paint(Math.min(t - start, covered + 0.5)); else if (veil.style.display !== "none") veil.style.display = "none";
       }
       // the real mark takes over from the ribbon
       if (!swapped && t >= swap) { swapped = true; base.style.opacity = 1; fly.style.opacity = 0; }
@@ -136,7 +144,11 @@ if (mark) {
         p.style.transform = `translate(0, ${34 * (1 - e)}px) scale(${0.8 + 0.2 * e})`;
       });
       if (t < fin) requestAnimationFrame(frame);
-      else { fly.style.display = "none"; root.classList.add("marca-lista"); }
+      else {
+        fly.style.display = "none";
+        removeEventListener("scroll", place); removeEventListener("resize", place);
+        root.classList.add("marca-lista");
+      }
     };
     requestAnimationFrame(frame);
   }
