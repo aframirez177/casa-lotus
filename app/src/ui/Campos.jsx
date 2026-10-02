@@ -97,11 +97,17 @@ export function Interruptor({ activo, onCambio, etiqueta, ayuda, disabled }) {
 /** Six boxes: types, pastes, auto-advances, and backspaces like one field. */
 export function CodigoInput({ valor = "", onCambio, onCompleto, largo = 6, error, deshabilitado }) {
   const refs = useRef([]);
+  // The code as of the last keystroke. Focus moves to the next box before the parent re-renders with the
+  // new value, so handlers must read this, not the `valor` captured by the previous render (that stale value
+  // sent the focus back to the first box after every digit).
+  const actual = useRef(valor);
+  actual.current = valor;
   const digitos = Array.from({ length: largo }, (_, i) => valor[i] || "");
   const poner = (texto, desde = 0) => {
     const limpio = texto.replace(/\D/g, "");
     if (!limpio) return;
-    const nuevo = (valor.slice(0, desde) + limpio).slice(0, largo);
+    const nuevo = (actual.current.slice(0, desde) + limpio).slice(0, largo);
+    actual.current = nuevo;
     onCambio(nuevo);
     const foco = Math.min(nuevo.length, largo - 1);
     refs.current[foco]?.focus();
@@ -114,18 +120,19 @@ export function CodigoInput({ valor = "", onCambio, onCompleto, largo = 6, error
           key={i} ref={(el) => (refs.current[i] = el)} className="entrada-codigo" inputMode="numeric" pattern="[0-9]*" maxLength={largo}
           autoComplete={i === 0 ? "one-time-code" : "off"} aria-label={`Dígito ${i + 1}`} value={d} disabled={deshabilitado} aria-invalid={error ? true : undefined}
           data-autofoco={i === 0 ? "" : undefined}
-          onChange={(e) => poner(e.target.value.slice(-largo), Math.min(i, valor.length))}
+          onChange={(e) => poner(e.target.value.slice(-largo), Math.min(i, actual.current.length))}
           onPaste={(e) => { e.preventDefault(); poner(e.clipboardData.getData("text"), 0); }}
           onKeyDown={(e) => {
             if (e.key === "Backspace") {
               e.preventDefault();
               const hasta = d ? i : Math.max(0, i - 1);
-              onCambio(valor.slice(0, hasta));
+              actual.current = actual.current.slice(0, hasta);
+              onCambio(actual.current);
               refs.current[hasta]?.focus();
             } else if (e.key === "ArrowLeft") refs.current[Math.max(0, i - 1)]?.focus();
             else if (e.key === "ArrowRight") refs.current[Math.min(largo - 1, i + 1)]?.focus();
           }}
-          onFocus={(e) => { if (i > valor.length) refs.current[valor.length]?.focus(); else e.target.select(); }}
+          onFocus={(e) => { const n = actual.current.length; if (i > n) refs.current[n]?.focus(); else e.target.select(); }}
         />
       ))}
     </m.div>

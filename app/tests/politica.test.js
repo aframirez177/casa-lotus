@@ -19,7 +19,7 @@ describe("cancelling", () => {
     expect(p.sinCosto).toBe(true);
     expect(p.tono).toBe("ok");
     expect(p.titulo).toBe("Faltan 20 horas: si cancelas, la clase vuelve a tu plan.");
-    expect(p.detalle).toBe("Puedes cancelar sin costo hasta el sábado 3 de octubre a las 2:00 a. m.");
+    expect(p.detalle).toBe("Puedes cancelar sin costo hasta mañana a las 2:00 a. m."); // relative to `ahora` (Oct 2, 12:00)
   });
 
   test("late, it is spent and the swing goes to the waiting list", () => {
@@ -50,7 +50,7 @@ describe("cancelling", () => {
 
 describe("rescheduling", () => {
   test("allowed until the limit, with the limit in words", () => {
-    const p = politicaReagendarTexto(reserva(), inicio - 30 * H);
+    const p = politicaReagendarTexto(reserva(), inicio - 60 * H); // Oct 1, 20:00: two days ahead reads as a date
     expect(p.puede).toBe(true);
     expect(p.detalle).toBe("Puedes cambiarla hasta el sábado 3 de octubre a las 2:00 a. m.");
   });

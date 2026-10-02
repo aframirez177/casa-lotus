@@ -1,16 +1,16 @@
 // Plain-words policy copy for a booking: what happens if she cancels or reschedules now.
 // Reads the server's ReservaClienta (puedeCancelar, cancelarSinCosto, limiteCancelar…) and re-checks
 // the limit against the clock, so a sheet left open past the limit tells the truth.
-import { ESTADO, inicioClase, horaLegible, partesBogota } from "./reglas.js";
+import { ESTADO, inicioClase, horaLegible, partesBogota, hoyClave } from "./reglas.js";
 import { faltaTexto, diaRelativo } from "./fechas.js";
 
 /** Ends a sentence without doubling the period of «a. m.» / «p. m.». */
 const punto = (texto) => (texto.endsWith(".") ? texto : texto + ".");
 
 /** «el sábado 3 de octubre a las 2:00 a. m.» / «hoy a las 3:00 p. m.» */
-export function cuandoTexto(ms) {
+export function cuandoTexto(ms, ahora = Date.now()) {
   const { fecha, hora } = partesBogota(ms);
-  const dia = diaRelativo(fecha);
+  const dia = diaRelativo(fecha, hoyClave(ahora)); // relative to the same clock as the rest of the copy
   const pre = dia === "hoy" || dia === "mañana" || dia === "ayer" ? dia : "el " + dia;
   return `${pre} a las ${horaLegible(hora)}`;
 }
@@ -33,7 +33,7 @@ export function politicaCancelarTexto(reserva, ahora = Date.now()) {
     return {
       puede: true, sinCosto: true, tono: "ok",
       titulo: `${falta}: si cancelas, la clase vuelve a tu plan.`,
-      detalle: Number.isFinite(limite) ? punto(`Puedes cancelar sin costo hasta ${cuandoTexto(limite)}`) : "",
+      detalle: Number.isFinite(limite) ? punto(`Puedes cancelar sin costo hasta ${cuandoTexto(limite, ahora)}`) : "",
       boton: "Sí, cancelar",
     };
   }
@@ -60,7 +60,7 @@ export function politicaReagendarTexto(reserva, ahora = Date.now()) {
   return {
     puede: true,
     titulo: "Elige tu nueva clase",
-    detalle: Number.isFinite(limite) ? punto(`Puedes cambiarla hasta ${cuandoTexto(limite)}`) + (esPrueba(reserva) ? " La clase de prueba se cambia una sola vez." : "") : "",
+    detalle: Number.isFinite(limite) ? punto(`Puedes cambiarla hasta ${cuandoTexto(limite, ahora)}`) + (esPrueba(reserva) ? " La clase de prueba se cambia una sola vez." : "") : "",
   };
 }
 

@@ -74,7 +74,7 @@ describe("booking", () => {
 
   test("a full class answers 409 llena", () => {
     s.entrarComo("clienta");
-    const llena = s.db.clases.find((c) => inicioClase(c) > t + 24 * H && s.db.reservas.filter((r) => r.clase === c.id && ["Pendiente de pago", "Confirmada"].includes(r.estado)).length >= c.cupos);
+    const llena = s.db.clases.find((c) => inicioClase(c) > t + 4 * H && s.db.reservas.filter((r) => r.clase === c.id && ["Pendiente de pago", "Confirmada"].includes(r.estado)).length >= c.cupos);
     const r = post("/api/yo/reservas", { clase: llena.id });
     expect(r.status).toBe(409);
     expect(r.cuerpo.motivo).toBe("llena");
