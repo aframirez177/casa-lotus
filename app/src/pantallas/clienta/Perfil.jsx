@@ -15,7 +15,8 @@ import { Hoja } from "../../ui/Hoja.jsx";
 import { useAvisos } from "../../ui/Avisos.jsx";
 import { InstalarTarjeta } from "../../shell/Instalar.jsx";
 import { FlujoCodigo } from "../entrar/FlujoCodigo.jsx";
-import { FormFicha, FormAcuerdos, PERFIL_VACIO, validarFicha, escribioSalud } from "../reservar/Ficha.jsx";
+import { FormFicha, FormPerfilExtra, FormAcuerdos, PERFIL_VACIO, validarFicha, escribioSalud, perfilPorCompletar } from "../reservar/Ficha.jsx";
+import { llegoDesdeAtribucion } from "../../lib/atribucion.js";
 import { CONSENTIMIENTOS, whatsappLegible, partesBogota, fechaLegible, SALUD_SIN_DATOS } from "../../lib/reglas.js";
 
 const fechaDe = (iso) => (iso ? fechaLegible(partesBogota(Date.parse(iso)).fecha) : "");
@@ -32,7 +33,8 @@ export default function Perfil() {
   const [errores, setErrores] = useState({});
   const [confirmarWa, setConfirmarWa] = useState(false);
 
-  const original = useMemo(() => (data ? { ...PERFIL_VACIO, ...data.clienta.perfil, whatsapp: formatoCelular(data.clienta.perfil.whatsapp), contactoEmergencia: { nombre: data.clienta.perfil.contactoEmergencia?.nombre || "", whatsapp: formatoCelular(data.clienta.perfil.contactoEmergencia?.whatsapp || "") } } : null), [data]);
+  // «Cómo llegó» starts from the visit's source when she never said it
+  const original = useMemo(() => (data ? { ...PERFIL_VACIO, ...data.clienta.perfil, llego: data.clienta.perfil.llego || llegoDesdeAtribucion(), whatsapp: formatoCelular(data.clienta.perfil.whatsapp), contactoEmergencia: { nombre: data.clienta.perfil.contactoEmergencia?.nombre || "", whatsapp: formatoCelular(data.clienta.perfil.contactoEmergencia?.whatsapp || "") } } : null), [data]);
   useEffect(() => { if (original) setPerfil(original); }, [original]);
   useEffect(() => { if (data && location.hash === "#ficha") setTimeout(() => document.getElementById("ficha")?.scrollIntoView({ behavior: "smooth", block: "start" }), 300); }, [data]);
 
@@ -86,6 +88,10 @@ export default function Perfil() {
 
           <Seccion titulo="Tu ficha" id="ficha" ayuda={clienta.fichaCompleta ? "Solo la ven Ana y tu profe." : "Te falta poco: tu profe la necesita antes de tu clase."}>
             <div className="tarjeta p-5 sm:p-6"><FormFicha perfil={perfil} cambiar={cambiar} errores={errores} /></div>
+          </Seccion>
+
+          <Seccion titulo={perfilPorCompletar(clienta.perfil) ? "Completa tu perfil (1 minuto)" : "Más sobre ti"} id="perfil" ayuda="Opcional. Nos ayuda a conocerte.">
+            <div className="tarjeta p-5 sm:p-6"><FormPerfilExtra perfil={perfil} cambiar={cambiar} /></div>
           </Seccion>
 
           <Seccion titulo="Acuerdos" ayuda="Lo que aceptaste y cuándo. Puedes cambiar lo opcional cuando quieras.">

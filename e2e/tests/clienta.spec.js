@@ -7,8 +7,9 @@ import { APP } from "../lib/entorno.js";
 
 const hora = (h) => R.horaLegible(h).replace(/\./g, "\\.");
 const diaRelativo = (f, hoy = R.hoyClave()) => (f === hoy ? "hoy" : f === R.sumarDias(hoy, 1) ? "mañana" : R.fechaLegible(f));
-/** Her booking card for a class: «sábado 3 de octubre · 8:00 a. m.» (day AND time, so two days never clash). */
-const fila = (page, c) => page.getByRole("article").filter({ hasText: `${diaRelativo(c.fecha)} · ${R.horaLegible(c.hora)}` });
+/** Her booking card for a class: «sábado 3 de octubre · 8:00 – 9:00 a. m.» (day AND start time, so two days never clash). */
+const inicio = (h) => R.horaLegible(h).split(" ")[0];
+const fila = (page, c) => page.getByRole("article").filter({ hasText: new RegExp(`${diaRelativo(c.fecha)} · ${inicio(c.hora)}( [ap]\\. m\\.)? –`) });
 
 test("clienta: enlace de acceso, saldo, cancelar a tiempo, reagendar, cancelar tarde y lista de espera", async ({ page, apiAdmin }) => {
   const hoy = R.hoyClave();
@@ -34,7 +35,9 @@ test("clienta: enlace de acceso, saldo, cancelar a tiempo, reagendar, cancelar t
   await abrirEnlace(page, enlace);
   await expect(page.getByRole("heading", { level: 1, name: `Hola, ${R.primerNombre(yo.nombre)}.` })).toBeVisible();
   const proxima = page.getByRole("article", { name: "Tu próxima clase" });
-  await expect(proxima).toContainText(R.horaLegible(N.hora));
+  await expect(proxima).toContainText(new RegExp(`${inicio(N.hora)}( [ap]\\. m\\.)? – `));
+  await expect(proxima).toContainText("Confirmada");
+  await expect(proxima.getByRole("link", { name: "Agregar a Google Calendar" })).toBeVisible();
   await expect(proxima).toContainText(/Empieza en/);
   const plan = page.getByRole("region", { name: "Tu plan" });
   await expect(plan).toContainText("Te quedan 5 de 8.");

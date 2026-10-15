@@ -3,7 +3,7 @@
 // It is a stand-in for showing the app without a backend; the real rules live in server/.
 import {
   ESTADO, OCUPAN, CONSUMEN, ACTIVAS, ESTADO_CLASE, MEDIOS, hoyClave, sumarDias, fechaLegible, horaLegible, momentoMs,
-  inicioClase, ocupados as ocupadosEn, reservable as reservableRegla, politicaCancelar, politicaReagendar, saldo as saldoRegla,
+  inicioClase, partesBogota, fechaCorta, ocupados as ocupadosEn, reservable as reservableRegla, politicaCancelar, politicaReagendar, saldo as saldoRegla,
   elegirCompra, estadoCompra, siguienteId, whatsappLegible, normalizaWhatsApp, enlaceWhatsApp, primerNombre, diasParaCumple,
   fechasDeClase, festivosEntre, claseId, diaDeSemana, dinero, CONSENTIMIENTOS, fichaCompleta as fichaCompletaRegla, horaTexto,
 } from "../../lib/reglas.js";
@@ -49,6 +49,9 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     horasPagar: num("Horas para pagar una reserva web", 12), cambiosPrueba: num("Cambios permitidos clase de prueba", 1),
   });
   const waReservas = () => ajuste("WhatsApp de reservas", "573128720888");
+  const duracion = () => num("Duración de la clase (minutos)", 60);
+  /** "HH:mm" when the class ends (start + duración, same day). */
+  const finDe = (c) => { const { hora } = partesBogota(inicioClase(c) + duracion() * 60000); return hora > c.hora ? hora : "23:59"; };
   const llave = () => ajuste("Llave de pago", "319 328 8469");
 
   /* ── lookups ──────────────────────────────────────────── */
@@ -67,7 +70,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const r = reservableRegla(c, ocu, ahora(), politicas().horasReservar);
     return {
       id: c.id, fecha: c.fecha, dia: c.dia, hora: c.hora, fechaTexto: fechaLegible(c.fecha), horaTexto: horaLegible(c.hora),
-      clase: c.clase || "", tipo: c.tipo || "Regular", cupos: Number(c.cupos), ocupados: ocu, libres: Math.max(0, c.cupos - ocu),
+      fin: finDe(c), clase: c.clase || "", tipo: c.tipo || "Regular", cupos: Number(c.cupos), ocupados: ocu, libres: Math.max(0, c.cupos - ocu),
       reservable: r.ok, ...(r.ok ? {} : { motivo: r.motivo }), estado: c.estado,
     };
   }
@@ -118,14 +121,14 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const texto = `Hola Casa Lotus, soy ${cl.nombre}. Te envío el comprobante de ${p.nombre === "Clase de prueba" ? "mi clase de prueba" : "mi plan " + p.nombre} para el ${fechaLegible(c.fecha)} a las ${horaLegible(c.hora)} (código ${r.id}).`;
     return { monto: p.precio, plan: p.nombre, llave: llave(), medios: ["Nequi", "DaviPlata", "Bre-B"], whatsapp: waReservas(), venceApartado: r.venceApartado, waTexto: texto, waEnlace: enlaceWhatsApp(waReservas(), texto) };
   }
-  function reservaClienta(r) {
+  function reservaClienta(r, { sinPlan = false } = {}) {
     const c = clase(r.clase), pol = politicas(), t = ahora();
     const can = politicaCancelar(r, c, t, pol.horasCancelar);
     const prueba = r.compra ? esPruebaCompra(r.compra) : r.planPedido === "Clase de prueba";
     const reag = politicaReagendar(r, c, t, pol.horasCancelar, cambiosHechos(r), prueba ? pol.cambiosPrueba : Infinity);
     const compra = db.compras.find((x) => x.id === r.compra);
     return {
-      id: r.id, estado: r.estado, clase: claseVista(c), compra: r.compra || undefined, plan: compra?.plan || r.planPedido || undefined,
+      id: r.id, estado: r.estado, clase: claseVista(c), compra: sinPlan ? undefined : r.compra || undefined, plan: sinPlan && compra ? undefined : compra?.plan || r.planPedido || undefined,
       puedeCancelar: can.ok, cancelarSinCosto: Boolean(can.ok && (can.devuelveClase || r.estado === ESTADO.PENDIENTE)), limiteCancelar: iso(can.limiteMs),
       puedeReagendar: reag.ok, limiteReagendar: iso(reag.limiteMs), reagendadaDe: r.reagendadaDe || undefined,
       pago: r.estado === ESTADO.PENDIENTE ? pagoDe(r, r.planPedido || "Clase de prueba") : undefined,
@@ -369,6 +372,19 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       if (c.reemplazoPedido) lista.push({ id: "A-reemplazo-" + c.id, tipo: "necesita-reemplazo", prioridad: 1, titulo: `${primerNombre(c.profe) || "Tu profe"} no puede dictar`, detalle: `${fechaLegible(c.fecha)}, ${horaLegible(c.hora)}${c.reemplazoPedido.motivo ? " · " + c.reemplazoPedido.motivo : ""}`, clase: claseVista(c), accion: { tipo: "abrir", ruta: ruta + "?profe=1" } });
       else if (!c.profe) lista.push({ id: "A-sinprofe-" + c.id, tipo: "sin-profe", prioridad: 2, titulo: "Clase sin profe", detalle: `${fechaLegible(c.fecha)}, ${horaLegible(c.hora)} · ${c.clase || "clase"}`, clase: claseVista(c), accion: { tipo: "abrir", ruta } });
     }
+    const sinTipo = db.clases.filter((k) => k.estado !== "Cancelada" && inicioClase(k) > t && k.fecha <= sumarDias(h, 14) && (!k.clase || k.clase === "Por confirmar"));
+    const porFranja = new Map();
+    for (const c of sinTipo) {
+      if (c.tipo === "Extra") { lista.push({ id: "sin-clase:" + c.id, tipo: "sin-clase", prioridad: 2, titulo: `Clase extra sin tipo: ${fechaCorta(c.fecha)} · ${horaLegible(c.hora)}`, detalle: "En la web sale como «Clase aérea».", accion: { tipo: "abrir", ruta: "/app/admin/agenda/" + encodeURIComponent(c.id) } }); continue; }
+      const k = c.dia + " " + c.hora;
+      porFranja.set(k, [...(porFranja.get(k) || []), c]);
+    }
+    for (const [k, cs] of porFranja) {
+      const [dia, hora] = k.split(" ");
+      lista.push({ id: "sin-clase:" + k, tipo: "sin-clase", prioridad: 2, titulo: `${dia} ${horaLegible(hora)}: ponle el tipo de clase en Horario`,
+        detalle: `${cs.length === 1 ? "1 clase" : cs.length + " clases"} en los próximos 14 días ${cs.length === 1 ? "dice" : "dicen"} «Por confirmar» (${cs.map((c) => fechaCorta(c.fecha)).join(", ")}). En la web salen como «Clase aérea».`,
+        accion: { tipo: "abrir", ruta: "/app/admin/horario" } });
+    }
     for (const r of db.reservas.filter((x) => x.estado === ESTADO.ASISTIO && !x.compra && clase(x.clase).fecha >= sumarDias(h, -14))) {
       const cl = clienta(r.clienta), c = clase(r.clase);
       const texto = `Hola ${primerNombre(cl.nombre)}, ¡qué bueno verte en clase el ${fechaLegible(c.fecha)}! Te escribo para el pago de esa clase. ¿Me envías el comprobante a la llave ${llave()}?`;
@@ -452,23 +468,40 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     return { actualizado: iso(ahora()), horasParaPagar: politicas().horasPagar, clases: db.clases.filter((c) => c.fecha >= desde && c.fecha <= hasta && c.estado !== "Cancelada" && inicioClase(c) > ahora()).map(claseVista) };
   });
   ruta("GET", "/api/publico/planes", () => db.planes.filter((p) => p.activo && p.tipo !== "Ajuste"));
-  ruta("GET", "/api/publico/estudio", () => ({ whatsapp: waReservas(), llavePago: llave(), mediosPago: ["Nequi", "DaviPlata", "Bre-B"], politicas: politicas() }));
+  ruta("GET", "/api/publico/estudio", () => ({ whatsapp: waReservas(), llavePago: llave(), mediosPago: ["Nequi", "DaviPlata", "Bre-B"], politicas: politicas(), duracion: duracion() }));
+  /** Recognised = her WhatsApp AND the first name she typed (accents and case aside). Never says more than that. */
+  function reconocida(perfil) {
+    const cl = clienteSegunWhatsApp(normalizaWhatsApp(perfil?.whatsapp));
+    return cl && sinAcentos(primerNombre(perfil?.nombre)) === sinAcentos(primerNombre(cl.nombre)) ? cl : null;
+  }
+  const pideFichaDe = (cl) => !cl.salud || !cl.contactoEmergencia?.nombre || !cl.contactoEmergencia?.whatsapp;
+  const pideAcuerdosDe = (cl) => { const k = cl.consentimientos || {}; return !k.datos?.acepta || !k.descargo?.acepta || typeof k.imagen?.acepta !== "boolean"; };
+  ruta("POST", "/api/publico/identificar", ({ b }) => {
+    validarPerfilPublico({ nombre: b.nombre, whatsapp: b.whatsapp });
+    const cl = b.website ? null : reconocida(b);
+    return cl ? { conocida: true, pideFicha: pideFichaDe(cl), pideAcuerdos: pideAcuerdosDe(cl) } : { conocida: false, pideFicha: true, pideAcuerdos: true };
+  });
   ruta("POST", "/api/publico/reservas", ({ b }) => {
     if (b.website) falla(422, "validacion", "No pudimos procesar la reserva.");
     validarPerfilPublico(b.perfil);
-    if (!b.consentimientos?.datos?.acepta || !b.consentimientos?.descargo?.acepta) falla(422, "validacion", "Para reservar necesitamos tu autorización de datos y que aceptes el descargo.", { campos: { consentimientos: "Acepta los acuerdos para seguir." } });
     const wa = normalizaWhatsApp(b.perfil.whatsapp);
+    const suya = reconocida(b.perfil);
+    const k = b.consentimientos || {};
+    if ((!suya || pideAcuerdosDe(suya)) && (!k.datos?.acepta || !k.descargo?.acepta)) falla(422, "validacion", "Para reservar necesitamos tu autorización de datos y que aceptes el descargo.", { campos: { consentimientos: "Acepta los acuerdos para seguir." } });
     let cl = clienteSegunWhatsApp(wa), limitada = false;
-    if (cl) { aplicarPerfil(cl, b.perfil, { soloVacios: true }); limitada = true; } else cl = nuevaClienta(b.perfil);
-    firmar(cl, b.consentimientos);
+    // typed fields only fill blanks, and never her e-mail (a stranger could otherwise receive her login code)
+    if (cl) { const { correo: _c, ...resto } = b.perfil; aplicarPerfil(cl, resto, { soloVacios: true }); limitada = true; } else cl = nuevaClienta(b.perfil);
+    firmar(cl, k);
     const at = JSON.stringify({ ref: b.ref, utm: b.utm, clickIds: b.clickIds });
     actorActual = { tipo: "clienta", id: cl.id, nombre: cl.nombre };
-    const r = crearReserva({ idClienta: cl.id, idClase: b.clase, origen: "Web · " + (b.ref || "APP"), plan: b.plan || "Clase de prueba", atribucion: at, forzarPendiente: true });
+    const r = crearReserva({ idClienta: cl.id, idClase: b.clase, origen: "Web · " + (b.ref || "APP"), plan: b.plan || "Clase de prueba", atribucion: at, forzarPendiente: !suya });
     abrirSesion({ rol: "clienta", id: cl.id, limitada, reservas: limitada ? [r.id] : undefined });
     const c = clase(r.clase);
-    emitir("reserva-web", "Nueva reserva web", `${cl.nombre} · ${fechaLegible(c.fecha)}, ${horaLegible(c.hora)}`, { clienta: cl.id, clase: c.id });
+    const conPlan = r.estado === ESTADO.CONFIRMADA;
+    emitir("reserva-web", conPlan ? "Reservó con su plan desde la web" : "Nueva reserva web", `${cl.nombre} · ${fechaLegible(c.fecha)}, ${horaLegible(c.hora)}`, { clienta: cl.id, clase: c.id });
     auditar("reserva-web", r.id, `${cl.nombre} · ${c.id}`);
-    return { status: 201, cuerpo: { codigo: r.id, estado: r.estado, clase: claseVista(c), pago: pagoDe(r, r.planPedido), sesion: true } };
+    const correo = Boolean(suya ? suya.correo : b.perfil.correo);
+    return { status: 201, cuerpo: { codigo: r.id, estado: r.estado, clase: claseVista(c), pago: conPlan ? null : pagoDe(r, r.planPedido), sesion: true, conPlan, saldo: conPlan ? saldoDe(cl.id) : null, correo } };
   });
   ruta("POST", "/api/publico/espera", ({ b }) => {
     validarPerfilPublico({ nombre: b.nombre, whatsapp: b.whatsapp });
@@ -580,7 +613,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const { cl, limitada, propias } = yoClienta(ctx);
     const suyas = db.reservas.filter((r) => r.clienta === cl.id && (!limitada || propias.includes(r.id)));
     const t = ahora();
-    const proximas = suyas.filter((r) => ACTIVAS.includes(r.estado) && inicioClase(clase(r.clase)) > t - 3600000).sort((a, b) => (a.clase < b.clase ? -1 : 1)).map(reservaClienta);
+    const proximas = suyas.filter((r) => ACTIVAS.includes(r.estado) && inicioClase(clase(r.clase)) > t - 3600000).sort((a, b) => (a.clase < b.clase ? -1 : 1)).map((r) => reservaClienta(r, { sinPlan: limitada }));
     const historial = limitada ? [] : suyas.filter((r) => !proximas.some((p) => p.id === r.id)).sort((a, b) => (a.clase < b.clase ? 1 : -1)).slice(0, 20).map(reservaClienta);
     const perfil = limitada ? { ...perfilDe(cl), nacimiento: "", barrio: "", intereses: [], salud: "", eps: "", contactoEmergencia: { nombre: "", whatsapp: "" } } : perfilDe(cl);
     return {

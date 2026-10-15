@@ -43,3 +43,9 @@ export function evento(tipo, datos = {}) {
     }
   } catch { /* analytics never breaks booking */ }
 }
+
+/** «¿Cómo llegaste?» guessed from the visit's utm_source (Instagram, Facebook, Google), "" otherwise. */
+const COMO = { instagram: "Instagram", ig: "Instagram", facebook: "Facebook", fb: "Facebook", google: "Google" };
+export function llegoDesdeAtribucion(at = leerAtribucion()) {
+  return COMO[String(at?.utm?.source || "").toLowerCase()] || "";
+}

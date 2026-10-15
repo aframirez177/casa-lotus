@@ -2,7 +2,7 @@
 // a client picker, a register-payment sheet, and copy/share for links.
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { MessageCircle, Clock, AlertTriangle, CalendarCheck, Users, Wallet, Cake, ClipboardList, Hourglass, Sparkles, ChevronRight, Copy, Check, Search, Share2, CircleDollarSign, CalendarClock, UserX, UserRoundSearch } from "lucide-react";
+import { MessageCircle, Clock, AlertTriangle, CalendarCheck, Users, Wallet, Cake, ClipboardList, Hourglass, Sparkles, ChevronRight, Copy, Check, Search, Share2, CircleDollarSign, CalendarClock, UserX, UserRoundSearch, Tag } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Boton } from "../../ui/Boton.jsx";
 import { Hoja } from "../../ui/Hoja.jsx";
@@ -132,6 +132,7 @@ const ICONO_ALERTA = {
   "prueba-sin-plan": [Sparkles, "bg-pilates text-navy"], cumple: [Cake, "bg-multinivel text-navy"], "cupo-liberado": [Hourglass, "bg-yoga text-navy"],
   "ficha-incompleta": [ClipboardList, "bg-mist text-navy"], "necesita-reemplazo": [UserX, "bg-error-bg text-error"],
   "sin-profe": [UserRoundSearch, "bg-aviso-bg text-aviso"], "vino-sin-plan": [CircleDollarSign, "bg-error-bg text-error"],
+  "sin-clase": [Tag, "bg-aviso-bg text-aviso"],
 };
 
 /** Server routes are absolute ("/app/admin/…"); the router already lives under /app. */

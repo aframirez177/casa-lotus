@@ -22,6 +22,7 @@ export const AJUSTES_DEFECTO = [
   ["Llave de pago", "319 328 8469", "Nequi, DaviPlata y Bre-B. Nunca un número de cuenta."],
   ["Correo para avisos", "avisos@demo.casalotus.studio", "Recibe un correo por cada reserva web."],
   ["Pago por clase a profes", "", "Costo por clase dictada. Vacío: la app no lo muestra."],
+  ["Duración de la clase (minutos)", "60", "Cuánto dura cada clase. Se usa en el calendario, la app y los correos de confirmación."],
 ];
 
 export const PLANES = [
@@ -39,7 +40,7 @@ export const PLANES = [
 
 export const HORARIO = [
   { dia: "Lunes", hora: "18:00", clase: "Stretch Aéreo", profe: "Tomás", cupos: 8, activa: true },
-  { dia: "Miércoles", hora: "18:00", clase: "Pilates Aéreo", profe: "Tomás", cupos: 8, activa: true },
+  { dia: "Miércoles", hora: "18:00", clase: "", profe: "Tomás", cupos: 8, activa: true }, // no type yet, as in the real Sheet: «Clase aérea»
   { dia: "Miércoles", hora: "19:00", clase: "Yoga Aéreo multinivel", profe: "Salomé", cupos: 8, activa: true },
   { dia: "Sábado", hora: "08:00", clase: "Pilates Aéreo", profe: "Salomé", cupos: 8, activa: true },
   { dia: "Sábado", hora: "09:15", clase: "Yoga Aéreo", profe: "Renata", cupos: 8, activa: true },

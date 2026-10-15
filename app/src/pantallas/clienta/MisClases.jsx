@@ -8,7 +8,8 @@ import { Segmentado } from "../../ui/Segmentado.jsx";
 import { Boton } from "../../ui/Boton.jsx";
 import { ListaEscalonada } from "../../ui/Animado.jsx";
 import { FilaReserva, HojaCancelar, HojaReagendar } from "./comun.jsx";
-import { ESTADO, horaLegible, fechaLegible } from "../../lib/reglas.js";
+import { ESTADO, fechaLegible } from "../../lib/reglas.js";
+import { rangoHora } from "../../lib/ics.js";
 import { nombreClase } from "../../lib/clases.js";
 
 const ESTADOS = {
@@ -18,7 +19,7 @@ const ESTADOS = {
   [ESTADO.CANCELADA_TARDE]: { texto: "Cancelada tarde", clase: "chip-aviso", Icono: Clock },
   [ESTADO.VENCIDA]: { texto: "Apartado vencido", clase: "", Icono: Hourglass },
   [ESTADO.CONFIRMADA]: { texto: "Confirmada", clase: "chip-blanco", Icono: Check },
-  [ESTADO.PENDIENTE]: { texto: "Espera pago", clase: "chip-aviso", Icono: Clock },
+  [ESTADO.PENDIENTE]: { texto: "Falta tu pago", clase: "chip-aviso", Icono: Clock },
 };
 
 export default function MisClases() {
@@ -46,7 +47,7 @@ export default function MisClases() {
                   <li key={r.id} className="flex items-center gap-4 px-5 py-4">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-navy first-letter:uppercase">{fechaLegible(r.clase.fecha)}</p>
-                      <p className="texto-s suave">{horaLegible(r.clase.hora)} · {nombreClase(r.clase)}</p>
+                      <p className="texto-s suave">{rangoHora(r.clase)} · {nombreClase(r.clase)}</p>
                     </div>
                     <span className={`chip ${e.clase}`}>{e.Icono && <e.Icono size={13} />}{e.texto}</span>
                   </li>

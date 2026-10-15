@@ -9,7 +9,26 @@ export function claveColor(nombre = "") {
 }
 export const COLOR = { multinivel: "var(--color-multinivel)", yoga: "var(--color-yoga)", pilates: "var(--color-pilates)", stretch: "var(--color-stretch)", neutra: "var(--color-mist)" };
 export const colorClase = (nombre) => COLOR[claveColor(nombre)];
-export const nombreClase = (c) => (c?.clase && c.clase !== "Por confirmar" ? c.clase : "Clase por confirmar");
+/** The class has no type yet (Clase empty or «Por confirmar» in the Sheet). */
+export const sinTipo = (c) => !(typeof c === "string" ? c : c?.clase) || (typeof c === "string" ? c : c.clase) === "Por confirmar";
+/** What a person reads: the type, or «Clase aérea» while Ana has not set it (never «por confirmar»). */
+export const nombreClase = (c) => (sinTipo(c) ? "Clase aérea" : typeof c === "string" ? c : c.clase);
+export const NOTA_SIN_TIPO = "Yoga, pilates o stretch: te confirmamos cuál";
+
+/** A booking's state in her words. */
+export const ESTADO_PALABRAS = {
+  "Pendiente de pago": "Falta tu pago", Confirmada: "Confirmada", Asistió: "Viniste", "No vino": "No viniste",
+  Cancelada: "Cancelada", "Cancelada tarde": "Cancelada tarde", Vencida: "Apartado vencido",
+};
+export const estadoPalabras = (estado) => ESTADO_PALABRAS[estado] || estado;
+
+/** The booking's state in ONE sentence, for the ticket: reserved with her plan (and what is left) or held until she pays. */
+export function estadoTicket(r) {
+  if (r.estado === "Pendiente de pago") return "Apartada: falta tu pago";
+  const n = r.saldo?.clases;
+  if (!Number.isFinite(n)) return "Reservada con tu plan";
+  return `Reservada con tu plan · ${n === 0 ? "era la última clase de tu plan" : n === 1 ? "te queda 1 clase" : `te quedan ${n} clases`}`;
+}
 
 /** Words for the public: never a number. */
 export function disponibilidad(c) {

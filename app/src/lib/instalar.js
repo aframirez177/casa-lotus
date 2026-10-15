@@ -10,7 +10,7 @@ export function capturarInstalacion() {
   addEventListener("appinstalled", () => { aviso = null; avisar(); });
 }
 
-const esIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+export const esIOS = () => typeof navigator !== "undefined" && (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 export const instalada = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 
 function leer() {

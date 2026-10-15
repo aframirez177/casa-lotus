@@ -1,7 +1,7 @@
 // Small shared pieces: headers, sections, empty states, avatars, class tags, error boxes.
 import { RefreshCw } from "lucide-react";
 import { Simbolo } from "./Logo.jsx";
-import { colorClase, nombreClase } from "../lib/clases.js";
+import { colorClase, nombreClase, sinTipo } from "../lib/clases.js";
 import { Boton } from "./Boton.jsx";
 
 export function Encabezado({ eyebrow, titulo, lead, accion, grande = true, className = "" }) {
@@ -65,6 +65,11 @@ export function Avatar({ nombre = "", tam = 44, className = "" }) {
 export function TagClase({ clase, className = "" }) {
   const nombre = typeof clase === "string" ? clase : nombreClase(clase);
   return <span className={`tag-clase ${className}`} style={{ "--c": colorClase(nombre) }}>{nombre}</span>;
+}
+
+/** Staff only: the class has no type yet (the public reads «Clase aérea»). */
+export function SinTipo({ clase, className = "" }) {
+  return sinTipo(clase) ? <span className={`chip chip-aviso !min-h-6 !px-2 !text-[0.6875rem] ${className}`} title="Ponle el tipo de clase en Horario o en la clase">Sin tipo</span> : null;
 }
 
 /** A thin colour field that marks the class type on a card's edge. */

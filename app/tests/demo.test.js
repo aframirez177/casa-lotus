@@ -90,6 +90,76 @@ describe("booking", () => {
   });
 });
 
+describe("returning people book in fewer steps", () => {
+  const camila = () => s.db.clientas.find((c) => c.nombre.startsWith("Camila"));
+  const valentina = () => s.db.clientas.find((c) => c.nombre.startsWith("Valentina"));
+  const tel = (cl) => cl.whatsapp.slice(2);
+  /** A class far enough ahead, with room, that this clienta has not booked. */
+  const libreDe = (cl, min = 30) => s.db.clases.find((c) => c.estado !== "Cancelada" && inicioClase(c) > t + min * H
+    && s.db.reservas.filter((r) => r.clase === c.id && ["Pendiente de pago", "Confirmada"].includes(r.estado)).length < c.cupos - 1
+    && !s.db.reservas.some((r) => r.clase === c.id && r.clienta === cl.id && ["Pendiente de pago", "Confirmada"].includes(r.estado)));
+
+  test("identificar: WhatsApp AND first name, no personal data, no session", () => {
+    const id = (nombre, whatsapp) => post("/api/publico/identificar", { nombre, whatsapp, website: "" }).cuerpo;
+    expect(id("camila peñaranda", tel(camila()))).toEqual({ conocida: true, pideFicha: false, pideAcuerdos: false });
+    expect(id("Camila", tel(camila()))).toEqual({ conocida: true, pideFicha: false, pideAcuerdos: false });
+    expect(id("Valentina Ríos", tel(valentina()))).toEqual({ conocida: true, pideFicha: true, pideAcuerdos: false }); // no emergency contact on file
+    expect(id("Otra Persona", tel(camila()))).toEqual({ conocida: false, pideFicha: true, pideAcuerdos: true });
+    expect(id("Nueva Persona", "3015550101")).toEqual({ conocida: false, pideFicha: true, pideAcuerdos: true });
+    expect(post("/api/publico/identificar", { nombre: "X", whatsapp: "12" }).status).toBe(422);
+    expect(get("/api/auth/yo").status).toBe(401);
+  });
+
+  test("a recognised clienta with a plan books confirmed from the public flow, without re-signing", () => {
+    const cl = camila();
+    s.entrarComo("admin");
+    const antes = get(`/api/admin/clientas/${cl.id}`).cuerpo.saldo.clases;
+    const correo = cl.correo;
+    const c = libreDe(cl);
+    const r = post("/api/publico/reservas", { clase: c.id, plan: "Clase de prueba", website: "", perfil: { nombre: "Camila", whatsapp: tel(cl), correo: "otra@ejemplo.com" } });
+    expect(r.status).toBe(201);
+    expect(r.cuerpo).toMatchObject({ estado: ESTADO.CONFIRMADA, conPlan: true, pago: null, correo: true });
+    expect(r.cuerpo.saldo.clases).toBe(antes - 1);
+    expect(r.cuerpo.clase.fin).toMatch(/^\d{2}:\d{2}$/);
+    expect(cl.correo, "a typed e-mail never replaces hers").toBe(correo);
+    const yo = get("/api/yo").cuerpo;
+    expect(yo.clienta.limitada).toBe(true);
+    expect(yo.proximas.map((x) => x.id)).toEqual([r.cuerpo.codigo]);
+    expect(yo.proximas[0].plan, "a limited session never sees her plan's name").toBeUndefined();
+  });
+
+  test("a known number with another first name is a stranger: held, same answer keys", () => {
+    const c = libreDe(camila());
+    const acuerdos = { datos: { acepta: true }, descargo: { acepta: true }, imagen: { acepta: true } };
+    const a = post("/api/publico/reservas", { clase: c.id, website: "", perfil: { nombre: "Otra Persona", whatsapp: tel(camila()) }, consentimientos: acuerdos });
+    const b = post("/api/publico/reservas", { clase: c.id, website: "", perfil: { nombre: "Nueva Persona", whatsapp: "3015550202" }, consentimientos: acuerdos });
+    expect(a.cuerpo).toMatchObject({ estado: ESTADO.PENDIENTE, conPlan: false, saldo: null });
+    expect(Object.keys(a.cuerpo).sort()).toEqual(Object.keys(b.cuerpo).sort());
+    expect(a.cuerpo.pago.monto).toBe(25000);
+  });
+
+  test("strangers still have to accept the agreements", () => {
+    const r = post("/api/publico/reservas", { clase: futuraLibre().id, website: "", perfil: { nombre: "Sin Acuerdos", whatsapp: "3015550303" } });
+    expect(r.status).toBe(422);
+  });
+
+  test("classes say when they end, the studio how long they last", () => {
+    expect(get("/api/publico/estudio").cuerpo.duracion).toBe(60);
+    for (const c of get("/api/publico/disponibilidad?dias=14").cuerpo.clases) {
+      expect(c.fin > c.hora, c.id).toBe(true);
+    }
+  });
+
+  test("Ana hears about slots without a class type, once per slot", () => {
+    s.entrarComo("admin");
+    const a = get("/api/admin/tablero").cuerpo.alertas.filter((x) => x.tipo === "sin-clase");
+    expect(a.length).toBeGreaterThan(0);
+    expect(new Set(a.map((x) => x.id)).size).toBe(a.length);
+    expect(a[0]).toMatchObject({ prioridad: 2, accion: { tipo: "abrir", ruta: "/app/admin/horario" } });
+    expect(a[0].detalle).toContain("Clase aérea");
+  });
+});
+
 describe("cancelling", () => {
   const reservar = () => { s.entrarComo("clienta"); const c = futuraLibre(30); return { c, r: post("/api/yo/reservas", { clase: c.id }).cuerpo }; };
 

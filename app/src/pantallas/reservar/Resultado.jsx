@@ -1,21 +1,25 @@
-// The end of the booking: «Tu columpio está apartado», how to pay, the hold countdown, the calendar,
-// and the invitation to install the app.
+// The end of the booking: a ticket she can read in one glance. The class («Clase aérea» while it has no type),
+// the day and the time range, the profe when known, and the state in ONE sentence: reserved with her plan (and
+// how many classes are left) or held until she pays (amount, key, receipt by WhatsApp, the hold countdown).
+// Then her calendar, and the invitation to install the app.
 import { useState } from "react";
 import { Link } from "react-router";
 import { m } from "motion/react";
-import { CalendarPlus, Copy, Check, MessageCircle, Smartphone, ArrowRight } from "lucide-react";
+import { Copy, Check, MessageCircle, Smartphone, ArrowRight, CircleCheck, Hourglass, Mail } from "lucide-react";
 import { Boton } from "../../ui/Boton.jsx";
-import { Columpios } from "../../ui/Columpios.jsx";
-import { TagClase } from "../../ui/Basicos.jsx";
+import { BotonesCalendario } from "../../ui/Calendario.jsx";
 import { InstalarTarjeta } from "../../shell/Instalar.jsx";
 import { useAhora } from "../../ui/useAhora.js";
-import { descargarIcs } from "../../lib/ics.js";
-import { dinero, fechaLegible, horaLegible, ESTADO } from "../../lib/reglas.js";
+import { useDuracion } from "../../api/hooks/publico.js";
+import { rangoHora } from "../../lib/ics.js";
+import { nombreClase, sinTipo, NOTA_SIN_TIPO, estadoTicket } from "../../lib/clases.js";
+import { dinero, fechaLegible, ESTADO } from "../../lib/reglas.js";
 import { duracionCorta, momentoLegible } from "../../lib/fechas.js";
 import { Simbolo } from "../../ui/Logo.jsx";
 
 export function Resultado({ r, limpiar }) {
   const pendiente = r.estado === ESTADO.PENDIENTE;
+  const duracion = useDuracion(r.clase);
   const ahora = useAhora(1000);
   const vence = r.pago?.venceApartado ? Date.parse(r.pago.venceApartado) : NaN;
   const queda = Number.isFinite(vence) ? vence - ahora : 0;
@@ -23,34 +27,44 @@ export function Resultado({ r, limpiar }) {
   const copiar = async () => {
     try { await navigator.clipboard.writeText(r.pago.llave.replace(/\s/g, "")); setCopiado(true); setTimeout(() => setCopiado(false), 2200); } catch { /* the number is visible anyway */ }
   };
+  const resorte = (delay) => ({ initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { delay, type: "spring", stiffness: 240, damping: 28 } });
 
   return (
     <div className="mx-auto max-w-[620px]">
-      <m.div initial={{ scale: 0.6, opacity: 0, rotate: -8 }} animate={{ scale: 1, opacity: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 160, damping: 14, delay: 0.1 }}
-        className="mb-8 grid h-20 w-20 place-items-center rounded-[28px] bg-navy text-lime shadow-float">
-        <Simbolo className="h-10 w-auto" />
-      </m.div>
-      <h1 className="saludo">{pendiente ? "Tu columpio está apartado." : "Tu columpio está reservado."}</h1>
-      <p className="lead mt-4">{pendiente ? `${r.nombre ? r.nombre + ", " : ""}falta un paso: el pago. Cuando llegue tu comprobante, Ana lo confirma.` : `${r.nombre ? "Te esperamos, " + r.nombre + "." : "Te esperamos."} Llega 10 minutos antes, con ropa cómoda y tu botella de agua.`}</p>
+      <div className="flex items-center gap-4">
+        <m.div initial={{ scale: 0.6, opacity: 0, rotate: -8 }} animate={{ scale: 1, opacity: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 160, damping: 14, delay: 0.1 }}
+          className="grid h-14 w-14 shrink-0 place-items-center rounded-[20px] bg-navy text-lime shadow-float lg:h-16 lg:w-16">
+          <Simbolo className="h-7 w-auto lg:h-8" />
+        </m.div>
+        <h1 className="titulo">{pendiente ? "Tu columpio está apartado." : "Tu clase está reservada."}</h1>
+      </div>
+      {r.correo && <p className="mt-4 flex items-center gap-2 texto-s text-ink"><Mail size={16} className="shrink-0 text-teal" />Te mandamos la confirmación a tu correo.</p>}
 
-      <m.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, type: "spring", stiffness: 240, damping: 28 }} className="tarjeta mt-8 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="font-display text-[1.75rem] leading-none text-navy first-letter:uppercase">{fechaLegible(r.clase.fecha)}</p>
-            <p className="mt-2 text-lg text-ink">{horaLegible(r.clase.hora)}</p>
+      {/* the ticket */}
+      <m.section {...resorte(0.15)} className="tarjeta mt-6 overflow-hidden" aria-label="Tu clase">
+        <div className="p-6 pb-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="etiqueta-sola">Tu clase</p>
+            <span className="text-[0.8125rem] text-muted">Código {r.codigo}</span>
           </div>
-          <TagClase clase={r.clase} />
+          <p className="mt-3 font-display text-[2.25rem] leading-[0.95] tracking-tight text-navy sm:text-[2.6rem]">{nombreClase(r.clase)}</p>
+          {sinTipo(r.clase) && <p className="mt-2 texto-s suave">{NOTA_SIN_TIPO}</p>}
+          <p className="mt-5 text-[1.125rem] font-medium text-navy first-letter:uppercase">{fechaLegible(r.clase.fecha)}</p>
+          <p className="text-[1.125rem] text-ink">{rangoHora(r.clase, duracion)}{r.clase.profe ? <span className="suave"> · con {r.clase.profe}</span> : null}</p>
         </div>
-        <div className="mt-5 flex items-center justify-between gap-4">
-          <Columpios clase={r.clase} />
-          <span className="text-[0.8125rem] text-muted">Código {r.codigo}</span>
+        <div className="mx-6 border-t border-dashed border-line" aria-hidden="true" />
+        <div className="p-6 pt-5">
+          <p className={`flex items-start gap-2.5 text-[1.0625rem] font-medium leading-snug ${pendiente ? "text-aviso" : "text-teal"}`} role="status">
+            {pendiente ? <Hourglass size={20} className="mt-0.5 shrink-0" /> : <CircleCheck size={20} className="mt-0.5 shrink-0" />}
+            {estadoTicket(r)}
+          </p>
+          <BotonesCalendario clase={r.clase} codigo={r.codigo} className="mt-4 -ml-1" />
         </div>
-        <Boton variante="niebla" tam="s" className="mt-5" icono={<CalendarPlus size={17} />} onClick={() => descargarIcs(r.clase, { codigo: r.codigo })}>Agregar a mi calendario</Boton>
       </m.section>
 
       {pendiente && r.pago && (
-        <m.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, type: "spring", stiffness: 240, damping: 28 }} className="tarjeta-noche mt-4 overflow-hidden p-6" aria-labelledby="pago-t">
-          <p id="pago-t" className="etiqueta-sola !text-paper/70">Para confirmarlo</p>
+        <m.section {...resorte(0.25)} className="tarjeta-noche mt-4 overflow-hidden p-6" aria-labelledby="pago-t">
+          <p id="pago-t" className="etiqueta-sola !text-paper/70">Para confirmarla</p>
           <p className="mt-3 text-paper/85">Paga {r.pago.plan === "Clase de prueba" ? "tu clase de prueba" : r.pago.plan}</p>
           <p className="numero mt-1 text-[3.25rem] !text-paper">{dinero(r.pago.monto)}</p>
           <div className="mt-5 rounded-[22px] bg-paper/8 p-4">
@@ -63,9 +77,9 @@ export function Resultado({ r, limpiar }) {
             </div>
           </div>
           <Boton variante="lima" bloque tam="l" className="mt-5 !whitespace-normal text-center" href={r.pago.waEnlace} icono={<MessageCircle size={19} />} aria-label="Enviar comprobante por WhatsApp">Enviar comprobante</Boton>
-          <p className="mt-4 rounded-[18px] border border-paper/15 px-4 py-3 text-[0.875rem] text-paper/85">Si ya tienes un plan activo, no pagues: Ana confirma tu reserva con tu plan.</p>
+          <p className="mt-3 text-center text-[0.875rem] text-paper/75">Ana confirma tu clase cuando le llega. No tienes que registrar nada más.</p>
           {Number.isFinite(vence) && (
-            <p className="mt-4 text-center text-[0.875rem] text-paper/75" aria-live="off">
+            <p className="mt-4 border-t border-paper/15 pt-4 text-center text-[0.875rem] text-paper/75" aria-live="off">
               {queda > 0 ? <>Te lo guardamos <strong className="font-semibold text-paper">{duracionCorta(queda)}</strong> (hasta {momentoLegible(vence)}). Si no llega el pago, el columpio se libera solo.</> : "El apartado venció. Escríbenos y miramos si sigue libre."}
             </p>
           )}

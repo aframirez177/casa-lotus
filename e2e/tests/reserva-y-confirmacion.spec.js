@@ -1,5 +1,5 @@
 // (b) Attribution end to end: an ad click lands on /clase-de-prueba/, the main CTA hands off to /app/reservar,
-// a NEW person books with her whole ficha, and the booking reaches the Sheet as «Pendiente de pago» with its
+// a NEW person books (Tú → the short ficha + agreements on one screen), and the booking reaches the Sheet as «Pendiente de pago» with its
 // ref and campaign. (c, first part) Ana confirms it from «Hoy» with the payment: «Confirmada», the purchase is
 // on her account and the Google Ads conversion is produced (the audit log records it).
 import { test, expect, visible } from "../lib/prueba.js";
@@ -35,7 +35,7 @@ test.describe.serial("clase de prueba desde un anuncio de Google", () => {
     await expect(tarjeta).toHaveAttribute("aria-pressed", "true");
     await visible(page.getByRole("button", { name: "Continuar" })).click();
 
-    // «Tú»
+    // «Tú»: name, WhatsApp, optional e-mail (for the confirmation)
     await expect(page.getByRole("heading", { level: 1, name: "¿Quién viene?" })).toBeVisible();
     await expect(page).toHaveURL(/paso=tu/);
     await expect(page).toHaveURL(/ref=WEB-PRUEBA-HERO/);
@@ -45,38 +45,33 @@ test.describe.serial("clase de prueba desde un anuncio de Google", () => {
     await page.getByLabel(/^Correo/).fill(p.correo);
     await visible(page.getByRole("button", { name: "Continuar" })).click();
 
-    // «Tu ficha»: every field of Ana's form
-    await expect(page.getByRole("heading", { level: 1, name: "Cuéntanos de ti" })).toBeVisible();
+    // a new number: «Tu ficha» asks only what a profe needs (health, emergency contact, experience)…
+    await expect(page.getByRole("heading", { level: 1, name: "Tu ficha" })).toBeVisible();
+    await expect(page).toHaveURL(/paso=ficha/);
     await page.getByRole("radio", { name: "Ninguna" }).click();
     await page.getByLabel("Nombre", { exact: true }).fill("Mamá de Renata");
     await page.getByLabel("Su WhatsApp").fill(p.contactoEmergencia.whatsapp);
-    await page.getByLabel(/^EPS/).fill("Sura");
     await page.getByRole("radio", { name: "Primera vez" }).click();
-    await page.getByRole("button", { name: "Reducir niveles de estrés / ansiedad" }).click();
-    await page.getByRole("button", { name: "Mejorar la calidad de sueño y relajación" }).click();
-    await expect(page.getByRole("button", { name: "Reducir niveles de estrés / ansiedad" })).toHaveAttribute("aria-pressed", "true");
-    await page.getByLabel("Fecha de nacimiento").fill("1995-04-20");
-    await page.getByLabel("Barrio").fill("Teusaquillo");
-    // utm_source=google prefills «¿Cómo llegaste?»
-    await expect(page.getByRole("radio", { name: "Google" })).toHaveAttribute("aria-checked", "true");
-    await visible(page.getByRole("button", { name: "Continuar" })).click();
+    for (const fuera of ["Fecha de nacimiento", "Barrio", /^EPS/]) await expect(page.getByLabel(fuera), "optional fields wait for «Completa tu perfil»").toHaveCount(0);
 
-    // «Acuerdos»: all of them, and the image choice
-    await expect(page.getByRole("heading", { level: 1, name: "Últimos acuerdos" })).toBeVisible();
-    await page.getByRole("checkbox", { name: /Leí y acepto/ }).click();
-    await page.getByRole("checkbox", { name: /Autorizo/ }).click();
+    // …and the agreements on the same screen: datos + descargo in one box, the image choice, the news opt-in
+    await page.getByRole("checkbox", { name: /Autorizo el tratamiento de mis datos y acepto el descargo/ }).click();
     await page.getByRole("radio", { name: "Sí, estoy de acuerdo" }).click();
     await page.getByRole("switch", { name: "Novedades por WhatsApp" }).click();
     await expect(page.getByRole("switch", { name: "Novedades por WhatsApp" })).toHaveAttribute("aria-checked", "true");
 
     const respuesta = page.waitForResponse((r) => r.url().includes("/api/publico/reservas") && r.request().method() === "POST");
-    await visible(page.getByRole("button", { name: /^Apartar/ })).click();
+    await visible(page.getByRole("button", { name: /^Reservar$/ })).click();
     const r = await respuesta;
     expect(r.status(), await r.text()).toBe(201);
     const cuerpo = await r.json();
 
-    // the result: amount, payment key, WhatsApp receipt link and the hold countdown
+    // the result: a ticket with the state in one sentence, then amount, payment key, WhatsApp receipt link and the hold countdown
     await expect(page.getByRole("heading", { level: 1, name: "Tu columpio está apartado." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Apartada: falta tu pago" })).toBeVisible();
+    await expect(page.getByText("Si ya tienes un plan activo")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Agregar a Google Calendar" })).toHaveAttribute("href", /^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&/);
+    if (cuerpo.correo) await expect(page.getByText("Te mandamos la confirmación a tu correo.")).toBeVisible();
     await expect(page.getByText("$25.000", { exact: true })).toBeVisible();
     await expect(page.getByText(LLAVE_PAGO, { exact: true })).toBeVisible();
     const wa = page.getByRole("link", { name: "Enviar comprobante por WhatsApp" });
@@ -96,11 +91,11 @@ test.describe.serial("clase de prueba desde un anuncio de Google", () => {
     const campana = despues.porCampana.find((x) => x.campana === "prueba" && x.source === "google" && x.medium === "cpc");
     expect(campana?.reservas, "Atribución carries utm source/medium/campaign").toBe(campanaAntes + 1);
     const ficha = await apiAdmin.clienta(fila.clienta);
+    // utm_source=google fills «Cómo llegó» without asking
     expect(ficha.perfil).toMatchObject({
-      nombre: p.nombre, correo: p.correo, salud: "Ninguna", eps: "Sura", experiencia: "Primera vez", barrio: "Teusaquillo", nacimiento: "1995-04-20", llego: "Google",
+      nombre: p.nombre, correo: p.correo, salud: "Ninguna", experiencia: "Primera vez", llego: "Google",
       contactoEmergencia: { nombre: "Mamá de Renata" },
     });
-    expect(ficha.perfil.intereses).toEqual(["Reducir niveles de estrés / ansiedad", "Mejorar la calidad de sueño y relajación"]);
     expect(ficha.consentimientos.datos?.acepta).toBe(true);
     expect(ficha.consentimientos.descargo?.acepta).toBe(true);
     expect(ficha.consentimientos.imagen?.acepta).toBe(true);

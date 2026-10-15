@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import { m, AnimatePresence } from "motion/react";
 import { Check, X, Cake, Sparkles, HeartPulse, Phone, MessageCircle, CameraOff, ChevronRight, Lock, Hourglass, Clock, UserPlus, ListChecks, UserX } from "lucide-react";
 import { Columpios } from "../../ui/Columpios.jsx";
-import { Avatar, TagClase } from "../../ui/Basicos.jsx";
+import { Avatar, TagClase, SinTipo } from "../../ui/Basicos.jsx";
 import { useAsistencia, useNotasClase, useClientasProfe, useAgregarAsistente, useCerrarLista, usePedirReemplazo } from "../../api/hooks/profe.js";
 import { Boton } from "../../ui/Boton.jsx";
 import { Hoja } from "../../ui/Hoja.jsx";
@@ -39,6 +39,7 @@ export function MiniClase({ clase: c, a }) {
       <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5" style={{ background: colorClase(c.clase) }} />
       <m.div layoutId={`clase-${c.id}`} className="flex items-baseline gap-1"><span className="font-display text-[1.45rem] leading-none text-navy">{h}</span><span className="text-[0.6875rem] text-muted">{suf.join(" ")}</span></m.div>
       <p className="mt-1.5 text-[0.8125rem] font-medium leading-tight text-navy">{nombreClase(c)}</p>
+      <SinTipo clase={c} className="mt-1" />
       <p className="text-[0.75rem] text-muted">{c.profe || "Sin profe"}</p>
       <div className="mt-2.5 flex items-center gap-2">
         <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-mist"><span className="block h-full rounded-full bg-navy" style={{ width: `${Math.min(100, (c.ocupados / Math.max(1, c.cupos)) * 100)}%` }} /></span>
@@ -70,7 +71,7 @@ export function TarjetaClaseEquipo({ clase: c, a, mostrarDia = false, compacta =
       </m.div>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="font-medium leading-tight text-navy">{nombreClase(c)}</p>
+          <p className="font-medium leading-tight text-navy">{nombreClase(c)}{!sinProfe && <SinTipo clase={c} className="ml-2 align-middle" />}</p>
           {cancelada ? <span className="chip chip-error">Cancelada</span> : c.reemplazoPedido ? <span className="chip chip-error">Reemplazo pedido</span> : !c.profe && !c.pasada ? <span className="chip chip-aviso">Sin profe</span> : porMarcar ? <span className="chip chip-aviso"><Clock size={13} />Marcar</span> : c.pocaGente ? <span className="chip chip-aviso">Poca gente</span> : null}
         </div>
         {c.profe && !sinProfe && <p className="mt-0.5 texto-s suave">con {c.profe}</p>}
@@ -103,6 +104,7 @@ export function CabeceraClase({ clase: c, sinProfe = false }) {
           <span className="saludo">{h}</span><span className="text-xl text-muted">{suf.join(" ")}</span>
         </m.div>
         <TagClase clase={c} className="mb-2" />
+        {!sinProfe && <SinTipo clase={c} className="mb-2.5" />}
       </div>
       {c.profe && !sinProfe && <p className="lead mt-3">con {c.profe}</p>}
       <div className="mt-6 flex items-center gap-4">

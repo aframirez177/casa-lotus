@@ -252,3 +252,14 @@
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
   .esqueleto { animation: none; }
 }
+
+/* ── booking: a compact greeting on phones, the full one on desktop ── */
+@layer components {
+  .saludo-reserva {
+    font-family: var(--font-display); font-weight: 400; color: var(--color-navy);
+    font-size: 2.125rem; line-height: 1; letter-spacing: -0.03em;
+  }
+  @media (min-width: 64rem) {
+    .saludo-reserva { font-size: clamp(2.75rem, 2rem + 3.6vw, 4.75rem); line-height: .94; letter-spacing: -0.035em; }
+  }
+}

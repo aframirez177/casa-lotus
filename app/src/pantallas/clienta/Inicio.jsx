@@ -19,6 +19,7 @@ import { useAvisos } from "../../ui/Avisos.jsx";
 import { InstalarTarjeta } from "../../shell/Instalar.jsx";
 import { FlujoCodigo } from "../entrar/FlujoCodigo.jsx";
 import { ProximaClase, FilaReserva, HojaCancelar, HojaReagendar } from "./comun.jsx";
+import { CompletaPerfil } from "./CompletaPerfil.jsx";
 import { primerNombre, hoyClave, fechaLegible, horaLegible, enlaceWhatsApp } from "../../lib/reglas.js";
 import { diaRelativo } from "../../lib/fechas.js";
 import { nombreClase } from "../../lib/clases.js";
@@ -76,6 +77,7 @@ export default function Inicio() {
               <ArrowRight size={18} className="shrink-0 text-navy" />
             </Link>
           )}
+          {clienta.fichaCompleta && !clienta.limitada && <CompletaPerfil perfil={clienta.perfil} />}
           {espera.length > 0 && <Espera items={espera} />}
           <InstalarTarjeta />
         </div>

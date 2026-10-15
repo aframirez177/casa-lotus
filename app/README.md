@@ -56,7 +56,7 @@ src/
   shell/                   routes + role guards, role frame (glass pill nav / side rail), bell, install card
   pantallas/
     entrar/                /entrar (two doors), /acceso/:token, /invitacion/:token, /restablecer/:token
-    reservar/              /reservar: class picker, ficha, agreements, result
+    reservar/              /reservar: class picker, «Tú», short ficha + agreements (first time only), ticket
     clienta/               /mi, /mi/clases, /mi/reservar, /mi/perfil
     profe/                 /profe, /profe/clase/:id
     admin/                 /admin (Hoy), agenda, clase, horario, clientas, mensajes, pagos, equipo, ajustes, registro, atribucion
@@ -71,8 +71,8 @@ tests/                     vitest
 | `/app/` | anyone | sends you to your home by role (`/admin`, `/profe`, `/mi`) or to `/entrar` |
 | `/app/entrar` | anyone | «Soy alumna» (code by WhatsApp or email) · «Equipo» (email + password) · forgot password |
 | `/app/acceso/:token` · `/app/invitacion/:token` · `/app/restablecer/:token` | links | private access link · new team member · password reset |
-| `/app/reservar` | anyone | class → tú → tu ficha → acuerdos → payment instructions. Reads `?clase`, `?plan`, `?ref`, `?espera=1` and `localStorage["cl_atribucion"]` |
-| `/app/mi…` | clienta | next class + countdown, balance ring, quick book, waiting lists · mis clases · reservar · perfil |
+| `/app/reservar` | anyone | Clase → Tú (name, WhatsApp, optional e-mail) → `POST /api/publico/identificar`: a returning clienta with her ficha on file confirms with one tap («¡Hola de nuevo!»); someone new fills «Tu ficha» (health, emergency contact, experience) and the agreements on one screen → ticket (class, day, time range, state in one sentence, payment if held, Google Calendar / .ics). Reads `?clase`, `?plan`, `?ref`, `?espera=1` and `localStorage["cl_atribucion"]` |
+| `/app/mi…` | clienta | next class + countdown, balance ring, quick book, waiting lists, «Completa tu perfil (1 minuto)» (birthday, barrio, EPS, interests, how she came) · mis clases · reservar · perfil |
 | `/app/profe…` | profe | next class, classes to mark · roster with ficha, Vino / No vino, add who came, close list, ask for a replacement, notes · cuenta |
 | `/app/admin…` | admin | Hoy · Agenda + class detail · Horario · Clientas (CRM) · Mensajes · Pagos · Equipo · Ajustes · Cuenta · Registro · Resultados de la web (`/admin/atribucion`) |
 
@@ -83,6 +83,8 @@ library load when they are used, and motion's providers live in the role frames 
 ## Notes
 
 - Never states a swing count to the public: the booking UI shows swing icons and words («Quedan pocos cupos»).
+- A class without a type («Por confirmar» in the Sheet) reads «Clase aérea» everywhere; staff screens add a «Sin tipo» badge
+  and Ana gets the `sin-clase` alert. Times read as a range (`Clase.fin`, else start + `estudio.duracion`).
 - Every date rule comes from `shared/reglas.js` (Bogotá time); consent texts from `shared/consentimientos.js`.
 - Reversible actions (cancel, free a hold, leave a waiting list) apply at once and commit after 5 s unless
   «Deshacer»; pending commits flush when the app goes to the background.
