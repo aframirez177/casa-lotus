@@ -63,13 +63,15 @@ test("clase extra: normal, y en festivo pide confirmación («Sí, crearla igual
   await expect(page.locator(`a[href="${enlaceClase(creada.id)}"]`)).toBeVisible();
 
   // a holiday: 12 October 2026, Día de la Raza
-  const festivo = "2026-10-12";
+  // the next Colombian holiday at least 3 days ahead (a fixed date would fall into the past)
+  const desdeF = R.sumarDias(R.hoyClave(), 3), anio = Number(desdeF.slice(0, 4));
+  const { fecha: festivo, nombre: nombreFestivo } = [...R.festivosColombia(anio), ...R.festivosColombia(anio + 1)].find((x) => x.fecha >= desdeF);
   const horaF = await apiAdmin.horaLibre(festivo, { desde: "05:00", hasta: "06:55" });
   await page.goto(APP + "/app/admin/agenda");
   await abrirFormulario();
   const f = await llenar(festivo, horaF, "Laura");
   await f.getByRole("button", { name: "Crear la clase" }).click();
-  await expect(f.getByRole("alert")).toContainText("es festivo (Día de la Raza)");
+  await expect(f.getByRole("alert")).toContainText(`es festivo (${nombreFestivo})`);
   expect((await apiAdmin.agenda(festivo)).some((c) => c.hora === horaF), "nothing created before confirming").toBe(false);
   await f.getByRole("button", { name: "Sí, crearla igual" }).click();
   await expect(page.getByText(/^Clase extra creada: /)).toBeVisible();
