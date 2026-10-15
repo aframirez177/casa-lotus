@@ -86,12 +86,13 @@ export const AJUSTES = [
   ["Llave de pago", "319 328 8469", "La llave de Nequi, DaviPlata y Bre-B. Nunca números de cuenta."],
   ["Correo para avisos", "casalotusbogota@gmail.com", "Aquí llega un correo cada vez que alguien reserva en la web. Déjalo vacío para no recibirlos."],
   ["Pago por clase a profes", "", "Lo que se paga por cada clase dictada. Solo lo ve el equipo administrador. Vacío: no se muestra."],
+  ["Duración de la clase (minutos)", 60, "Cuánto dura cada clase. Se usa en el calendario, la app y los correos de confirmación."],
 ];
 
 export const AJUSTES_NUMERICOS = new Set([
   "Cupos por clase", "Horas para pagar una reserva web", "Horas mínimas para reservar", "Horas mínimas para cancelar",
   "Cambios permitidos clase de prueba", "Mínimo de personas", "Semanas de clases hacia adelante", "Aviso de saldo bajo (clases)",
-  "Días para avisar vencimiento", "Pago por clase a profes",
+  "Días para avisar vencimiento", "Pago por clase a profes", "Duración de la clase (minutos)",
 ]);
 
 /** Plans of a fresh Sheet (the same seed as apps-script/sistema/Esquema.js; public prices). */

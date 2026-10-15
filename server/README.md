@@ -108,7 +108,7 @@ studio's Drive and is only shared with the service account.
    (replies land in the studio's Gmail). `GET /api/admin/salud` → `correo.ok` must be `true`.
 
 The free plan sends 3,000 e-mails a month and 100 a day (https://resend.com/pricing): one alert per web
-booking plus login codes and resets fits easily. A failed send is logged and never fails the booking; the
+booking, each student's confirmation and cancellation e-mails, login codes and resets fit easily. A failed send is logged and never fails the booking; the
 driver retries once on 429/5xx and never logs the key or full addresses. E-mails carry no inline images: the
 logo is the site's hosted `https://casalotus.studio/apple-touch-icon.png`.
 
@@ -206,12 +206,16 @@ WhatsApp text to share.
 - CSRF: every non-GET needs `X-Casa-Lotus: 1` and a same-site `Origin` when present (the beacon endpoint
   `/api/publico/eventos` accepts no header but still checks Origin).
 - Rate limits (SQLite, sliding window): login 5/15 min per e-mail+IP, codes 3/h per destination and 10/h per IP,
-  public booking 10/h per IP.
+  public booking 10/h per IP, «identificar» 10/h per IP and 5/h per phone.
 - Nothing reveals whether someone is a clienta or has an account: `POST /api/auth/codigo` always answers
   `{ ok: true }` and `POST /api/auth/recuperar` always 204, immediately; the lookup and the sending happen after
   the answer. Login errors are identical and equally slow (a dummy hash is checked for unknown e-mails).
 - A public booking with a WhatsApp that already belongs to a clienta never reveals it, never fills more than her
-  blanks, never spends her plan (it stays «Pendiente de pago»), and opens only a **limited** session that sees
+  blanks (and never her e-mail or WhatsApp: they are how she signs in), and opens only a **limited** session that sees
   what it typed and the bookings it made. A code sent to her (WhatsApp/e-mail) upgrades it.
+- Returning students without a login: only when the first name **and** the WhatsApp match (`POST /api/publico/identificar`,
+  or the booking itself) does a public booking use her stored agreements and spend her own plan. This is a deliberate,
+  mild trade-off (Álvaro, 2026-10): whoever knows both can book on her plan and learns that she exists and her balance, never
+  her profile or health data. Confirmation e-mails go to her own address; a stranger's typed address only gets that booking.
 - Free text written to the Sheet is escaped so it can never become a formula (formula injection).
 - Logs mask phones, e-mails and tokens; errors never return stack traces.

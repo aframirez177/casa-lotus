@@ -10,6 +10,7 @@ import {
 import { conflictoReserva, noExiste, sinPermiso, validacion } from "../errores.js";
 import { profeDeClase, exigirPlazoAsistencia } from "./profes.js";
 import { avisarProfe } from "./asignacion.js";
+import { avisarReservaPorCorreo, avisarCancelacionPorCorreo } from "./avisos.js";
 
 const { ESTADO } = R;
 const esAdmin = (actor) => actor?.tipo === "admin" || actor?.tipo === "sistema" || actor?.tipo === "ia";
@@ -38,6 +39,7 @@ function exigirDuena(actor, r) {
  * Books inside a transaction. Confirmed at once when a valid plan covers the class; otherwise it
  * holds the swing for «Horas para pagar una reserva web» (never past the class start).
  * opciones.admin skips the booking cut-off and the two-pending limit; soloPendiente never charges a plan.
+ * The caller queues the student's confirmation e-mail (avisos.js), so each flow decides where it goes.
  */
 export async function reservarEnTx(tx, { clienta, clase, origen, atribucion, notas = "", admin = false, soloPendiente = false }) {
   const M = tx.M;
@@ -47,7 +49,8 @@ export async function reservarEnTx(tx, { clienta, clase, origen, atribucion, not
   const horasMin = admin ? -1e9 : M.ajustes["Horas mínimas para reservar"];
   const puede = R.reservable(c, M.ocupados(clase), tx.ahora, horasMin);
   if (!puede.ok) throw conflictoReserva(puede.motivo);
-  // a public booking never spends a plan on its own: whoever knows a number must not use her classes
+  // a public booking spends a plan only when the student was recognised (first name + WhatsApp): whoever
+  // merely knows a number must not use her classes
   const compra = soloPendiente ? null : R.elegirCompra(M.compras, M.reservas, clienta, c.fecha);
   const id = R.siguienteId("R", M.reservas.map((r) => r.id));
   const fila = {
@@ -87,6 +90,7 @@ export async function reservar(ctx, actor, { clienta, clase, origen }) {
     const r = await reservarEnTx(tx, { clienta: quien, clase, origen: origen || (actor.tipo === "clienta" ? "App" : "Panel"), admin: esAdmin(actor) });
     const c = tx.M.clasePorId.get(clase);
     tx.auditar("reserva.crear", r.id, { clienta: quien, clase, estado: r.estado });
+    avisarReservaPorCorreo(tx, r.id);
     tx.publicar({
       tipo: "reserva", titulo: (actor.tipo === "clienta" ? "Reservó " : "Reserva para ") + p.nombre,
       detalle: R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora) + " · " + r.estado, clienta: quien, clase,
@@ -120,6 +124,7 @@ export async function confirmar(ctx, actor, idReserva, { pago } = {}) {
     const p = M.clientaPorId.get(r.clienta);
     const hoy = R.hoyClave(tx.ahora);
     tx.auditar("reserva.confirmar", r.id, { compra: compra.id, pago: nueva ? { plan: nueva.plan, valor: nueva.valor, medio: nueva.medio } : null });
+    if (!vino) avisarReservaPorCorreo(tx, r.id); // «confirmada con tu plan» closes the loop after she paid
     if (nueva) tx.publicar({ tipo: "pago", titulo: "Pago de " + (p?.nombre || r.clienta), detalle: nueva.plan + " · " + R.dinero(nueva.valor), clienta: r.clienta, clase: r.clase });
     if (ctx.whatsapp?.configurado && p?.whatsapp) {
       tx.despues(() => ctx.whatsapp.enviarPlantilla(p.whatsapp, "reserva_confirmada", {
@@ -199,6 +204,7 @@ export async function cancelar(ctx, actor, idReserva, { sinCosto = false } = {})
     await tx.actualizar("Reservas", r._fila, { "Estado": estado, ...(nota ? { "Notas": (r.notas ? r.notas + " · " : "") + nota } : {}) });
     const p = M.clientaPorId.get(r.clienta);
     tx.auditar("reserva.cancelar", r.id, { antes: r.estado, ahora: estado, devolvioClase: devolvio, sinCosto: Boolean(sinCosto) });
+    avisarCancelacionPorCorreo(tx, r, c, { resultado: r.estado === ESTADO.PENDIENTE ? "liberada" : devolvio ? "devuelta" : "descontada" });
     tx.publicar({
       tipo: "cancelacion", titulo: "Canceló " + (p?.nombre || r.clienta), clienta: r.clienta, clase: c.id,
       detalle: R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora) + (estado === ESTADO.CANCELADA_TARDE ? " · tarde, la clase se descuenta" : ""),
@@ -283,6 +289,7 @@ export async function reagendar(ctx, actor, idReserva, nuevaClase) {
     M = tx.M;
     const p = M.clientaPorId.get(r.clienta);
     tx.auditar("reserva.reagendar", r.id, { nueva: id, de: c0.id, a: c1.id });
+    avisarReservaPorCorreo(tx, id, { reagendadaDe: c0 });
     tx.publicar({
       tipo: "reagenda", titulo: "Cambió de clase: " + (p?.nombre || r.clienta), clienta: r.clienta, clase: c1.id,
       detalle: R.fechaCorta(c0.fecha) + " " + R.horaLegible(c0.hora) + " → " + R.fechaCorta(c1.fecha) + " " + R.horaLegible(c1.hora),
@@ -376,6 +383,7 @@ export async function tomarCupo(ctx, actor, idEspera) {
     const r = await reservarEnTx(tx, { clienta: e.clienta, clase: e.clase, origen: "Lista de espera", admin: true });
     await tx.actualizar("Espera", e._fila, { "Estado": "Tomó el cupo" });
     tx.auditar("espera.tomar", e.id, { reserva: r.id });
+    avisarReservaPorCorreo(tx, r.id);
     const c = tx.M.clasePorId.get(e.clase);
     return { reserva: vistaReservaClienta(tx.M, r, tx.ahora), clase: vistaClaseEquipo(tx.M, c, tx.ahora) };
   });

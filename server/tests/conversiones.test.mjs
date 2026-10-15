@@ -6,7 +6,7 @@ import { destinoHojaSeparada, isoBogota, COLUMNAS_CONVERSION } from "../src/dato
 
 const SAB = "2026-10-03 08:00";
 
-test("a known clienta on the public flow: same answer as a stranger, confirmed with her plan, no payment, no conversion", async () => {
+test("the public flow: a stranger on a known number gets a stranger's answer; her own name books on her plan, no payment, no conversion", async () => {
   const s = await arrancar();
   try {
     const ana = s.cliente();
@@ -14,20 +14,32 @@ test("a known clienta on the public flow: same answer as a stranger, confirmed w
     const c = await ana.post("/api/admin/clientas", { nombre: "Sara Plan", whatsapp: "3155550301" });
     await ana.post("/api/admin/pagos", { clienta: c.json.id, plan: "8 clases al mes", medio: "Nequi" });
 
-    const conocida = await s.cliente().post("/api/publico/reservas", reservaWeb(SAB, { nombre: "Sara", whatsapp: "315 555 0301", clickIds: { gclid: "G-1" } }));
-    const nueva = await s.cliente().post("/api/publico/reservas", reservaWeb(SAB, { nombre: "Sara", whatsapp: "315 555 0302", clickIds: { gclid: "G-2" } }));
-    assert.equal(conocida.status, 201);
+    // someone else types Sara's number: exactly what a new number gets
+    const ajena = await s.cliente().post("/api/publico/reservas", reservaWeb(SAB, { nombre: "Otra", whatsapp: "315 555 0301", clickIds: { gclid: "G-1" } }));
+    const nueva = await s.cliente().post("/api/publico/reservas", reservaWeb(SAB, { nombre: "Otra", whatsapp: "315 555 0302", clickIds: { gclid: "G-2" } }));
+    assert.equal(ajena.status, 201);
     assert.equal(nueva.status, 201);
     const sinCodigo = (r) => JSON.stringify({ ...r.json, codigo: "", pago: { ...r.json.pago, waTexto: "", waEnlace: "" }, clase: { ...r.json.clase, ocupados: 0, libres: 0 } });
-    assert.equal(sinCodigo(conocida), sinCodigo(nueva), "nothing in the answer depends on whether she exists");
-    assert.equal(conocida.json.pago.monto, 25000, "the plan she chose (trial by default)");
-    assert.equal(conocida.json.estado, "Pendiente de pago");
+    assert.equal(sinCodigo(ajena), sinCodigo(nueva), "nothing in the answer depends on whether she exists");
+    assert.equal(ajena.json.pago.monto, 25000, "the plan she chose (trial by default)");
+    assert.equal(ajena.json.estado, "Pendiente de pago");
+    assert.equal(ajena.json.conPlan, false);
+    assert.equal(ajena.json.saldo, null);
 
-    const conf = await ana.post("/api/admin/reservas/" + conocida.json.codigo + "/confirmar", {});
+    // Ana confirms it without a payment: charged to the plan Sara already has, no purchase, no conversion
+    const conf = await ana.post("/api/admin/reservas/" + ajena.json.codigo + "/confirmar", {});
     assert.equal(conf.status, 200, conf.texto);
     assert.equal(conf.json.reserva.estado, "Confirmada");
     assert.equal(conf.json.reserva.plan, "8 clases al mes", "charged to her active plan");
     assert.ok(!conf.json.compra, "no new purchase");
+
+    // Sara herself (first name + number) books on her plan at once
+    const suya = await s.cliente().post("/api/publico/reservas", reservaWeb("2026-10-07 18:00", { nombre: "sára", whatsapp: "315 555 0301", clickIds: { gclid: "G-3" } }));
+    assert.equal(suya.status, 201, suya.texto);
+    assert.equal(suya.json.estado, "Confirmada");
+    assert.equal(suya.json.conPlan, true);
+    assert.equal(suya.json.pago, null);
+    assert.deepEqual(suya.json.saldo, { clases: 6, vence: "2026-10-30", venceTexto: "viernes 30 de octubre" });
     await s.ctx.esperarSegundoPlano();
     assert.equal(s.datos._tablas["Conversiones Ads"].filas.length, 0, "no sale, no conversion");
   } finally {

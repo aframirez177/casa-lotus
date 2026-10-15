@@ -1,17 +1,22 @@
 // Casa Lotus · what anyone can do without an account: see the plans and free swings (counts only),
-// book a class from the site, join a waiting list, and send attribution beacons.
-// A known WhatsApp books as that clienta, but nothing in the answer reveals that she exists, her
-// profile only gets its blanks filled, and the booking never spends her plan on its own.
+// recognise a returning student, book a class from the site, join a waiting list, send attribution beacons.
+// A known WhatsApp books as that clienta. Only when the first name matches too («reconocida») does the booking
+// use her own agreements and plan; otherwise nothing in the answer reveals that she exists, her profile only
+// gets its blanks filled, and the booking never spends her plan.
 import { createHash } from "node:crypto";
 import * as R from "../../../shared/reglas.js";
 import { SALUD_SIN_DATOS } from "../../../shared/consentimientos.js";
 import { modelo, transaccion } from "./base.js";
 import { crearEnTx, columnasPerfil, columnasConsentimientos, soloVacios } from "./clientas.js";
 import { reservarEnTx, unirseEsperaEnTx } from "./reservas.js";
-import { vistaClase, vistaPago, planDePrueba, MEDIOS_LLAVE } from "./vistas.js";
+import {
+  vistaClase, vistaPago, vistaSaldo, planDePrueba, perfilDe, respuestasDeSeguridad, acuerdosCompletos, duracionDe, MEDIOS_LLAVE,
+} from "./vistas.js";
+import { avisarReservaPorCorreo, esCorreo } from "./avisos.js";
 import { noExiste, validacion } from "../errores.js";
 import { correoReservaWeb } from "../notificaciones/plantillas.js";
 import { leerMeta, guardarMeta } from "../db/sqlite.js";
+import { sinTilde } from "../datos/modelo.js";
 import { randomBytes } from "node:crypto";
 
 export const PUBLICO = Object.freeze({ tipo: "publico", id: "web", nombre: "Sitio web" });
@@ -20,7 +25,7 @@ export async function estudio(ctx) {
   const M = await modelo(ctx);
   const aj = M.ajustes;
   return {
-    whatsapp: aj["WhatsApp de reservas"], llavePago: aj["Llave de pago"], mediosPago: MEDIOS_LLAVE,
+    whatsapp: aj["WhatsApp de reservas"], llavePago: aj["Llave de pago"], mediosPago: MEDIOS_LLAVE, duracion: duracionDe(M),
     politicas: {
       horasReservar: aj["Horas mínimas para reservar"], horasCancelar: aj["Horas mínimas para cancelar"],
       horasPagar: aj["Horas para pagar una reserva web"], cambiosPrueba: aj["Cambios permitidos clase de prueba"],
@@ -38,6 +43,39 @@ export function atribucionDe(utm = {}, clickIds = {}) {
 
 const hayDatoDeSalud = (s) => Boolean(s && !SALUD_SIN_DATOS.includes(s));
 
+/** First words compared without accents, case or punctuation: «maría» = «María Fernanda». */
+const primeraPalabra = (t) => sinTilde(R.primerNombre(t)).replace(/[^a-z0-9]/g, "");
+export function mismoNombre(escrito, registrado) {
+  const a = primeraPalabra(escrito);
+  return Boolean(a) && a === primeraPalabra(registrado);
+}
+
+/** The clienta this name + WhatsApp belong to, or null (both must match). */
+export function reconocer(M, nombre, whatsapp) {
+  const p = M.clientaPorWa.get(whatsapp);
+  return p && mismoNombre(nombre, p.nombre) ? p : null;
+}
+
+/**
+ * POST /api/publico/identificar: is this a returning student, and what does the booking still need from her?
+ * Returns none of her data. pideFicha: the safety answers are missing (health, emergency contact);
+ * pideAcuerdos: the agreements are missing (data, disclaimer, photos). Together they are !fichaCompleta.
+ */
+export async function identificar(ctx, { nombre, whatsapp }) {
+  const M = await modelo(ctx);
+  const p = reconocer(M, nombre, whatsapp);
+  if (!p) return { conocida: false, pideFicha: true, pideAcuerdos: true };
+  return { conocida: true, pideFicha: !respuestasDeSeguridad(perfilDe(p)), pideAcuerdos: !acuerdosCompletos(p.consentimientos) };
+}
+
+/** A recognised student's agreements: what she accepted before, plus anything accepted now. */
+function consentimientosEfectivos(guardados, nuevos = {}) {
+  const o = {};
+  for (const k of ["datos", "descargo", "sensibles"]) o[k] = { acepta: nuevos[k]?.acepta === true || guardados?.[k]?.acepta === true };
+  o.imagen = typeof nuevos.imagen?.acepta === "boolean" ? nuevos.imagen : guardados?.imagen || { acepta: null };
+  return o;
+}
+
 function revisarConsentimientos(perfil, cons) {
   const campos = {};
   if (cons?.datos?.acepta !== true) campos["consentimientos.datos"] = "Para reservar necesitamos tu autorización de tratamiento de datos.";
@@ -50,13 +88,13 @@ function revisarConsentimientos(perfil, cons) {
 }
 
 /**
- * POST /api/publico/reservas. Returns { codigo, estado, clase, pago, sesion, clienta, nueva } — the
- * route turns `clienta`/`nueva` into the session (full for someone new, limited for a known number)
- * and strips them from the answer.
+ * POST /api/publico/reservas. Returns { codigo, estado, clase, pago, sesion, conPlan, saldo, correo } plus the
+ * internal { clienta, nueva, destinoCorreo }, which the route turns into the session (full for someone new,
+ * limited for a known number) and strips from the answer. The keys are the same for everyone.
  */
 export async function reservaPublica(ctx, input) {
-  const { perfil, consentimientos: cons } = input;
-  revisarConsentimientos(perfil, cons);
+  const { perfil } = input;
+  const cons = input.consentimientos || {};
   const atribucion = atribucionDe(input.utm, input.clickIds);
   const ref = input.ref || "WEB";
   let aviso = null;
@@ -66,13 +104,20 @@ export async function reservaPublica(ctx, input) {
     const c = M.clasePorId.get(input.clase);
     if (!c) throw noExiste("Esa clase no existe.");
     if (input.plan && !M.planPorNombre.get(input.plan)?.activo) throw validacion("Ese plan no existe.", { plan: "Elige un plan de la lista." });
-    const datosPerfil = { ...perfil };
-    if (hayDatoDeSalud(perfil.salud) && cons?.sensibles?.acepta !== true) delete datosPerfil.salud;
     let p = M.clientaPorWa.get(perfil.whatsapp);
+    const reconocida = Boolean(p && mismoNombre(perfil.nombre, p.nombre));
+    // a returning student's own agreements count; anyone else accepts them here
+    const efectivos = reconocida ? consentimientosEfectivos(p.consentimientos, cons) : cons;
+    revisarConsentimientos(perfil, efectivos);
+    const datosPerfil = { ...perfil };
+    if (hayDatoDeSalud(perfil.salud) && efectivos?.sensibles?.acepta !== true) delete datosPerfil.salud;
     let nueva = false;
     if (p) {
       const cambios = soloVacios(p, { ...columnasPerfil(datosPerfil), ...columnasConsentimientos(cons, hoy) });
+      // her number and her e-mail are how she signs in: a public form never sets them on an existing
+      // clienta (whoever typed her number could otherwise receive her login code)
       delete cambios["WhatsApp"];
+      delete cambios["Correo"];
       if (Object.keys(cambios).length) await tx.actualizar("Clientas", p._fila, cambios);
     } else {
       const id = await crearEnTx(tx, { perfil: { ...datosPerfil, llego: datosPerfil.llego || "Otro" }, consentimientos: cons });
@@ -80,24 +125,34 @@ export async function reservaPublica(ctx, input) {
       nueva = true;
     }
     const plan = input.plan || planDePrueba(tx.M)?.nombre;
-    // the plan she asked for rides in «Atribución» (no new column): Ana's «Confirmar» preselects it
-    const r = await reservarEnTx(tx, { clienta: p.id, clase: c.id, origen: "Web · " + ref, atribucion: { ...atribucion, ...(plan ? { plan } : {}) }, soloPendiente: true });
-    tx.auditar("reserva.web", r.id, { clienta: p.id, clase: c.id, ref, nueva });
+    // the plan she asked for rides in «Atribución» (no new column): Ana's «Confirmar» preselects it.
+    // Only a recognised student books on her own plan; anyone else holds a swing until the payment arrives.
+    const r = await reservarEnTx(tx, {
+      clienta: p.id, clase: c.id, origen: "Web · " + ref, atribucion: { ...atribucion, ...(plan ? { plan } : {}) }, soloPendiente: !reconocida,
+    });
+    const conPlan = r.estado === R.ESTADO.CONFIRMADA;
+    tx.auditar("reserva.web", r.id, { clienta: p.id, clase: c.id, ref, nueva, reconocida, conPlan });
     const cv = vistaClase(tx.M, c, tx.ahora);
+    const quien = reconocida ? tx.M.clientaPorId.get(p.id).nombre : perfil.nombre;
     tx.publicar({
-      tipo: "reserva-web", titulo: "Nueva reserva web · " + perfil.nombre,
+      tipo: "reserva-web", titulo: (conPlan ? "Reservó con su plan: " : "Apartó un columpio: ") + quien,
       detalle: R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora) + (cv.clase ? " · " + cv.clase : "") + " · código " + r.id,
       clienta: p.id, clase: c.id, ruta: "/app/admin",
     });
-    const pago = vistaPago(tx.M, r, { plan, nombre: perfil.nombre });
-    const correo = String(tx.M.ajustes["Correo para avisos"] || "").trim();
+    const pago = conPlan ? null : vistaPago(tx.M, r, { plan, nombre: perfil.nombre });
+    const saldo = conPlan ? vistaSaldo(tx.M, p.id, hoy) : null;
+    // her confirmation: her own e-mail when recognised, otherwise only the address typed here (never the owner's)
+    const escrito = esCorreo(perfil.correo) ? perfil.correo.trim() : "";
+    const destinoCorreo = reconocida && esCorreo(p.correo) ? p.correo.trim() : escrito;
+    const correo = avisarReservaPorCorreo(tx, r.id, { para: destinoCorreo, nombre: quien, plan, mostrarSaldo: reconocida });
+    const correoAna = String(tx.M.ajustes["Correo para avisos"] || "").trim();
     aviso = {
-      correo: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo) ? correo : "", nombre: perfil.nombre, whatsapp: perfil.whatsapp, codigo: r.id,
+      correo: esCorreo(correoAna) ? correoAna : "", nombre: quien, whatsapp: perfil.whatsapp, codigo: r.id,
       clase: cv, venceTexto: r.vence ? R.fechaLegible(R.hoyClave(r.vence)) + " a las " + R.horaLegible(R.ahoraHora(r.vence)) : "",
-      pago, claseNombre: cv.clase,
+      pago, claseNombre: cv.clase, conPlan, saldo: saldo ? saldo.clases : null, horasCancelar: tx.M.ajustes["Horas mínimas para cancelar"],
     };
     aviso.optIn = nueva && cons?.novedades?.acepta === true;
-    return { codigo: r.id, estado: r.estado, clase: cv, pago, sesion: true, clienta: p.id, nueva };
+    return { codigo: r.id, estado: r.estado, clase: cv, pago, sesion: true, conPlan, saldo, correo, clienta: p.id, nueva, destinoCorreo };
   });
 
   // outside the lock: a slow or failed e-mail / WhatsApp never costs the booking
@@ -111,8 +166,15 @@ export async function reservaPublica(ctx, input) {
     ctx.enSegundoPlano(async () => {
       // marketing opt-in only from someone new who ticked it (a known number cannot be opted in by others)
       if (aviso.optIn) try { await ctx.whatsapp.optIn?.(aviso.whatsapp, "web"); } catch { /* optional */ }
+      const cuando = aviso.clase.fechaTexto + " a las " + aviso.clase.horaTexto;
+      if (aviso.conPlan) {
+        await ctx.whatsapp.enviarPlantilla(aviso.whatsapp, "reserva_confirmada", {
+          nombre: R.primerNombre(aviso.nombre), clase: aviso.claseNombre || "tu clase", cuando, horas: String(aviso.horasCancelar),
+        }, { tipo: "sistema", nombre: "Casa Lotus" });
+        return;
+      }
       await ctx.whatsapp.enviarPlantilla(aviso.whatsapp, "reserva_recibida", {
-        nombre: R.primerNombre(aviso.nombre), clase: aviso.claseNombre || "tu clase", cuando: aviso.clase.fechaTexto + " a las " + aviso.clase.horaTexto,
+        nombre: R.primerNombre(aviso.nombre), clase: aviso.claseNombre || "tu clase", cuando,
         vence: aviso.venceTexto, monto: R.dinero(aviso.pago.monto), codigo: aviso.codigo, // key and number are literal in the template
       }, { tipo: "sistema", nombre: "Casa Lotus" });
     });

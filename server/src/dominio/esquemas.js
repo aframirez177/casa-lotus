@@ -67,10 +67,17 @@ export const clickIds = z.object({
 }).partial();
 export const ref = z.string().max(60).transform((s) => s.replace(/[^\w·\- ]/g, "").trim().toUpperCase().slice(0, 60));
 
+export const identificar = z.object({
+  nombre: texto(80, { min: 2, mensaje: "Escribe tu nombre." }),
+  whatsapp,
+  website: z.string().max(200).optional(),
+});
+
 export const reservaPublica = z.object({
   clase: claseId,
   perfil: perfilParcial.required({ nombre: true, whatsapp: true }),
-  consentimientos: consentimientos.required({ datos: true, descargo: true, imagen: true }),
+  // optional: a recognised student (name + WhatsApp) already accepted them; anyone else must (checked in the domain)
+  consentimientos: consentimientos.optional().default({}),
   plan: texto(60).optional(),
   ref: ref.optional().default("WEB"),
   utm: utm.optional(),

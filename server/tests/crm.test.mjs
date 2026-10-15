@@ -88,7 +88,7 @@ test("public endpoints carry counts only: no names, no phones, no e-mails", asyn
     }
     for (const prohibido of ["Ximena", "Laura", "Geral", "salud", "gente"]) assert.ok(!cuerpos.includes('"' + prohibido), prohibido);
     const disp = JSON.parse(cuerpos.split("\n")[0]);
-    assert.ok(disp.clases.every((c) => Object.keys(c).every((k) => ["id", "fecha", "dia", "hora", "fechaTexto", "horaTexto", "clase", "tipo", "cupos", "ocupados", "libres", "reservable", "motivo", "estado"].includes(k))));
+    assert.ok(disp.clases.every((c) => Object.keys(c).every((k) => ["id", "fecha", "dia", "hora", "fin", "fechaTexto", "horaTexto", "clase", "tipo", "cupos", "ocupados", "libres", "reservable", "motivo", "estado"].includes(k))));
     assert.ok(disp.clases.find((c) => c.motivo === "llena"));
     // and nothing else is reachable without a session
     for (const ruta of ["/api/admin/tablero", "/api/admin/clientas", "/api/profe/clases", "/api/yo"]) assert.equal((await anon.get(ruta)).status, 401, ruta);

@@ -97,6 +97,33 @@ export async function tablero(ctx) {
       clase: vistaClase(M, M.clasePorId.get(c.id), ahora), accion: { tipo: "abrir", ruta: "/app/admin/agenda/" + encodeURIComponent(c.id) },
     });
   }
+  // classes without a type in the next 14 days: one alert per weekly slot (fixed in Horario), one per extra class
+  const sinTipo = new Map();
+  for (const c of M.clases) {
+    if (c.estado !== "Programada" || esPasada(c, ahora) || nombreClase(c) || R.inicioClase(c) - ahora > 14 * 86400000) continue;
+    const k = c.tipo === "Extra" ? c.id : c.dia + " " + c.hora;
+    if (!sinTipo.has(k)) sinTipo.set(k, []);
+    sinTipo.get(k).push(c);
+  }
+  for (const [k, lista] of sinTipo) {
+    const c = lista[0];
+    if (c.tipo === "Extra") {
+      add({
+        id: "sin-clase:" + k, tipo: "sin-clase", prioridad: 2, titulo: "Clase extra sin tipo: " + R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora),
+        detalle: "Dice «Por confirmar». En la web sale como «Clase aérea»: ponle el tipo de clase.",
+        accion: { tipo: "abrir", ruta: "/app/admin/agenda/" + encodeURIComponent(c.id) },
+      });
+      continue;
+    }
+    const n = lista.length;
+    add({
+      id: "sin-clase:" + k, tipo: "sin-clase", prioridad: 2, titulo: c.dia + " " + R.horaLegible(c.hora) + ": ponle el tipo de clase en Horario",
+      detalle: (n === 1 ? "1 clase en los próximos 14 días dice" : n + " clases en los próximos 14 días dicen") + " «Por confirmar» (" +
+        lista.map((x) => R.fechaCorta(x.fecha)).join(", ") + "). En la web " + (n === 1 ? "sale" : "salen") + " como «Clase aérea».",
+      accion: { tipo: "abrir", ruta: "/app/admin/horario" },
+    });
+  }
+
   for (const c of M.clases) {
     if (c.estado !== "Programada" || esPasada(c, ahora)) continue;
     const ruta = "/app/admin/agenda/" + encodeURIComponent(c.id);

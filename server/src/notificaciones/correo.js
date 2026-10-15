@@ -19,6 +19,11 @@ function remitenteCon(remitente, nombre) {
 
 const direccion = (remitente) => remitente.match(/<([^>]+)>/)?.[1] || remitente.trim();
 
+/** adjuntos: [{ nombre: "clase.ics", contenido: "text", tipo: "text/calendar; charset=utf-8" }] (small text files). */
+const adjuntosResend = (adjuntos) => adjuntos.map((a) => ({
+  filename: a.nombre, content: Buffer.from(String(a.contenido), "utf8").toString("base64"), ...(a.tipo ? { content_type: a.tipo } : {}),
+}));
+
 /** POST to Resend with a timeout; one retry on 429 / 5xx / network errors. */
 async function enviarResend({ clave, fetchImpl, log }, cuerpo) {
   let ultimo;
@@ -57,11 +62,12 @@ export function crearCorreo(config, log, { fetch: fetchImpl = globalThis.fetch }
     const listo = Boolean(c.resend.clave);
     return {
       ...base, driver: "resend", activo: listo,
-      async enviar({ para, asunto, html, texto, nombreRemitente }) {
+      async enviar({ para, asunto, html, texto, nombreRemitente, adjuntos }) {
         if (!listo) { log.warn("correo sin configurar (falta RESEND_API_KEY)", { asunto }); return false; }
         const r = await enviarResend({ clave: c.resend.clave, fetchImpl, log }, {
           from: remitenteCon(c.remitente, nombreRemitente), to: [para], subject: asunto, html, text: texto,
           ...(c.responderA ? { reply_to: c.responderA } : {}),
+          ...(adjuntos?.length ? { attachments: adjuntosResend(adjuntos) } : {}),
         });
         log.info("correo enviado", { para: enmascarar(para), asunto, id: r?.id });
         return true;
@@ -74,7 +80,7 @@ export function crearCorreo(config, log, { fetch: fetchImpl = globalThis.fetch }
     const listo = Boolean(c.smtp.host && c.smtp.user && c.smtp.pass);
     return {
       ...base, driver: "smtp", activo: listo,
-      async enviar({ para, asunto, html, texto, nombreRemitente }) {
+      async enviar({ para, asunto, html, texto, nombreRemitente, adjuntos }) {
         if (!listo) { log.warn("correo sin configurar", { asunto }); return false; }
         if (!transporte) {
           const nodemailer = (await import("nodemailer")).default;
@@ -83,7 +89,10 @@ export function crearCorreo(config, log, { fetch: fetchImpl = globalThis.fetch }
             connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 20000,
           });
         }
-        await transporte.sendMail({ from: remitenteCon(c.remitente, nombreRemitente), to: para, replyTo: c.responderA || undefined, subject: asunto, html, text: texto });
+        await transporte.sendMail({
+          from: remitenteCon(c.remitente, nombreRemitente), to: para, replyTo: c.responderA || undefined, subject: asunto, html, text: texto,
+          attachments: (adjuntos || []).map((a) => ({ filename: a.nombre, content: String(a.contenido), contentType: a.tipo })),
+        });
         log.info("correo enviado", { para: enmascarar(para), asunto });
         return true;
       },
@@ -96,7 +105,8 @@ export function crearCorreo(config, log, { fetch: fetchImpl = globalThis.fetch }
       buzon.push({ ...m, de: remitenteCon(c.remitente, m.nombreRemitente), responderA: c.responderA, ts: Date.now() });
       if (buzon.length > 50) buzon.shift();
       if (config.dev) {
-        process.stdout.write("\n── correo (driver console) ──\nDe: " + remitenteCon(c.remitente, m.nombreRemitente) + "\nPara: " + m.para + "\nAsunto: " + m.asunto + "\n\n" + m.texto + "\n────────────────────────────\n\n");
+        const adj = (m.adjuntos || []).map((a) => "\nAdjunto: " + a.nombre).join("");
+        process.stdout.write("\n── correo (driver console) ──\nDe: " + remitenteCon(c.remitente, m.nombreRemitente) + "\nPara: " + m.para + "\nAsunto: " + m.asunto + adj + "\n\n" + m.texto + "\n────────────────────────────\n\n");
       } else {
         log.info("correo omitido (driver console)", { asunto: m.asunto });
       }

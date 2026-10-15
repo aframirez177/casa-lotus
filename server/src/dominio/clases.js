@@ -9,6 +9,7 @@ import { porMarcar } from "./profes.js";
 import { cuandoTexto } from "./reservas.js";
 import { resolverProfe, profeCambiado, avisarProfe, sinProfe } from "./asignacion.js";
 import { sinTilde } from "../datos/modelo.js";
+import { avisarCancelacionPorCorreo } from "./avisos.js";
 
 export async function agenda(ctx, { desde, hasta } = {}) {
   const M = await modelo(ctx), ahora = ctx.ahora(), hoy = R.hoyClave(ahora);
@@ -114,6 +115,9 @@ export async function cancelarClase(ctx, actor, id, { motivo = "" } = {}) {
       await tx.actualizar("Espera", e._fila, { "Estado": "Ya no", "Notas": "Clase cancelada" });
     }
     tx.auditar("clase.cancelar", id, { motivo, reservas: afectadasAntes.map((r) => r.id) });
+    for (const r of afectadasAntes.filter((x) => avisar.includes(x.id))) {
+      avisarCancelacionPorCorreo(tx, r, c, { porEstudio: true, motivo, resultado: r.estado === R.ESTADO.PENDIENTE ? "liberada" : "devuelta" });
+    }
     tx.publicar({ tipo: "clase", titulo: "Clase cancelada: " + R.fechaCorta(c.fecha) + " · " + R.horaLegible(c.hora), detalle: motivo, clase: id });
     const cuando = cuandoTexto(c);
     const afectadas = gente.filter((g) => avisar.includes(g.reserva)).map((g) => {

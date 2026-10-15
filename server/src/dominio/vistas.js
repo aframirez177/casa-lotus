@@ -10,8 +10,23 @@ export const PLAZO_ASISTENCIA_MS = 48 * 3600000;
 export const MEDIOS_LLAVE = ["Nequi", "DaviPlata", "Bre-B"];
 
 export const iso = (ms) => (ms === null || ms === undefined || !Number.isFinite(Number(ms)) ? null : new Date(Number(ms)).toISOString());
-export const nombreClase = (c) => (c?.clase && c.clase !== "Por confirmar" ? c.clase : "");
+/** The class name to show: "" when the Sheet says nothing or «Por confirmar» (the app and e-mails say «Clase aérea»). */
+export const nombreClase = (c) => (c?.clase && sinTilde(c.clase) !== "por confirmar" ? c.clase : "");
+export const CLASE_GENERICA = "Clase aérea";
 export const esPasada = (c, ahora) => ahora >= R.inicioClase(c);
+
+/** Ajustes «Duración de la clase (minutos)», 60 when empty or nonsense. */
+export function duracionDe(M) {
+  const d = Number(M.ajustes["Duración de la clase (minutos)"]);
+  return Number.isFinite(d) && d > 0 ? Math.min(Math.round(d), 600) : 60;
+}
+
+/** "HH:mm" when a class that starts at `hora` ends (same day, never past 23:59). */
+export function finClase(hora, minutos) {
+  const [h, m] = String(hora).split(":").map(Number);
+  const t = Math.min((h || 0) * 60 + (m || 0) + minutos, 23 * 60 + 59);
+  return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
+}
 
 /** A class object even when its row is gone (an old booking pointing to a deleted class). */
 function claseOFantasma(M, id) {
@@ -27,7 +42,7 @@ export function vistaClase(M, c, ahora, { real = false } = {}) {
   const ocupados = M.ocupados(c.id);
   const r = R.reservable(c, ocupados, ahora, M.ajustes["Horas mínimas para reservar"]);
   const o = {
-    id: c.id, fecha: c.fecha, dia: c.dia, hora: c.hora, fechaTexto: R.fechaLegible(c.fecha), horaTexto: R.horaLegible(c.hora),
+    id: c.id, fecha: c.fecha, dia: c.dia, hora: c.hora, fin: finClase(c.hora, duracionDe(M)), fechaTexto: R.fechaLegible(c.fecha), horaTexto: R.horaLegible(c.hora),
     clase: nombreClase(c), tipo: c.tipo, cupos: c.cupos, ocupados: real ? ocupados : Math.min(ocupados, c.cupos),
     libres: Math.max(c.cupos - ocupados, 0), reservable: r.ok, estado: c.estado,
   };
@@ -126,6 +141,15 @@ export function perfilDe(c) {
 
 export const consentimientosDe = (c) => c.consentimientos;
 export const fichaDe = (c) => fichaCompleta(perfilDe(c), c.consentimientos);
+
+/**
+ * The two halves of fichaCompleta (shared/consentimientos.js), so a returning student is asked only
+ * what is missing: the safety answers a profe needs, and the agreements.
+ */
+export const respuestasDeSeguridad = (perfil = {}) =>
+  Boolean(perfil.salud && perfil.contactoEmergencia?.nombre && perfil.contactoEmergencia?.whatsapp);
+export const acuerdosCompletos = (cons = {}) =>
+  Boolean(cons.datos?.acepta && cons.descargo?.acepta && typeof cons.imagen?.acepta === "boolean");
 
 /* ── plans and payments ───────────────────────────────── */
 

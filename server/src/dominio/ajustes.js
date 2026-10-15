@@ -6,6 +6,7 @@ import { AJUSTES, AJUSTES_NUMERICOS } from "../datos/esquema.js";
 import { validacion } from "../errores.js";
 
 const AYUDA = Object.fromEntries(AJUSTES.map(([k, , a]) => [k, a]));
+const DURACION = "Duración de la clase (minutos)";
 
 export async function asegurarAjustes(ctx) {
   const M = await modelo(ctx, { fresco: true });
@@ -37,6 +38,11 @@ export async function verAjustes(ctx) {
 
 function normalizar(k, v) {
   if (k === "Pago por clase a profes" && (v === "" || v === null)) return "";
+  if (k === DURACION) {
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 15 || n > 240) throw validacion("Revisa la duración de la clase.", { [k]: "Escribe los minutos, entre 15 y 240." });
+    return n;
+  }
   if (AJUSTES_NUMERICOS.has(k)) {
     const n = Number(v);
     if (!Number.isFinite(n) || n < 0 || n > 10000000) throw validacion("Revisa el valor de «" + k + "».", { [k]: "Escribe un número." });

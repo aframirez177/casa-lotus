@@ -11,7 +11,7 @@ export function cargarSesion(ctx) {
       if (s.rol === "clienta") {
         req.actor = {
           tipo: "clienta", id: s.clienta, nombre: s.datos?.nombre || "", whatsapp: s.whatsapp || "",
-          limitada: s.alcance === "reserva", reservas: s.datos?.reservas || [],
+          limitada: s.alcance === "reserva", reservas: s.datos?.reservas || [], correo: s.datos?.correo || "",
         };
       } else {
         const u = s.usuarioFila;
