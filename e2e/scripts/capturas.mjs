@@ -135,7 +135,7 @@ for (const vista of Object.keys(VISTAS)) {
     await capturar(page, "publico", vista, "10-reservar-clase-vacio");
     await page.locator("ul button[aria-pressed]").first().click();
     await capturar(page, "publico", vista, "11-reservar-clase-elegida");
-    const seguir = () => page.getByRole("button", { name: /^(Continuar|Apartar|Apartar mi columpio)$/ }).filter({ visible: true }).first().click();
+    const seguir = () => page.getByRole("button", { name: /^(Continuar|Reservar|Apartar|Apartar mi columpio)$/ }).filter({ visible: true }).first().click();
     await seguir();
     await capturar(page, "publico", vista, "12-reservar-tu");
     await seguir();
