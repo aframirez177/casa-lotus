@@ -4,7 +4,7 @@
 // next date per slot (modo "semana") or every class of the next three weeks (modo "lista").
 // Swings fill as bookings arrive; the text never states a number.
 import { reservar } from "../../lib/enlaces";
-import { HORARIO_SEMANAL, DIAS, POLITICAS, refHorario, hora12 } from "../../data/estudio";
+import { HORARIO_SEMANAL, DIAS, POLITICAS, CLASE_AEREA, refHorario, hora12 } from "../../data/estudio";
 
 interface Props {
   modo?: "semana" | "lista";
@@ -44,7 +44,7 @@ const dias = DIAS.filter((d) => HORARIO_SEMANAL.some((f) => f.dia === d));
             return (
               <a class="slot" data-cta={ref} href={reservar(ref)} data-cursor="Reservar">
                 <span class="slot__time">{hora}<small>{sufijo}</small></span>
-                <span class="slot__meta">{f.clase && <span class="slot__class">{f.clase}</span>}<span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
+                <span class="slot__meta"><span class="slot__class">{f.clase || CLASE_AEREA}</span><span class="swings" data-taken="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
                 <span class="slot__go" aria-hidden="true"></span>
               </a>
             );

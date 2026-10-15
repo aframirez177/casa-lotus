@@ -1,0 +1,46 @@
+---
+// «Próximas clases»: a compact strip right under the hero (home, /clase-de-prueba/, every /clases/* page).
+// A student asked for the schedule higher up, with the details of each class after it.
+// The HTML holds the weekly grid as cards: no dates and no swings, because it cannot know them. They reserve the
+// row's height and are what a crawler, a visitor without JavaScript or a visit with the API down sees.
+// With JavaScript they sit under a skeleton until scripts/proximas.js paints the next bookable classes
+// (GET /api/publico/disponibilidad, the same request as the grid) after the first frame: CLS 0, LCP untouched.
+// Every card books with ref WEB-PROXIMAS (CONTRATO §9); full classes offer the waiting list.
+import { reservar, whatsapp } from "../../lib/enlaces";
+import { HORARIO_SEMANAL, CLASE_AEREA, claseDeNombre, hora12 } from "../../data/estudio";
+
+interface Props {
+  /** class page: list this class first-hand when the Sheet names it (else every class) */
+  filtro?: string;
+  ref?: string;
+}
+const { filtro, ref = "WEB-PROXIMAS" } = Astro.props;
+const wa = whatsapp(ref, "Hola Casa Lotus, quiero saber cuándo abren clases nuevas");
+---
+<section class="proximas" id="proximas" data-bg="paper" data-proximas-seccion aria-labelledby="proximas-titulo">
+  <div class="wrap">
+    <div class="proximas__head">
+      <h2 class="proximas__titulo" id="proximas-titulo">Próximas clases</h2>
+      <p class="proximas__estado" data-proximas-estado="semanal"><span class="proximas__dot" aria-hidden="true"></span><span>Horario de la semana</span></p>
+    </div>
+    <ol class="proximas__fila" data-proximas data-ref={ref} data-filtro={filtro} data-whatsapp={wa}>
+      {HORARIO_SEMANAL.map((f) => {
+        const { hora, sufijo } = hora12(f.hora);
+        const color = f.clase ? claseDeNombre(f.clase)?.colorVar : undefined;
+        return (
+          <li class="proxima" data-dia={f.dia} data-hora={f.hora} style={color ? `--c: ${color}` : undefined}>
+            <a class="proxima__link" href={reservar(ref)} data-cta={ref} data-cursor="Reservar">
+              <span class="proxima__cuando">{f.dia} <span>cada semana</span></span>
+              <span class="proxima__hora">{hora}<small>{sufijo}</small></span>
+              <span class="proxima__clase">{f.clase || CLASE_AEREA}</span>
+              <span class="swings proxima__columpios" aria-hidden="true"></span>
+              <span class="proxima__estado">Reserva en línea</span>
+              <span class="proxima__go" aria-hidden="true"></span>
+            </a>
+          </li>
+        );
+      })}
+    </ol>
+    <a class="link-arrow proximas__todos" href="/horarios/">Ver todos los horarios</a>
+  </div>
+</section>

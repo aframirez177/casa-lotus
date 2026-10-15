@@ -144,6 +144,9 @@ export const CLASES: Clase[] = [
   },
 ];
 
+/** The name shown while the Sheet's «Clase» is empty or «Por confirmar» (scripts/horarios.js says the same). */
+export const CLASE_AEREA = "Clase aérea";
+
 /** Class of a Sheet name ("Pilates Aéreo", "pilates aereo"…), or undefined (Acro, Therapy…). */
 export function claseDeNombre(nombre: string) {
   const n = nombre.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();

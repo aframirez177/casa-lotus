@@ -10,6 +10,7 @@ import Otras from "../../components/ui/Otras.astro";
 import Sello from "../../components/ui/Sello.astro";
 import Cierre from "../../components/ui/Cierre.astro";
 import Horarios from "../../components/secciones/Horarios.astro";
+import Proximas from "../../components/secciones/Proximas.astro";
 import PrimeraClase from "../../components/secciones/PrimeraClase.astro";
 import Testimonios from "../../components/secciones/Testimonios.astro";
 import Preguntas from "../../components/secciones/Preguntas.astro";
@@ -63,6 +64,8 @@ const REF = pagina.ref;
   <PageHero pagina={pagina} secundario={{ texto: "Ver horarios", href: "#horarios" }}>
     <HeroFoto slot="media" src={clase.foto} alt={clase.alt} color={clase.colorVar} tag={clase.corto} />
   </PageHero>
+
+  <Proximas filtro={clase.nombre} />
 
   <section class="section section--tight" id="trabajas" data-bg="paper">
     <div class="wrap">

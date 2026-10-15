@@ -7,6 +7,7 @@
 // Booking moved to the app: every booking CTA is a plain link to /app/reservar (shared/CONTRATO.md §9).
 import { iniciarAtribucion, videoAbierto } from "./atribucion.js";
 import { iniciarHorarios, marcarColumpios } from "./horarios.js";
+import { iniciarProximas } from "./proximas.js";
 import { estado } from "./estado.js";
 
 const root = document.documentElement;
@@ -99,6 +100,9 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && menu && !menu.hid
 $$(".class-card").forEach((card) => card.addEventListener("click", (e) => {
   if (!e.target.closest("a")) ($(".h3 a", card) || $(".link-arrow", card))?.click();
 }));
+
+/* ── «Próximas clases» under the hero: skeleton now, live classes after the first frame (proximas.js) ── */
+iniciarProximas();
 
 /* ── Schedule: swings, and live availability once the schedule nears the screen ── */
 $$(".swings").forEach(marcarColumpios);

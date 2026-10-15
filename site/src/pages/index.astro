@@ -3,6 +3,7 @@
 // nav links to the inner pages.
 import Base from "../layouts/Base.astro";
 import Hero from "../components/secciones/Hero.astro";
+import Proximas from "../components/secciones/Proximas.astro";
 import Manifiesto from "../components/secciones/Manifiesto.astro";
 import Clases from "../components/secciones/Clases.astro";
 import Sala from "../components/secciones/Sala.astro";
@@ -18,6 +19,7 @@ const p = PAGINAS.inicio;
 ---
 <Base pagina={p}>
   <Hero pagina={p} />
+  <Proximas />
   <Manifiesto />
   <Clases />
   <Sala />
