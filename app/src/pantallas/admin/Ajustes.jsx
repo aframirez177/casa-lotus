@@ -16,11 +16,11 @@ import { esDemo } from "../../api/modo.js";
 
 const GRUPOS = [
   { titulo: "Reservas", claves: ["Horas mínimas para reservar", "Horas para pagar una reserva web", "Horas mínimas para cancelar", "Cambios permitidos clase de prueba"] },
-  { titulo: "Clases", claves: ["Cupos por clase", "Mínimo de personas", "Semanas de clases hacia adelante"] },
-  { titulo: "Avisos", claves: ["Aviso de saldo bajo (clases)", "Días para avisar vencimiento", "Correo para avisos"] },
+  { titulo: "Clases", claves: ["Cupos por clase", "Duración de la clase (minutos)", "Mínimo de personas", "Semanas de clases hacia adelante", "Días de reserva de cupos fijos"] },
+  { titulo: "Avisos", claves: ["Hora del recordatorio", "Aviso de saldo bajo (clases)", "Días para avisar vencimiento", "Correo para avisos"] },
   { titulo: "Pagos", claves: ["WhatsApp de reservas", "Llave de pago", "Pago por clase a profes"] },
 ];
-const UNIDAD = { "Horas mínimas para reservar": "horas", "Horas para pagar una reserva web": "horas", "Horas mínimas para cancelar": "horas", "Cambios permitidos clase de prueba": "cambios", "Cupos por clase": "columpios", "Mínimo de personas": "personas", "Semanas de clases hacia adelante": "semanas", "Aviso de saldo bajo (clases)": "clases", "Días para avisar vencimiento": "días" };
+const UNIDAD = { "Horas mínimas para reservar": "horas", "Horas para pagar una reserva web": "horas", "Horas mínimas para cancelar": "horas", "Cambios permitidos clase de prueba": "cambios", "Cupos por clase": "columpios", "Mínimo de personas": "personas", "Semanas de clases hacia adelante": "semanas", "Aviso de saldo bajo (clases)": "clases", "Días para avisar vencimiento": "días", "Duración de la clase (minutos)": "minutos", "Días de reserva de cupos fijos": "días" };
 
 export default function Ajustes() {
   const ajustes = useAjustes();

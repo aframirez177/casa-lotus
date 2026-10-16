@@ -23,6 +23,7 @@ export const AJUSTES_DEFECTO = [
   ["Correo para avisos", "avisos@demo.casalotus.studio", "Recibe un correo por cada reserva web."],
   ["Pago por clase a profes", "", "Costo por clase dictada. Vacío: la app no lo muestra."],
   ["Días de reserva de cupos fijos", "14", "Hasta cuántos días adelante se reserva sola cada alumna fija."],
+  ["Hora del recordatorio", "18:00", "A esta hora del día anterior le llega a cada alumna el recordatorio de su clase."],
   ["Duración de la clase (minutos)", "60", "Cuánto dura cada clase. Se usa en el calendario, la app y los correos de confirmación."],
 ];
 
