@@ -20,6 +20,7 @@ import { TIPOS_CLASE, useProfes } from "./Agenda.jsx";
 import { SelectorClase } from "../reservar/SelectorClase.jsx";
 import { ESTADO, enlaceWhatsApp, primerNombre, fechaLegible, horaLegible, politicaCancelar, inicioClase } from "../../lib/reglas.js";
 import { haceTexto } from "../../lib/fechas.js";
+import { origenTexto } from "../../lib/fijos.js";
 
 export default function ClaseDetalle() {
   const { id } = useParams();
@@ -182,7 +183,7 @@ function HojaPersona({ g, clase: c, cerrar, cancelar, mover }) {
   const tarde = politicaCancelar({ estado: g.estado }, c, Date.now(), horas);
   const esTarde = g.estado === ESTADO.CONFIRMADA && tarde.ok && !tarde.devuelveClase;
   return (
-    <Hoja abierta={Boolean(g)} alCerrar={cerrar} titulo={g.nombre} descripcion={`${g.estado}${g.origen ? " · " + g.origen : ""}`}>
+    <Hoja abierta={Boolean(g)} alCerrar={cerrar} titulo={g.nombre} descripcion={`${g.estado}${g.origen ? " · " + origenTexto(g.origen) : ""}`}>
       <div className="space-y-3">
         <button type="button" onClick={() => mover(g)} className="tarjeta flex w-full items-center gap-4 p-4 text-left"><Repeat size={20} className="text-navy" /><span className="font-medium text-navy">Moverla a otra clase</span></button>
         <div className="tarjeta p-4">

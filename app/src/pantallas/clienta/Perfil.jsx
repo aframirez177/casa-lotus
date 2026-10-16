@@ -32,6 +32,8 @@ export default function Perfil() {
   const [perfil, setPerfil] = useState(PERFIL_VACIO);
   const [errores, setErrores] = useState({});
   const [confirmarWa, setConfirmarWa] = useState(false);
+  const recordar = useEditarPerfil();
+  const [recordatorios, setRecordatorios] = useState(null); // optimistic, until /api/yo answers
 
   // «Cómo llegó» starts from the visit's source when she never said it
   const original = useMemo(() => (data ? { ...PERFIL_VACIO, ...data.clienta.perfil, llego: data.clienta.perfil.llego || llegoDesdeAtribucion(), whatsapp: formatoCelular(data.clienta.perfil.whatsapp), contactoEmergencia: { nombre: data.clienta.perfil.contactoEmergencia?.nombre || "", whatsapp: formatoCelular(data.clienta.perfil.contactoEmergencia?.whatsapp || "") } } : null), [data]);
@@ -81,7 +83,7 @@ export default function Perfil() {
           <Seccion titulo="Tus datos">
             <div className="tarjeta grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
               <Entrada etiqueta="Nombre y apellido" valor={perfil.nombre} onCambio={(v) => cambiar({ nombre: v })} autoComplete="name" />
-              <Entrada etiqueta="Correo" opcional type="email" valor={perfil.correo} onCambio={(v) => cambiar({ correo: v })} autoComplete="email" ayuda="Para recordatorios y para entrar sin contraseña." />
+              <Entrada etiqueta="Correo" opcional type="email" valor={perfil.correo} onCambio={(v) => cambiar({ correo: v })} autoComplete="email" ayuda="Para recordarte tus clases el día anterior y para entrar sin contraseña." />
               <Entrada etiqueta="WhatsApp" valor={perfil.whatsapp} onCambio={(v) => cambiar({ whatsapp: formatoCelular(v) })} inputMode="tel" ayuda="Con este número entras a la app." className="sm:col-span-2" />
             </div>
           </Seccion>
@@ -103,10 +105,17 @@ export default function Perfil() {
 
       <Seccion titulo="Avisos">
         <div className="tarjeta divide-y divide-line px-5">
-          <div className="flex items-center gap-4 py-4">
-            <BellRing size={20} className="shrink-0 text-teal" />
-            <div className="min-w-0 flex-1"><p className="font-medium text-navy">Recordatorios de tus clases</p><p className="texto-s suave">Por WhatsApp, un día antes, y el código para entrar. Vienen con tu reserva.</p></div>
-          </div>
+          {clienta.limitada ? (
+            <div className="flex items-center gap-4 py-4">
+              <BellRing size={20} className="shrink-0 text-teal" />
+              <div className="min-w-0 flex-1"><p className="font-medium text-navy">Recordatorios de tus clases</p><p className="texto-s suave">Te escribimos el día anterior a cada clase.</p></div>
+            </div>
+          ) : (
+            <Interruptor activo={Boolean(clienta.perfil.correo) && (recordatorios ?? clienta.perfil.recordatorios !== false)} disabled={!clienta.perfil.correo || recordar.isPending}
+              etiqueta="Recordatorios por correo"
+              ayuda={clienta.perfil.correo ? `El día anterior a cada clase, a ${clienta.perfil.correo}, con un botón por si no puedes ir. Pronto también por WhatsApp.` : "Escribe tu correo en «Tus datos» y te recordamos cada clase el día anterior."}
+              onCambio={(v) => { setRecordatorios(v); recordar.mutate({ recordatorios: v }, { onSuccess: () => avisar(v ? "Te recordamos cada clase el día anterior." : "Listo, ya no te enviamos recordatorios."), onError: (er) => { setRecordatorios(null); avisar(er.mensaje, { tipo: "error" }); } }); }} />
+          )}
           {!clienta.limitada && (
             <Interruptor activo={cons.novedades?.acepta === true} onCambio={(v) => firmarUno({ ...cons, novedades: { acepta: v } })} etiqueta={CONSENTIMIENTOS.novedades.titulo} ayuda="Eventos, talleres y promociones. Nunca más de lo necesario." />
           )}

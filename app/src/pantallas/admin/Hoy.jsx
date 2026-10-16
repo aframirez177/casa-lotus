@@ -1,5 +1,6 @@
 // /app/admin — Ana's day: the week's occupancy (the number that governs), payments to confirm,
 // today's classes as a timeline, alerts by urgency, classes to mark.
+import { useState } from "react";
 import { Link } from "react-router";
 import { m } from "motion/react";
 import { ArrowRight, Hourglass, Users, Wallet, CircleDollarSign } from "lucide-react";
@@ -23,6 +24,7 @@ export default function Hoy() {
   const { data: t, isPending, error, refetch } = useTablero();
   const { data: nov } = useQuery({ ...consultaNovedades, enabled: false });
   const ahora = useAhora(60000);
+  const [todas, setTodas] = useState(false);
   if (isPending) return <EsqueletoPagina tarjetas={4} />;
   if (error) return <ErrorCaja error={error} reintentar={refetch} />;
 
@@ -47,7 +49,7 @@ export default function Hoy() {
           <div>
             <p className="etiqueta-sola !text-paper/65">Esta semana</p>
             <p className="mt-2 text-paper"><strong className="font-display text-2xl font-normal">{kpis.semana.ocupados}</strong><span className="text-paper/75"> de {kpis.semana.cupos} columpios</span></p>
-            <p className="texto-s text-paper/65">{kpis.semana.clases} clases</p>
+            <p className="texto-s text-paper/65">{kpis.semana.clases} clases{kpis.fijosActivos ? <> · <Link to="/admin/horario" className="underline decoration-paper/30 underline-offset-2 hover:text-paper">{kpis.fijosActivos} con horario fijo</Link></> : null}</p>
           </div>
         </m.section>
         <Kpi a="#por-confirmar" icono={<CircleDollarSign size={18} />} valor={kpis.pendientesPago} texto={kpis.pendientesPago === 1 ? "pago por confirmar" : "pagos por confirmar"} tono={kpis.pendientesPago ? "aviso" : ""} />
@@ -84,7 +86,10 @@ export default function Hoy() {
         <aside className="min-w-0">
           <Seccion titulo="Avisos" ayuda={t.alertas.length ? "Lo más urgente arriba. Un toque abre WhatsApp con el mensaje listo." : null}>
             {t.alertas.length ? (
-              <ul className="tarjeta divide-y divide-line px-4">{t.alertas.slice(0, 12).map((a) => <FilaAlerta key={a.id} a={a} />)}</ul>
+              <>
+                <ul className="tarjeta divide-y divide-line px-4">{t.alertas.slice(0, todas ? undefined : 12).map((a) => <FilaAlerta key={a.id} a={a} />)}</ul>
+                {t.alertas.length > 12 && <button type="button" onClick={() => setTodas(!todas)} className="mt-2 min-h-11 rounded-full px-3 texto-s font-medium text-teal hover:bg-white/70">{todas ? "Ver menos" : `Ver ${t.alertas.length - 12} ${t.alertas.length - 12 === 1 ? "aviso más" : "avisos más"}`}</button>}
+              </>
             ) : <Vacio titulo="Nada pendiente" texto="Cuando haya algo que avisar, aparece aquí." />}
           </Seccion>
           {kpis.enEspera > 0 && (

@@ -14,6 +14,7 @@ export const K = {
   novedades: ["admin", "novedades"],
   agenda: (desde, hasta) => ["admin", "agenda", desde, hasta],
   horario: ["admin", "horario"],
+  fijos: (f) => ["admin", "fijos", f ?? {}],
   clientas: (f) => ["admin", "clientas", f],
   segmentos: ["admin", "segmentos"],
   clienta: (id) => ["admin", "clienta", id],

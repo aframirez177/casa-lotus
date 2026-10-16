@@ -161,7 +161,8 @@ describe("returning people book in fewer steps", () => {
 });
 
 describe("cancelling", () => {
-  const reservar = () => { s.entrarComo("clienta"); const c = futuraLibre(30); return { c, r: post("/api/yo/reservas", { clase: c.id }).cuerpo }; };
+  // her weekly fijo would book (and spend) new classes as the clock moves: these tests look at one booking only
+  const reservar = () => { s.entrarComo("clienta"); for (const f of s.db.fijos) if (f.clienta === "C-0001") f.estado = "Pausado"; const c = futuraLibre(30); return { c, r: post("/api/yo/reservas", { clase: c.id }).cuerpo }; };
 
   test("on time: «Cancelada» and the class goes back to the plan", () => {
     const { c, r } = reservar();

@@ -49,3 +49,11 @@ export function porDia(clases) {
   }
   return [...grupos.entries()].map(([fecha, lista]) => ({ fecha, lista }));
 }
+
+/** «Tu clase del sábado 8:00» — the calm header when she arrives from a reminder's «No puedo ir». */
+export function tituloTuClase(c) {
+  if (!c?.fecha) return "Tu clase";
+  const dia = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"][new Date(c.fecha + "T12:00:00Z").getUTCDay()];
+  const [h, m = "00"] = String(c.hora || "").split(":");
+  return `Tu clase del ${dia} ${Number(h) % 12 || 12}:${m}`;
+}

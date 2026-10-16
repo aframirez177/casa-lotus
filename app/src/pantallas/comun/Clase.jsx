@@ -5,7 +5,8 @@ import { Link } from "react-router";
 import { m, AnimatePresence } from "motion/react";
 import { Check, X, Cake, Sparkles, HeartPulse, Phone, MessageCircle, CameraOff, ChevronRight, Lock, Hourglass, Clock, UserPlus, ListChecks, UserX } from "lucide-react";
 import { Columpios } from "../../ui/Columpios.jsx";
-import { Avatar, TagClase, SinTipo } from "../../ui/Basicos.jsx";
+import { Avatar, TagClase, SinTipo, TagFija } from "../../ui/Basicos.jsx";
+import { origenTexto } from "../../lib/fijos.js";
 import { useAsistencia, useNotasClase, useClientasProfe, useAgregarAsistente, useCerrarLista, usePedirReemplazo } from "../../api/hooks/profe.js";
 import { Boton } from "../../ui/Boton.jsx";
 import { Hoja } from "../../ui/Hoja.jsx";
@@ -174,6 +175,7 @@ function Persona({ g, puedeMarcar, poner, acciones, admin }) {
         <div className="min-w-0 flex-1">
           <p className="font-medium leading-tight text-navy">{g.nombre}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {g.fijo && <TagFija chica={false} />}
             {g.primeraVez && <span className="chip !bg-pilates"><Sparkles size={13} />Primera vez</span>}
             {g.cumple && <span className="chip !bg-multinivel"><Cake size={13} />Cumpleaños</span>}
             {g.experiencia && !g.primeraVez && <span className="chip">{g.experiencia}</span>}
@@ -228,7 +230,7 @@ function Persona({ g, puedeMarcar, poner, acciones, admin }) {
           </button>
         </div>
       )}
-      {admin && !puedeMarcar && !pendiente && g.estado === ESTADO.CONFIRMADA && <p className="mt-3 texto-s suave">Confirmada{g.origen ? ` · llegó por ${g.origen}` : ""}</p>}
+      {admin && !puedeMarcar && !pendiente && g.estado === ESTADO.CONFIRMADA && <p className="mt-3 texto-s suave">Confirmada{g.fijo ? " · horario fijo" : g.origen ? ` · llegó por ${origenTexto(g.origen)}` : ""}</p>}
     </m.li>
   );
 }

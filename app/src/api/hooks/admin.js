@@ -8,7 +8,8 @@ const q = (clave, ruta, consulta, staleTime = 30000, extra = {}) => ({ queryKey:
 export const useTablero = () => useQuery(q(K.tablero, "/api/admin/tablero", undefined, 20000, { refetchInterval: 120000 }));
 export const useAgenda = (desde, hasta) => useQuery(q(K.agenda(desde, hasta), "/api/admin/agenda", { desde, hasta }, 30000, { placeholderData: keepPreviousData }));
 export const useHorario = () => useQuery(q(K.horario, "/api/admin/horario", undefined, 60000));
-export const useClientas = (f) => useQuery(q(K.clientas(f), "/api/admin/clientas", f, 60000, { placeholderData: keepPreviousData }));
+export const useFijos = (f, enabled = true) => useQuery(q(K.fijos(f), "/api/admin/fijos", f, 20000, { enabled }));
+export const useClientas = (f, enabled = true) => useQuery(q(K.clientas(f), "/api/admin/clientas", f, 60000, { placeholderData: keepPreviousData, enabled }));
 export const useSegmentos = () => useQuery(q(K.segmentos, "/api/admin/segmentos", undefined, 60000));
 export const useClienta = (idc) => useQuery(q(K.clienta(idc), `/api/admin/clientas/${id(idc)}`, undefined, 30000, { enabled: Boolean(idc) }));
 export const usePagos = (mes) => useQuery(q(K.pagos(mes), "/api/admin/pagos", { mes }, 60000, { placeholderData: keepPreviousData }));
@@ -132,6 +133,38 @@ export function useEditarFranja() {
 export function useDesactivarFranja() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: (ids) => api.del(`/api/admin/horario/${id(ids)}`), onSuccess: () => { qc.invalidateQueries({ queryKey: K.horario }); qc.invalidateQueries({ queryKey: ["admin", "agenda"] }); qc.invalidateQueries({ queryKey: ["publico"] }); } });
+}
+
+/**
+ * Cupos fijos: every write books or frees swings in several classes, so after it the slot cards, her detail,
+ * the agenda, the dashboard (alerts, KPI), the profe rosters and public availability all refresh.
+ */
+function trasFijo(qc) {
+  qc.invalidateQueries({ queryKey: ["admin"] });
+  qc.invalidateQueries({ queryKey: ["profe"] });
+  qc.invalidateQueries({ queryKey: ["publico"] });
+}
+export function useCrearFijo() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (b) => api.post("/api/admin/fijos", b), onSuccess: () => trasFijo(qc) });
+}
+/** Pause, resume or change one: the state flips at once on every cached list, and rolls back on error. */
+export function useEditarFijo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id: idf, ...b }) => api.patch(`/api/admin/fijos/${id(idf)}`, b),
+    onMutate: ({ id: idf, estado }) => {
+      const antes = qc.getQueriesData({ queryKey: ["admin", "fijos"] });
+      if (estado) qc.setQueriesData({ queryKey: ["admin", "fijos"] }, (l) => (Array.isArray(l) ? l.map((f) => (f.id === idf ? { ...f, estado } : f)) : l));
+      return { antes };
+    },
+    onError: (_e, _v, ctx) => { for (const [k, d] of ctx?.antes || []) qc.setQueryData(k, d); },
+    onSettled: () => trasFijo(qc),
+  });
+}
+export function useTerminarFijo() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: (idf) => api.del(`/api/admin/fijos/${id(idf)}`), onSuccess: () => trasFijo(qc) });
 }
 
 export function useCrearClienta() {

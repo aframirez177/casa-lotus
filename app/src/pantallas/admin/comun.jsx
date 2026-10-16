@@ -2,7 +2,7 @@
 // a client picker, a register-payment sheet, and copy/share for links.
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { MessageCircle, Clock, AlertTriangle, CalendarCheck, Users, Wallet, Cake, ClipboardList, Hourglass, Sparkles, ChevronRight, Copy, Check, Search, Share2, CircleDollarSign, CalendarClock, UserX, UserRoundSearch, Tag } from "lucide-react";
+import { MessageCircle, Clock, AlertTriangle, CalendarCheck, Users, Wallet, Cake, ClipboardList, Hourglass, Sparkles, ChevronRight, Copy, Check, Search, Share2, CircleDollarSign, CalendarClock, UserX, UserRoundSearch, Tag, Repeat, CalendarX2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Boton } from "../../ui/Boton.jsx";
 import { Hoja } from "../../ui/Hoja.jsx";
@@ -18,6 +18,7 @@ import { MEDIOS, dinero, fechaLegible, horaLegible, hoyClave, primerNombre } fro
 import { duracionCorta, diaRelativo } from "../../lib/fechas.js";
 import { nombreClase } from "../../lib/clases.js";
 import { textoDetalle } from "../../lib/texto.js";
+import { origenTexto } from "../../lib/fijos.js";
 
 export const ETAPAS = {
   lead: { texto: "Interesada", clase: "chip" },
@@ -62,7 +63,7 @@ export function TarjetaPendiente({ p, nueva }) {
           <p className="texto-s text-ink first-letter:uppercase">{diaRelativo(p.clase.fecha)} · {horaLegible(p.clase.hora)} · {nombreClase(p.clase)}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {Number.isFinite(vence) && <span className={`chip ${urgente ? "chip-error" : "chip-aviso"}`}><Clock size={13} />{vence > 0 ? `Se libera en ${duracionCorta(vence)}` : "Apartado vencido"}</span>}
-            {p.origen && <span className="chip">{p.origen}</span>}
+            {p.origen && <span className="chip">{origenTexto(p.origen)}</span>}
           </div>
           {p.saldo > 0 && <p className="mt-2 texto-s text-teal">Tiene {p.saldo === 1 ? "1 clase" : p.saldo + " clases"} en su plan: no necesita pagar esta.</p>}
         </div>
@@ -133,20 +134,31 @@ const ICONO_ALERTA = {
   "ficha-incompleta": [ClipboardList, "bg-mist text-navy"], "necesita-reemplazo": [UserX, "bg-error-bg text-error"],
   "sin-profe": [UserRoundSearch, "bg-aviso-bg text-aviso"], "vino-sin-plan": [CircleDollarSign, "bg-error-bg text-error"],
   "sin-clase": [Tag, "bg-aviso-bg text-aviso"],
+  "fijo-sin-plan": [Repeat, "bg-aviso-bg text-aviso"], "fijo-sin-columpio": [CalendarX2, "bg-error-bg text-error"],
 };
 
 /** Server routes are absolute ("/app/admin/…"); the router already lives under /app. */
 export const rutaApp = (ruta = "") => ruta.replace(/^\/app(?=\/|$)/, "") || "/";
 
 export function FilaAlerta({ a }) {
+  const [pago, setPago] = useState(false);
   const [Icono, color] = ICONO_ALERTA[a.tipo] || [AlertTriangle, "bg-mist text-navy"];
   const destino = a.accion?.tipo === "abrir" ? rutaApp(a.accion.ruta) : a.clienta ? `/admin/clientas/${a.clienta.id}` : null;
+  // a regular without a plan: renew by WhatsApp, or register the payment right here (her held classes get confirmed)
+  const conPago = a.tipo === "fijo-sin-plan" && a.clienta;
+  const texto = destino ? (
+    <Link to={destino} className="block min-w-0 rounded-xl"><span className="block font-medium leading-snug text-navy">{textoDetalle(a.titulo)}</span><span className="block texto-s suave">{textoDetalle(a.detalle)}</span></Link>
+  ) : <div className="min-w-0"><p className="font-medium leading-snug text-navy">{textoDetalle(a.titulo)}</p><p className="texto-s suave">{textoDetalle(a.detalle)}</p></div>;
   return (
     <li className="flex items-center gap-3 py-3">
       <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${color}`}><Icono size={18} strokeWidth={1.8} /></span>
-      {destino ? (
-        <Link to={destino} className="min-w-0 flex-1 rounded-xl"><span className="block font-medium leading-snug text-navy">{textoDetalle(a.titulo)}</span><span className="block texto-s suave">{textoDetalle(a.detalle)}</span></Link>
-      ) : <div className="min-w-0 flex-1"><p className="font-medium leading-snug text-navy">{textoDetalle(a.titulo)}</p><p className="texto-s suave">{textoDetalle(a.detalle)}</p></div>}
+      {conPago ? (
+        <div className="min-w-0 flex-1">
+          {texto}
+          <button type="button" onClick={() => setPago(true)} className="chip chip-blanco mt-2 !min-h-9 !px-3 hover:bg-mist"><CircleDollarSign size={14} />Registrar pago</button>
+          <HojaPago abierta={pago} cerrar={() => setPago(false)} clienta={a.clienta} />
+        </div>
+      ) : <div className="min-w-0 flex-1">{texto}</div>}
       {a.accion?.tipo === "whatsapp" ? (
         <a href={a.accion.enlace} target="_blank" rel="noopener" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-navy text-paper hover:bg-navy-900" aria-label={`Escribir por WhatsApp: ${a.titulo}`}><MessageCircle size={18} /></a>
       ) : destino ? <ChevronRight size={18} className="shrink-0 text-muted" aria-hidden="true" /> : null}

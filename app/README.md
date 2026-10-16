@@ -83,6 +83,10 @@ library load when they are used, and motion's providers live in the role frames 
 ## Notes
 
 - Never states a swing count to the public: the booking UI shows swing icons and words («Quedan pocos cupos»).
+- Cupos fijos (regulars who come every week): each Horario slot card shows its «fijas» (staff only) and opens a sheet to add
+  several people in a row (type a name, Enter); her detail has «Horario fijo» (add, pause from a date with «Cancelar sus
+  clases ya reservadas», resume, end). The server books each fijo's next 14 days; bookings carry `fijo` and show «Fija»
+  on rosters and in her classes; Hoy shows `fijo-sin-plan` (with «Registrar pago») and `fijo-sin-columpio`.
 - A class without a type («Por confirmar» in the Sheet) reads «Clase aérea» everywhere; staff screens add a «Sin tipo» badge
   and Ana gets the `sin-clase` alert. Times read as a range (`Clase.fin`, else start + `estudio.duracion`).
 - Every date rule comes from `shared/reglas.js` (Bogotá time); consent texts from `shared/consentimientos.js`.

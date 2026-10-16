@@ -13,6 +13,8 @@ import { Anillo } from "../../ui/Anillo.jsx";
 import { formatoCelular } from "../../ui/Campos.jsx";
 import { useAvisos } from "../../ui/Avisos.jsx";
 import { Etapa, HojaPago, Compartir } from "./comun.jsx";
+import { SeccionHorarioFijo } from "./Fijos.jsx";
+import { TagFija } from "../../ui/Basicos.jsx";
 import { ICONOS_EVENTO } from "../../shell/Campana.jsx";
 import { SelectorClase } from "../reservar/SelectorClase.jsx";
 import { FormTu, FormFicha, PERFIL_VACIO } from "../reservar/Ficha.jsx";
@@ -36,7 +38,7 @@ export default function ClientaDetalle() {
 
   if (isPending) return <div className="space-y-6 pt-4"><div className="flex items-center gap-4"><Esqueleto className="h-[72px] w-[72px] rounded-full" /><div className="space-y-2"><Esqueleto className="h-10 w-56" /><Esqueleto className="h-4 w-40" /></div></div><EsqueletoLista filas={3} /></div>;
   if (error) return <ErrorCaja error={error} reintentar={refetch} />;
-  const proximas = c.reservas.filter((r) => [ESTADO.CONFIRMADA, ESTADO.PENDIENTE].includes(r.estado) && r.clase.fecha >= partesBogota(Date.now()).fecha);
+  const proximas = c.reservas.filter((r) => [ESTADO.CONFIRMADA, ESTADO.PENDIENTE].includes(r.estado) && r.clase.fecha >= partesBogota(Date.now()).fecha).sort((a, b) => (a.clase.id < b.clase.id ? -1 : 1));
 
   return (
     <div className="max-w-[1080px]">
@@ -83,11 +85,15 @@ export default function ClientaDetalle() {
             </div>
           </Seccion>
 
+          <Seccion titulo="Horario fijo" id="horario-fijo">
+            <SeccionHorarioFijo c={c} />
+          </Seccion>
+
           <Seccion titulo="Próximas clases">
             {proximas.length ? (
               <ul className="space-y-2">{proximas.map((r) => (
                 <li key={r.id}><Link to={`/admin/agenda/${encodeURIComponent(r.clase.id)}`} className="tarjeta flex items-center gap-3 p-4">
-                  <div className="min-w-0 flex-1"><p className="font-medium text-navy first-letter:uppercase">{diaRelativo(r.clase.fecha)} · {horaLegible(r.clase.hora)}</p><p className="texto-s suave">{nombreClase(r.clase)}</p>{r.atribucion && <p className="mt-1 text-[0.8125rem] text-teal">{textoAtribucion(r.atribucion)}</p>}</div>
+                  <div className="min-w-0 flex-1"><p className="font-medium text-navy first-letter:uppercase">{diaRelativo(r.clase.fecha)} · {horaLegible(r.clase.hora)}</p><p className="texto-s suave">{nombreClase(r.clase)}{r.fijo && <TagFija className="ml-2 align-middle" />}</p>{r.atribucion && <p className="mt-1 text-[0.8125rem] text-teal">{textoAtribucion(r.atribucion)}</p>}</div>
                   <span className={`chip ${r.estado === ESTADO.PENDIENTE ? "chip-aviso" : "chip-ok"}`}>{r.estado === ESTADO.PENDIENTE ? "Espera pago" : "Confirmada"}</span>
                 </Link></li>
               ))}</ul>

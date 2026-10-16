@@ -12,20 +12,24 @@ import { useAvisos } from "../../ui/Avisos.jsx";
 import { TIPOS_CLASE, useProfes } from "./Agenda.jsx";
 import { colorClase, nombreClase } from "../../lib/clases.js";
 import { horaLegible, hoyClave, fechaLegible } from "../../lib/reglas.js";
+import { slotTexto, textoFijas } from "../../lib/fijos.js";
+import { AvataresFijos, HojaFijasSlot } from "./Fijos.jsx";
 
+const fijasTotal = (lista) => lista.reduce((n, x) => n + (x.cuposFijos || 0), 0);
 const SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 export default function Horario() {
   const { data, isPending, error, refetch } = useHorario();
   const [params, setParams] = useSearchParams();
   const [editar, setEditar] = useState(null);
+  const [fijas, setFijas] = useState(null); // slot id whose regulars sheet is open
   const [nueva, setNueva] = useState(params.get("nueva") === "1");
   useEffect(() => { if (params.get("nueva")) setParams({}, { replace: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const activas = (data || []).filter((s) => s.activa);
 
   return (
     <div>
-      <Encabezado titulo="Horario" grande={false} lead={data ? `${activas.length} franjas cada semana · ${activas.reduce((s, x) => s + x.cupos, 0)} columpios` : " "}
+      <Encabezado titulo="Horario" grande={false} lead={data ? `${activas.length} franjas cada semana · ${activas.reduce((s, x) => s + x.cupos, 0)} columpios${fijasTotal(activas) ? ` · ${fijasTotal(activas)} ${fijasTotal(activas) === 1 ? "fija" : "fijas"}` : ""}` : " "}
         accion={<Boton tam="s" icono={<Plus size={17} />} onClick={() => setNueva(true)}>Nueva franja</Boton>} />
       {isPending ? <Esqueleto className="h-80 rounded-[28px]" /> : error ? <ErrorCaja error={error} reintentar={refetch} /> : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 lg:gap-3">
@@ -36,14 +40,23 @@ export default function Horario() {
                 <h2 className="etiqueta-sola mb-3">{dia}</h2>
                 <div className="grid gap-3">
                   {lista.map((s) => (
-                    <button key={s.id} type="button" onClick={() => setEditar(s)} className={`tarjeta relative overflow-hidden p-4 text-left ${s.activa ? "" : "opacity-55"}`}>
+                    <div key={s.id} className={`tarjeta relative overflow-hidden ${s.activa ? "" : "opacity-55"}`}>
                       <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5" style={{ background: colorClase(s.clase) }} />
-                      <p className="flex items-baseline gap-1 whitespace-nowrap leading-none text-navy"><span className="font-display text-[1.45rem]">{horaLegible(s.hora).split(" ")[0]}</span><span className="text-[0.75rem] text-muted">{horaLegible(s.hora).split(" ").slice(1).join(" ")}</span></p>
-                      <p className="mt-2 text-[0.875rem] font-medium leading-tight text-navy">{nombreClase(s)}</p>
-                      <SinTipo clase={s} className="mt-1" />
-                      <p className="mt-3 flex items-center gap-1.5 texto-s text-ink"><Users size={14} />{s.cupos} · {s.profe || "Profe por definir"}</p>
-                      <p className="mt-1 text-[0.8125rem] text-muted">{s.activa ? `${s.proximas} ${s.proximas === 1 ? "clase creada" : "clases creadas"}` : "Desactivada"}</p>
-                    </button>
+                      <button type="button" onClick={() => setEditar(s)} className="block w-full rounded-t-[28px] p-4 pb-3 text-left hover:bg-mist/40">
+                        <p className="flex items-baseline gap-1 whitespace-nowrap leading-none text-navy"><span className="font-display text-[1.45rem]">{horaLegible(s.hora).split(" ")[0]}</span><span className="text-[0.75rem] text-muted">{horaLegible(s.hora).split(" ").slice(1).join(" ")}</span></p>
+                        <p className="mt-2 text-[0.875rem] font-medium leading-tight text-navy">{nombreClase(s)}</p>
+                        <SinTipo clase={s} className="mt-1" />
+                        <p className="mt-3 flex items-center gap-1.5 texto-s text-ink"><Users size={14} />{s.cupos} · {s.profe || "Profe por definir"}</p>
+                        <p className="mt-1 text-[0.8125rem] text-muted">{s.activa ? `${s.proximas} ${s.proximas === 1 ? "clase creada" : "clases creadas"}` : "Desactivada"}</p>
+                      </button>
+                      {s.activa && (
+                        <button type="button" onClick={() => setFijas(s.id)} aria-label={`Alumnas fijas de los ${slotTexto(s.dia, s.hora)}: ${textoFijas(s.cuposFijos || 0, s.cupos)}`}
+                          className="flex min-h-12 w-full flex-wrap items-center gap-x-2 gap-y-1 border-t border-line px-4 py-2.5 text-left hover:bg-mist/40">
+                          {s.fijos?.length ? <AvataresFijos fijos={s.fijos} /> : <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-mist text-navy" aria-hidden="true"><Plus size={13} /></span>}
+                          <span className={`text-[0.8125rem] font-medium ${s.cuposFijos ? "text-navy" : "text-muted"}`}>{s.fijos?.length ? textoFijas(s.cuposFijos, s.cupos) : "Agregar fijas"}</span>
+                        </button>
+                      )}
+                    </div>
                   ))}
                   {!lista.length && <p className="rounded-[22px] border border-dashed border-line p-4 text-center text-[0.8125rem] text-muted">—</p>}
                 </div>
@@ -53,6 +66,7 @@ export default function Horario() {
         </div>
       )}
       <HojaFranja franja={editar} abierta={Boolean(editar)} cerrar={() => setEditar(null)} />
+      <HojaFijasSlot slot={(data || []).find((s) => s.id === fijas)} abierta={Boolean(fijas)} cerrar={() => setFijas(null)} />
       <HojaFranja abierta={nueva} cerrar={() => setNueva(false)} />
     </div>
   );

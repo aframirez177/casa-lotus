@@ -17,7 +17,7 @@ export function FormTu({ perfil, cambiar, errores = {} }) {
       <Entrada etiqueta="WhatsApp" valor={perfil.whatsapp} onCambio={(v) => cambiar({ whatsapp: formatoCelular(v) })} inputMode="tel" autoComplete="tel-national" placeholder="300 123 4567"
         ayuda="Por aquí te recordamos la clase." error={errores.whatsapp} />
       <Entrada etiqueta="Correo" opcional type="email" valor={perfil.correo} onCambio={(v) => cambiar({ correo: v })} autoComplete="email" placeholder="tu@correo.com"
-        ayuda="Para mandarte la confirmación." error={errores.correo} />
+        ayuda="Para mandarte la confirmación y recordarte la clase." error={errores.correo} />
     </div>
   );
 }

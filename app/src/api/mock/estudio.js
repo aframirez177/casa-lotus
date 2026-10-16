@@ -22,6 +22,7 @@ export const AJUSTES_DEFECTO = [
   ["Llave de pago", "319 328 8469", "Nequi, DaviPlata y Bre-B. Nunca un número de cuenta."],
   ["Correo para avisos", "avisos@demo.casalotus.studio", "Recibe un correo por cada reserva web."],
   ["Pago por clase a profes", "", "Costo por clase dictada. Vacío: la app no lo muestra."],
+  ["Días de reserva de cupos fijos", "14", "Hasta cuántos días adelante se reserva sola cada alumna fija."],
   ["Duración de la clase (minutos)", "60", "Cuánto dura cada clase. Se usa en el calendario, la app y los correos de confirmación."],
 ];
 
@@ -266,6 +267,32 @@ export function sembrar(ahora = Date.now()) {
     if (ocupados(reservas, ayer.id) > ayer.cupos) ayer.cupos = ocupados(reservas, ayer.id);
   }
 
+  /* ── cupos fijos: the regulars who come every week (the demo adapter books their next 14 days on load) ──
+     Saturday 8:00 is full, so Valentina's new fijo has no swing this week (alert «fijo-sin-columpio»);
+     Sofía has no classes left, so her Monday is held unpaid (alert «fijo-sin-plan»); Carolina paused hers. */
+  const fijos = [];
+  const fijo = (nombre, dia, hora, { estado = "Activo", haceDias = 40 } = {}) => {
+    const cl = porNombre(nombre);
+    const f = { id: "F-" + String(fijos.length + 1).padStart(4, "0"), clienta: cl.id, dia, hora, desde: sumarDias(hoy, -haceDias), hasta: "", estado, notas: "", creado: iso(ahora - haceDias * 86400000) };
+    fijos.push(f);
+    // her bookings in that slot since it started came from it
+    for (const res of reservas) {
+      const c = clases.find((k) => k.id === res.clase);
+      if (res.clienta === cl.id && c.dia === dia && c.hora === hora && c.fecha >= f.desde && res.estado !== ESTADO.CANCELADA) res.origen = "Cupo fijo · " + f.id;
+    }
+  };
+  fijo("Juliana", "Sábado", "08:00", { haceDias: 70 });
+  fijo("María José", "Sábado", "08:00", { haceDias: 50 });
+  fijo("Camila", "Sábado", "08:00");
+  fijo("Diana", "Sábado", "08:00", { haceDias: 30 });
+  fijo("Valentina", "Sábado", "08:00", { haceDias: 1 });
+  fijo("Felipe", "Sábado", "09:15", { haceDias: 30 });
+  fijo("Carolina", "Sábado", "09:15", { estado: "Pausado", haceDias: 60 });
+  fijo("Paola", "Miércoles", "19:00");
+  fijo("Sara", "Miércoles", "19:00", { haceDias: 20 });
+  fijo("Andrea", "Lunes", "18:00", { haceDias: 35 });
+  fijo("Sofía", "Lunes", "18:00", { haceDias: 25 });
+
   /* ── messages (WhatsApp Cloud API, test mode) ── */
   const conv = (id, cl, nombre, whatsapp, mensajes, ventanaHoras, noLeidos, etiquetas = []) => ({
     id, whatsapp, nombre, clienta: cl ? { id: cl.id, nombre: cl.nombre } : null, noLeidos, estado: "abierta", etiquetas,
@@ -309,11 +336,11 @@ export function sembrar(ahora = Date.now()) {
   const registro = eventos.map((e) => ({ ts: e.ts, actor: { tipo: e.actor.tipo, id: e.actor.tipo === "admin" ? "U-1" : "", nombre: e.actor.nombre }, accion: e.tipo, objeto: e.clienta || "", detalle: e.detalle }));
 
   return {
-    version: 1, dia: hoy,
+    version: 2, dia: hoy,
     ajustes: AJUSTES_DEFECTO.map(([ajuste, valor, ayuda]) => ({ ajuste, valor, ayuda })),
     planes: PLANES.map((p) => ({ ...p })),
     horario: HORARIO.map((h) => ({ ...h, id: h.dia + " " + h.hora })),
-    clases, clientas: clientas.map(({ _g, ...c }) => c), compras, reservas, espera,
+    clases, clientas: clientas.map(({ _g, ...c }) => c), compras, reservas, espera, fijos,
     equipo: EQUIPO.map((u, i) => ({ ...u, activa: true, foto: "", creada: sumarDias(hoy, -200 + i * 20), ultimoAcceso: iso(ahora - (i + 1) * 3 * 3600000) })),
     eventos, registro, conversaciones,
     plantillas: PLANTILLAS,

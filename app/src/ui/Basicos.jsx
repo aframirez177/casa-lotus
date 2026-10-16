@@ -1,5 +1,5 @@
 // Small shared pieces: headers, sections, empty states, avatars, class tags, error boxes.
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Repeat } from "lucide-react";
 import { Simbolo } from "./Logo.jsx";
 import { colorClase, nombreClase, sinTipo } from "../lib/clases.js";
 import { Boton } from "./Boton.jsx";
@@ -70,6 +70,11 @@ export function TagClase({ clase, className = "" }) {
 /** Staff only: the class has no type yet (the public reads «Clase aérea»). */
 export function SinTipo({ clase, className = "" }) {
   return sinTipo(clase) ? <span className={`chip chip-aviso !min-h-6 !px-2 !text-[0.6875rem] ${className}`} title="Ponle el tipo de clase en Horario o en la clase">Sin tipo</span> : null;
+}
+
+/** «Fija»: the booking came from her weekly «cupo fijo» (staff rosters, her detail, and her own classes). */
+export function TagFija({ className = "", claro = false, chica = true }) {
+  return <span className={`chip ${chica ? "!min-h-6 !gap-1 !px-2 !text-[0.75rem]" : ""} ${claro ? "!bg-paper/15 !text-paper" : "chip-blanco"} ${className}`} title="Horario fijo: se reserva sola cada semana"><Repeat size={chica ? 12 : 13} aria-hidden="true" />Fija</span>;
 }
 
 /** A thin colour field that marks the class type on a card's edge. */

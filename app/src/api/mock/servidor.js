@@ -8,6 +8,7 @@ import {
   fechasDeClase, festivosEntre, claseId, diaDeSemana, dinero, CONSENTIMIENTOS, fichaCompleta as fichaCompletaRegla, horaTexto,
 } from "../../lib/reglas.js";
 import { sembrar } from "./estudio.js";
+import { slotTexto } from "../../lib/fijos.js";
 
 const CLAVE = "cl_demo_estudio_v1";
 const iso = (ms) => new Date(ms).toISOString();
@@ -30,7 +31,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     if (!persistir || typeof sessionStorage === "undefined") return null;
     try {
       const d = JSON.parse(sessionStorage.getItem(CLAVE) || "null");
-      return d && d.version === 1 && d.dia === hoyClave(ahora()) ? d : null;
+      return d && d.version === 2 && d.dia === hoyClave(ahora()) ? d : null;
     } catch { return null; }
   }
   function guardar() {
@@ -61,6 +62,9 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
   const reserva = (id) => db.reservas.find((r) => r.id === id);
   const plan = (nombre) => db.planes.find((p) => p.nombre === nombre);
   const usuario = (id) => db.equipo.find((u) => u.id === id);
+  const fijo = (id) => db.fijos.find((f) => f.id === id);
+  /** The fijo a booking came from: its Origen is «Cupo fijo · F-0001» (a reschedule copies it, so the moved booking keeps it). */
+  const fijoDe = (r) => (/^Cupo fijo · (F-\d+)$/.exec(r?.origen || "") || [])[1] || null;
   const ocupados = (idClase) => ocupadosEn(db.reservas, idClase);
   const esPruebaCompra = (idCompra) => { const c = db.compras.find((x) => x.id === idCompra); return c && plan(c.plan)?.tipo === "Prueba"; };
 
@@ -90,7 +94,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       reserva: r.id, clienta: r.clienta, nombre: cl.nombre, whatsapp: cl.whatsapp, whatsappTexto: whatsappLegible(cl.whatsapp), estado: r.estado,
       primeraVez: primeraVez(r.clienta, clase(r.clase)), experiencia: cl.experiencia || "", salud: cl.salud || "",
       cumple: d !== null && (d <= 3 || d >= 362), autorizaImagen: typeof cl.consentimientos?.imagen?.acepta === "boolean" ? cl.consentimientos.imagen.acepta : null,
-      contactoEmergencia: contactoTexto(cl), origen: r.origen || "",
+      contactoEmergencia: contactoTexto(cl), origen: r.origen || "", fijo: fijoDe(r),
     };
   }
   function esperaItem(e) {
@@ -119,7 +123,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const c = clase(r.clase);
     const p = plan(nombrePlan) || plan("Clase de prueba");
     const texto = `Hola Casa Lotus, soy ${cl.nombre}. Te envío el comprobante de ${p.nombre === "Clase de prueba" ? "mi clase de prueba" : "mi plan " + p.nombre} para el ${fechaLegible(c.fecha)} a las ${horaLegible(c.hora)} (código ${r.id}).`;
-    return { monto: p.precio, plan: p.nombre, llave: llave(), medios: ["Nequi", "DaviPlata", "Bre-B"], whatsapp: waReservas(), venceApartado: r.venceApartado, waTexto: texto, waEnlace: enlaceWhatsApp(waReservas(), texto) };
+    return { monto: p.precio, plan: p.nombre, llave: llave(), medios: ["Nequi", "DaviPlata", "Bre-B"], whatsapp: waReservas(), venceApartado: r.venceApartado || null, waTexto: texto, waEnlace: enlaceWhatsApp(waReservas(), texto) };
   }
   function reservaClienta(r, { sinPlan = false } = {}) {
     const c = clase(r.clase), pol = politicas(), t = ahora();
@@ -131,7 +135,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       id: r.id, estado: r.estado, clase: claseVista(c), compra: sinPlan ? undefined : r.compra || undefined, plan: sinPlan && compra ? undefined : compra?.plan || r.planPedido || undefined,
       puedeCancelar: can.ok, cancelarSinCosto: Boolean(can.ok && (can.devuelveClase || r.estado === ESTADO.PENDIENTE)), limiteCancelar: iso(can.limiteMs),
       puedeReagendar: reag.ok, limiteReagendar: iso(reag.limiteMs), reagendadaDe: r.reagendadaDe || undefined,
-      pago: r.estado === ESTADO.PENDIENTE ? pagoDe(r, r.planPedido || "Clase de prueba") : undefined,
+      pago: r.estado === ESTADO.PENDIENTE ? pagoDe(r, r.planPedido || "Clase de prueba") : undefined, fijo: sinPlan ? null : fijoDe(r),
     };
   }
   function saldoDe(idClienta) {
@@ -148,6 +152,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       intereses: cl.intereses || [], salud: cl.salud || "", eps: cl.eps || "",
       contactoEmergencia: { nombre: cl.contactoEmergencia?.nombre || "", whatsapp: cl.contactoEmergencia?.whatsapp || "" },
       experiencia: cl.experiencia || "", llego: cl.llego || "",
+      recordatorios: !(cl.etiquetas || []).includes("sin-recordatorios"),
     };
   }
   const fichaCompleta = (cl) => fichaCompletaRegla(perfilDe(cl), cl.consentimientos || {});
@@ -166,6 +171,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const segs = [];
     if (agendadas) segs.push("agendadas");
     if (s.clases > 0) segs.push("con-clases");
+    if (db.fijos.some((f) => f.clienta === cl.id && f.estado === "Activo")) segs.push("con-cupo-fijo");
     if (s.clases > 0 && s.clases <= aviso) segs.push("poquitas");
     if (s.clases > 0 && s.vence && s.vence <= sumarDias(h, dias)) segs.push("vence-pronto");
     if (s.clases === 0 && otras.some((c) => c.fecha >= sumarDias(h, -45))) segs.push("sin-clases");
@@ -225,6 +231,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       espera: db.espera.filter((e) => e.clienta === cl.id && e.estado === "Esperando").map(esperaItem),
       conversacion: conv ? { id: conv.id, noLeidos: conv.noLeidos, ultimoMensaje: ultimoMensaje(conv) } : undefined,
       linea: lineaDe(cl),
+      fijos: db.fijos.filter((f) => f.clienta === cl.id).sort((a, b) => (a.estado === "Terminado") - (b.estado === "Terminado") || (a.id < b.id ? -1 : 1)).map(fijoVista),
     };
   }
 
@@ -313,6 +320,75 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     if (enEspera.length) emitir("espera", "Se liberó un columpio", `${fechaLegible(c.fecha)}, ${horaLegible(c.hora)} · ${enEspera.length} en espera`, { clase: c.id });
     return { devolvioClase: devuelve && r.compra !== "" };
   }
+  /* ── cupos fijos: a regular's weekly slot books itself for the next DIAS_FIJO days ── */
+  const diasFijo = () => Math.min(60, Math.max(1, num("Días de reserva de cupos fijos", 14)));
+  /** Classes of a fijo's slot inside its window (from today, or its «desde», to +14 days, never past its «hasta»). */
+  function clasesDelFijo(f) {
+    const h = hoy(), ini = f.desde > h ? f.desde : h;
+    let fin = sumarDias(h, diasFijo());
+    if (f.hasta && f.hasta < fin) fin = f.hasta;
+    return db.clases.filter((c) => c.dia === f.dia && c.hora === f.hora && (c.tipo || "Regular") === "Regular" && c.fecha >= ini && c.fecha <= fin && c.estado !== ESTADO_CLASE.CANCELADA && inicioClase(c) > ahora());
+  }
+  /** Only an active fijo books (a pause from a future date keeps what is already booked until «hasta»). */
+  const fijoReserva = (f) => f.estado === "Activo";
+  const DIAS_UNO = { Lunes: "lunes", Martes: "martes", Miércoles: "miércoles", Jueves: "jueves", Viernes: "viernes", Sábado: "sábado", Domingo: "domingo" };
+  /**
+   * Books her into every class of the window she is not in yet. With a plan → Confirmada; without → «Pendiente de pago»
+   * that never expires («Cupo fijo · sin plan»). A date she already had from this fijo (even cancelled) is never booked again.
+   */
+  function generarFijo(f) {
+    const creadas = [], conflictos = [];
+    if (!fijoReserva(f)) return { creadas, conflictos };
+    for (const c of clasesDelFijo(f)) {
+      if (db.reservas.some((r) => r.clase === c.id && r.clienta === f.clienta && (yaDelFijo(r, f) || OCUPAN.includes(r.estado)))) continue;
+      if (ocupados(c.id) >= Number(c.cupos)) { conflictos.push({ clase: claseVista(c), motivo: "llena" }); continue; }
+      const compra = elegirCompra(db.compras, db.reservas, f.clienta, c.fecha);
+      const r = {
+        id: siguienteId("R", db.reservas.map((x) => x.id)), creada: iso(ahora()), clase: c.id, clienta: f.clienta,
+        estado: compra ? ESTADO.CONFIRMADA : ESTADO.PENDIENTE, compra: compra ? compra.id : "", origen: "Cupo fijo · " + f.id, venceApartado: "",
+        notas: compra ? "" : "Cupo fijo · sin plan", reagendadaDe: "", atribucion: "", planPedido: compra ? "" : ultimoPlan(f.clienta),
+      };
+      db.reservas.push(r);
+      creadas.push(r);
+    }
+    return { creadas, conflictos };
+  }
+  const generarFijos = () => { for (const f of db.fijos) generarFijo(f); };
+  /** A date this fijo already had (she cancelled it herself: never again). Dates a pause or an end cancelled come back on resume. */
+  const yaDelFijo = (r, f) => fijoDe(r) === f.id && !(r.estado === ESTADO.CANCELADA && /Cupo fijo (pausado|terminado|con fecha de fin)$/.test(r.notas || ""));
+  /** Her fijo's bookings still ahead (after `despues` when given), cancelled without cost: the class goes back to her plan. */
+  function cancelarDelFijo(f, despues = "", nota = "Cupo fijo pausado") {
+    const hechas = [];
+    for (const r of db.reservas.filter((x) => fijoDe(x) === f.id && ACTIVAS.includes(x.estado))) {
+      const c = clase(r.clase);
+      if (inicioClase(c) <= ahora() || (despues && c.fecha <= despues)) continue;
+      r.estado = ESTADO.CANCELADA; r.venceApartado = ""; r.notas = nota;
+      hechas.push(r);
+    }
+    return hechas.map((r) => reservaClienta(r));
+  }
+  /** After a payment: her unpaid fijo bookings take the new plan, oldest class first. */
+  function confirmarFijasPendientes(idClienta) {
+    const lista = db.reservas.filter((r) => r.clienta === idClienta && fijoDe(r) && r.estado === ESTADO.PENDIENTE && inicioClase(clase(r.clase)) > ahora()).sort((a, b) => (a.clase < b.clase ? -1 : 1));
+    const hechas = [];
+    for (const r of lista) {
+      const compra = elegirCompra(db.compras, db.reservas, idClienta, clase(r.clase).fecha);
+      if (!compra) continue;
+      r.estado = ESTADO.CONFIRMADA; r.compra = compra.id; r.notas = ""; r.planPedido = ""; r.venceApartado = "";
+      hechas.push(r);
+    }
+    return hechas.map((r) => reservaClienta(r));
+  }
+  function fijoVista(f) {
+    const cl = clienta(f.clienta) || {};
+    const proximas = db.reservas.filter((r) => fijoDe(r) === f.id && ACTIVAS.includes(r.estado) && clase(r.clase).fecha >= hoy())
+      .sort((a, b) => (a.clase < b.clase ? -1 : 1)).map((r) => ({ clase: claseVista(clase(r.clase)), estado: r.estado, reserva: r.id }));
+    return {
+      id: f.id, clienta: { id: cl.id, nombre: cl.nombre }, dia: f.dia, hora: f.hora, slot: f.dia + " " + f.hora, slotTexto: slotTexto(f.dia, f.hora),
+      desde: f.desde, hasta: f.hasta || "", estado: f.estado, notas: f.notas || "", proximas,
+    };
+  }
+
   function clienteSegunWhatsApp(wa) { return db.clientas.find((c) => c.whatsapp === wa); }
   function nuevaClienta(perfil, extra = {}) {
     const id = siguienteId("C", db.clientas.map((c) => c.id));
@@ -333,6 +409,11 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     if (p.intereses) poner("intereses", p.intereses.slice(0, 2));
     poner("salud", p.salud); poner("eps", p.eps); poner("experiencia", p.experiencia); poner("llego", p.llego);
     if (p.contactoEmergencia) poner("contactoEmergencia", { nombre: p.contactoEmergencia.nombre || "", whatsapp: normalizaWhatsApp(p.contactoEmergencia.whatsapp) || "" });
+    // reminders off = the tag «sin-recordatorios» (what the e-mail's «No quiero recordatorios» sets)
+    if (typeof p.recordatorios === "boolean" && !soloVacios) {
+      const sin = (cl.etiquetas || []).filter((x) => x !== "sin-recordatorios");
+      cl.etiquetas = p.recordatorios ? sin : [...sin, "sin-recordatorios"];
+    }
   }
   function firmar(cl, cons = {}) {
     cl.consentimientos = cl.consentimientos || {};
@@ -390,11 +471,32 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       const texto = `Hola ${primerNombre(cl.nombre)}, ¡qué bueno verte en clase el ${fechaLegible(c.fecha)}! Te escribo para el pago de esa clase. ¿Me envías el comprobante a la llave ${llave()}?`;
       lista.push({ id: "A-sinplan-" + r.id, tipo: "vino-sin-plan", prioridad: 1, titulo: `${primerNombre(cl.nombre)} vino sin plan`, detalle: `${fechaLegible(c.fecha)} · cóbrale la clase o registra su pago`, clienta: { id: cl.id, nombre: cl.nombre }, clase: claseVista(c), accion: wa(cl, texto) });
     }
+    // cupos fijos: a regular without a plan (her swing is held unpaid) and a regular left without a swing (class full)
+    const fijoSinPlan = new Set();
+    for (const f of db.fijos.filter(fijoReserva)) {
+      const cl = clienta(f.clienta), n = primerNombre(cl.nombre), st = slotTexto(f.dia, f.hora);
+      const sinPago = db.reservas.filter((r) => fijoDe(r) === f.id && r.estado === ESTADO.PENDIENTE && inicioClase(clase(r.clase)) > t).map((r) => clase(r.clase)).sort((a, b) => (a.id < b.id ? -1 : 1));
+      if (sinPago.length) {
+        fijoSinPlan.add(cl.id);
+        const c = sinPago[0];
+        lista.push({ id: "fijo-sin-plan:" + f.id, tipo: "fijo-sin-plan", prioridad: inicioClase(c) - t < 48 * 3600000 ? 1 : 2, titulo: `${n} tiene horario fijo y no tiene plan`,
+          detalle: `${st} · ${sinPago.length === 1 ? "su columpio del " + fechaCorta(c.fecha) + " está apartado" : sinPago.length + " clases apartadas"} sin pago`,
+          clienta: { id: cl.id, nombre: cl.nombre }, clase: claseVista(c),
+          accion: cl.whatsapp ? wa(cl, `Hola ${n}, tu clase fija del ${DIAS_UNO[f.dia] || f.dia.toLowerCase()} ${horaLegible(f.hora)} sigue apartada para ti. Para confirmarla, ¿renovamos tu plan?`) : { tipo: "abrir", ruta: "/app/admin/clientas/" + cl.id } });
+      }
+      for (const c of clasesDelFijo(f)) {
+        if (db.reservas.some((r) => r.clase === c.id && r.clienta === f.clienta && (yaDelFijo(r, f) || OCUPAN.includes(r.estado)))) continue;
+        if (ocupados(c.id) < Number(c.cupos)) continue;
+        lista.push({ id: `fijo-sin-columpio:${f.id}:${c.id}`, tipo: "fijo-sin-columpio", prioridad: 1, titulo: `${n} no tiene columpio el ${fechaCorta(c.fecha)}`,
+          detalle: `Es su horario fijo (${st}) y la clase está llena. Sube los cupos o muévela.`,
+          clienta: { id: cl.id, nombre: cl.nombre }, clase: claseVista(c), accion: { tipo: "abrir", ruta: "/app/admin/agenda/" + encodeURIComponent(c.id) } });
+      }
+    }
     for (const cl of db.clientas) {
       const { segs } = segmentosDe(cl), s = saldoDe(cl.id), n = primerNombre(cl.nombre);
       if (segs.includes("poquitas")) lista.push({ id: "A-saldo-" + cl.id, tipo: "saldo-bajo", prioridad: 2, titulo: `A ${n} le ${s.clases === 1 ? "queda 1 clase" : "quedan " + s.clases + " clases"}`, detalle: "Buen momento para ofrecerle renovar", clienta: { id: cl.id, nombre: cl.nombre }, accion: wa(cl, `Hola ${n}, te escribo de Casa Lotus. Te ${s.clases === 1 ? "queda 1 clase" : "quedan " + s.clases + " clases"} en tu plan. ¿Quieres que te aparte el siguiente?`) });
       else if (segs.includes("vence-pronto")) lista.push({ id: "A-vence-" + cl.id, tipo: "vence-pronto", prioridad: 2, titulo: `El plan de ${n} vence el ${s.venceTexto}`, detalle: `Le ${s.clases === 1 ? "queda 1 clase" : "quedan " + s.clases + " clases"} por usar`, clienta: { id: cl.id, nombre: cl.nombre }, accion: wa(cl, `Hola ${n}, tu plan en Casa Lotus vence el ${s.venceTexto} y aún tienes clases. ¡Agéndalas para no perderlas!`) });
-      if (segs.includes("sin-clases")) lista.push({ id: "A-sin-" + cl.id, tipo: "sin-clases", prioridad: 2, titulo: `${n} se quedó sin clases`, detalle: "Ofrécele renovar su plan", clienta: { id: cl.id, nombre: cl.nombre }, accion: wa(cl, `Hola ${n}, se acabaron las clases de tu plan en Casa Lotus. ¿Te lo renuevo?`) });
+      if (segs.includes("sin-clases") && !fijoSinPlan.has(cl.id)) lista.push({ id: "A-sin-" + cl.id, tipo: "sin-clases", prioridad: 2, titulo: `${n} se quedó sin clases`, detalle: "Ofrécele renovar su plan", clienta: { id: cl.id, nombre: cl.nombre }, accion: wa(cl, `Hola ${n}, se acabaron las clases de tu plan en Casa Lotus. ¿Te lo renuevo?`) });
       if (segs.includes("prueba")) lista.push({ id: "A-prueba-" + cl.id, tipo: "prueba-sin-plan", prioridad: 2, titulo: `${n} vino a su clase de prueba`, detalle: "Todavía no ha tomado un plan", clienta: { id: cl.id, nombre: cl.nombre }, accion: wa(cl, `Hola ${n}, ¿cómo te sentiste en tu clase de prueba en Casa Lotus? Si quieres seguir, te cuento los planes.`) });
       const dc = diasParaCumple(cl.nacimiento, h);
       if (dc !== null && dc <= 3) lista.push({ id: "A-cumple-" + cl.id, tipo: "cumple", prioridad: 3, titulo: dc === 0 ? `Hoy cumple años ${n}` : `${n} cumple años en ${dc === 1 ? "1 día" : dc + " días"}`, detalle: "Un mensaje cálido siempre suma", clienta: { id: cl.id, nombre: cl.nombre }, accion: wa(cl, `¡Feliz cumpleaños, ${n}! Todo el equipo de Casa Lotus te abraza 💚`) });
@@ -412,8 +514,8 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const pend = db.reservas.filter((r) => r.estado === ESTADO.PENDIENTE).map((r) => {
       const cl = clienta(r.clienta), c = clase(r.clase);
       const texto = `Hola ${primerNombre(cl.nombre)}, te escribo de Casa Lotus por tu reserva del ${fechaLegible(c.fecha)} a las ${horaLegible(c.hora)}: ¿me envías el comprobante del pago para confirmarla?`;
-      return { reserva: r.id, clienta: cl.id, nombre: cl.nombre, whatsapp: cl.whatsapp, clase: claseVista(c), creada: r.creada, venceApartado: r.venceApartado, saldo: saldoDe(cl.id).clases, origen: r.origen, plan: r.planPedido || "", waTexto: texto, waEnlace: enlaceWhatsApp(cl.whatsapp, texto) };
-    }).sort((a, b) => (a.venceApartado < b.venceApartado ? -1 : 1));
+      return { reserva: r.id, clienta: cl.id, nombre: cl.nombre, whatsapp: cl.whatsapp, clase: claseVista(c), creada: r.creada, venceApartado: r.venceApartado || null, saldo: saldoDe(cl.id).clases, origen: r.origen, plan: r.planPedido || "", waTexto: texto, waEnlace: enlaceWhatsApp(cl.whatsapp, texto) };
+    }).sort((a, b) => (a.venceApartado || "~") < (b.venceApartado || "~") ? -1 : (a.venceApartado || "~") > (b.venceApartado || "~") ? 1 : a.clase.id < b.clase.id ? -1 : 1);
     const hora = Number(new Date(t - 5 * 3600000).getUTCHours());
     const segs = segmentosLista();
     return {
@@ -423,6 +525,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
         mes: { ingresos: comprasMes.reduce((s, c) => s + Number(c.valor), 0), compras: comprasMes.length, clasesDictadas: clasesMes.length, pagoProfes: pago ? pago * clasesMes.length : null, asistentes: db.reservas.filter((r) => r.estado === ESTADO.ASISTIO && r.clase.startsWith(mes)).length },
         clientasActivas: db.clientas.filter((cl) => saldoDe(cl.id).clases > 0).length, pendientesPago: pend.length,
         enEspera: db.espera.filter((e) => e.estado === "Esperando").length,
+        fijosActivos: db.fijos.filter((f) => f.estado === "Activo").length,
       },
       hoyClases: db.clases.filter((c) => c.fecha === h).map(claseEquipo),
       manana: db.clases.filter((c) => c.fecha === sumarDias(h, 1)).map(claseEquipo),
@@ -432,6 +535,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
   }
   const SEGMENTOS = [
     ["agendadas", "Agendaron", "Tienen una clase reservada desde hoy"], ["con-clases", "Con clases", "Les quedan clases en su plan"],
+    ["con-cupo-fijo", "Con horario fijo", "Vienen cada semana a la misma hora: su columpio se reserva solo"],
     ["poquitas", "Les quedan poquitas", "Una o dos clases por usar"], ["vence-pronto", "Vence pronto", "Su plan vence en menos de una semana"],
     ["sin-clases", "Renovar", "Compraron hace poco y ya no tienen clases"], ["pendiente-pago", "Deben un pago", "Tienen una reserva esperando pago"],
     ["prueba", "Vinieron a prueba", "Hicieron la clase de prueba y no han tomado plan"], ["nuevas", "Nuevas", "Llegaron en las últimas dos semanas"],
@@ -558,6 +662,14 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     codigoPendiente = null;
     return { usuario: u };
   });
+  /** «No puedo ir» from the reminder e-mail. In the demo the token is the booking id. The server answers 302 to `redirige`. */
+  ruta("GET", "/api/auth/reserva/:token", ({ p }) => {
+    const r = reserva(p.token);
+    if (!r || !ACTIVAS.includes(r.estado) || inicioClase(clase(r.clase)) <= ahora()) return { redirige: "/app/entrar?enlace=vencido" };
+    const s = sesionActual();
+    if (!(s && (s.rol !== "clienta" || (s.id === r.clienta && !s.limitada)))) abrirSesion({ rol: "clienta", id: r.clienta, limitada: true, reservas: [r.id] });
+    return { usuario: yoUsuario(sesionActual()), redirige: `/app/mi/clases?reserva=${encodeURIComponent(r.id)}&accion=cancelar` };
+  });
   ruta("GET", "/api/auth/enlace/:token", ({ p }) => {
     const cl = clienta(p.token) || db.clientas[0];
     abrirSesion({ rol: "clienta", id: cl.id });
@@ -623,6 +735,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       proximas, historial,
       espera: limitada ? [] : db.espera.filter((e) => e.clienta === cl.id && e.estado === "Esperando").map((e) => ({ ...esperaItem(e), clase: claseVista(clase(e.clase)) })),
       politicas: politicas(), pago: { llave: llave(), medios: ["Nequi", "DaviPlata", "Bre-B"], whatsapp: waReservas() },
+      fijos: limitada ? [] : db.fijos.filter((f) => f.clienta === cl.id && f.estado !== "Terminado").map((f) => ({ id: f.id, slotTexto: slotTexto(f.dia, f.hora), estado: f.estado, desde: f.desde, hasta: f.hasta || "" })),
     };
   });
   ruta("PATCH", "/api/yo/perfil", (ctx) => {
@@ -648,9 +761,9 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     return { status: 201, cuerpo: reservaClienta(r) };
   });
   ruta("POST", "/api/yo/reservas/:id/cancelar", (ctx) => {
-    const { cl } = yoClienta(ctx);
+    const { cl, limitada, propias } = yoClienta(ctx);
     const r = reserva(ctx.p.id);
-    if (!r || r.clienta !== cl.id) falla(404, "no-existe", "No encontramos esa reserva.");
+    if (!r || r.clienta !== cl.id || (limitada && !propias.includes(r.id))) falla(404, "no-existe", "No encontramos esa reserva.");
     const { devolvioClase } = cancelarReserva(r);
     const c = clase(r.clase);
     emitir("cancelacion", devolvioClase ? "Canceló a tiempo" : "Canceló tarde", `${cl.nombre} · ${fechaLegible(c.fecha)}, ${horaLegible(c.hora)}`, { clienta: cl.id, clase: c.id });
@@ -658,10 +771,13 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     return { reserva: reservaClienta(r), devolvioClase, mensaje };
   });
   ruta("POST", "/api/yo/reservas/:id/reagendar", (ctx) => {
-    const { cl } = yoClienta(ctx);
+    const { cl, limitada, propias } = yoClienta(ctx);
     const r = reserva(ctx.p.id);
-    if (!r || r.clienta !== cl.id) falla(404, "no-existe", "No encontramos esa reserva.");
-    return reagendar(r, ctx.b.clase, false);
+    if (!r || r.clienta !== cl.id || (limitada && !propias.includes(r.id))) falla(404, "no-existe", "No encontramos esa reserva.");
+    const x = reagendar(r, ctx.b.clase, false);
+    // a scoped session follows its booking to the new class
+    if (limitada) abrirSesion({ ...sesionActual(), reservas: [...propias, x.nueva.id] });
+    return x;
   });
   function reagendar(r, idNueva, admin) {
     const c = clase(r.clase), pol = politicas();
@@ -841,7 +957,12 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     auditar("clase-cancelada", c.id, b.motivo || "");
     return { clase: claseEquipo(c), afectadas };
   }));
-  ruta("GET", "/api/admin/horario", A(() => db.horario.map((h) => ({ ...h, proximas: db.clases.filter((c) => c.dia === h.dia && c.hora === h.hora && c.estado !== "Cancelada" && inicioClase(c) > ahora()).length }))));
+  /** The slot's regulars for its card (staff only): who, and how many swings they hold every week. */
+  const fijosDeSlot = (h) => {
+    const lista = db.fijos.filter((f) => f.dia === h.dia && f.hora === h.hora && f.estado !== "Terminado");
+    return { fijos: lista.map((f) => ({ id: f.id, clienta: { id: f.clienta, nombre: clienta(f.clienta)?.nombre || "" }, estado: f.estado })), cuposFijos: lista.filter((f) => f.estado === "Activo").length };
+  };
+  ruta("GET", "/api/admin/horario", A(() => db.horario.map((h) => ({ ...h, proximas: db.clases.filter((c) => c.dia === h.dia && c.hora === h.hora && c.estado !== "Cancelada" && inicioClase(c) > ahora()).length, ...fijosDeSlot(h) }))));
   ruta("POST", "/api/admin/horario", A(({ b }) => {
     const hora = horaTexto(b.hora);
     if (!b.dia || !hora) falla(422, "validacion", "Elige el día y la hora.", { campos: { dia: !b.dia ? "Elige el día." : undefined, hora: !hora ? "Elige la hora." : undefined } });
@@ -854,7 +975,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     for (const c of nuevas) db.clases.push({ ...c, estado: "Programada", notas: "", tipo: "Regular" });
     db.clases.sort((a, x) => (a.id < x.id ? -1 : 1));
     auditar("franja-nueva", id, `${slot.clase} · ${nuevas.length} clases`);
-    return { status: 201, cuerpo: { slot: { ...slot, proximas: nuevas.length }, clasesCreadas: nuevas.length } };
+    return { status: 201, cuerpo: { slot: { ...slot, proximas: nuevas.length, ...fijosDeSlot(slot) }, clasesCreadas: nuevas.length } };
   }));
   ruta("PATCH", "/api/admin/horario/:id", A(({ p, b }) => {
     const id = decodeURIComponent(p.id);
@@ -868,7 +989,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
       if (b.cupos !== undefined) c.cupos = Math.max(s.cupos, ocupados(c.id));
       n++;
     }
-    return { slot: { ...s }, clasesActualizadas: n };
+    return { slot: { ...s, ...fijosDeSlot(s) }, clasesActualizadas: n };
   }));
   ruta("DELETE", "/api/admin/horario/:id", A(({ p }) => {
     const id = decodeURIComponent(p.id);
@@ -881,6 +1002,61 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     }
     return { canceladas, conReservas };
   }));
+  // cupos fijos
+  const ORDEN_FIJO = { Activo: 0, Pausado: 1, Terminado: 2 }, SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  ruta("GET", "/api/admin/fijos", A(({ q }) => {
+    if (q.slot && !/^\S+ \d{2}:\d{2}$/.test(q.slot)) falla(422, "validacion", "Esa franja no se entiende.", { campos: { slot: "Día y hora, como «Sábado 08:00»." } });
+    return db.fijos
+      .filter((f) => (!q.clienta || f.clienta === q.clienta) && (!q.slot || f.dia + " " + f.hora === q.slot))
+      .sort((a, b) => ORDEN_FIJO[a.estado] - ORDEN_FIJO[b.estado] || SEMANA.indexOf(a.dia) - SEMANA.indexOf(b.dia) || (a.hora < b.hora ? -1 : a.hora > b.hora ? 1 : 0) || String(clienta(a.clienta)?.nombre).localeCompare(clienta(b.clienta)?.nombre))
+      .map(fijoVista);
+  }));
+  ruta("POST", "/api/admin/fijos", A(({ b }) => {
+    const cl = clienta(b.clienta);
+    if (!b.clienta) falla(422, "validacion", "Elige a la persona.", { campos: { clienta: "Elige a la persona." } });
+    if (!cl) falla(404, "no-existe", "No encontramos a esa clienta.");
+    const hora = horaTexto(b.hora);
+    const slot = db.horario.find((h) => h.dia === b.dia && h.hora === hora && h.activa);
+    if (!slot) falla(422, "validacion", "Elige una franja activa del horario.", { campos: { hora: "Elige una franja del horario." } });
+    for (const k of ["desde", "hasta"]) if (b[k] && !/^\d{4}-\d{2}-\d{2}$/.test(b[k])) falla(422, "validacion", "Revisa la fecha.", { campos: { [k]: "Revisa la fecha." } });
+    if (b.hasta && b.hasta < (b.desde || hoy())) falla(422, "validacion", "La fecha final va después del inicio.", { campos: { hasta: "Después del inicio." } });
+    if (db.fijos.some((f) => f.clienta === cl.id && f.dia === slot.dia && f.hora === slot.hora && f.estado !== "Terminado")) conflicto("ya-reservada", `${primerNombre(cl.nombre)} ya tiene horario fijo los ${slotTexto(slot.dia, slot.hora)}.`);
+    const f = { id: siguienteId("F", db.fijos.map((x) => x.id)), clienta: cl.id, dia: slot.dia, hora: slot.hora, desde: b.desde || hoy(), hasta: b.hasta || "", estado: "Activo", notas: String(b.notas || "").slice(0, 500), creado: iso(ahora()) };
+    db.fijos.push(f);
+    const { creadas, conflictos } = generarFijo(f);
+    emitir("reserva", "Horario fijo nuevo", `${cl.nombre} · ${slotTexto(f.dia, f.hora)}`, { clienta: cl.id });
+    auditar("fijo-nuevo", f.id, `${cl.nombre} · ${f.dia} ${f.hora} · ${creadas.length} reservas`);
+    return { status: 201, cuerpo: { fijo: fijoVista(f), reservasCreadas: creadas.map((r) => reservaClienta(r)), conflictos } };
+  }));
+  ruta("PATCH", "/api/admin/fijos/:id", A(({ p, b }) => {
+    const f = fijo(p.id);
+    if (!f) falla(404, "no-existe", "No encontramos ese horario fijo.");
+    if (b.estado !== undefined && !["Activo", "Pausado", "Terminado"].includes(b.estado)) falla(422, "validacion", "Ese estado no existe.", { campos: { estado: "Activo, Pausado o Terminado." } });
+    if (b.hasta && !/^\d{4}-\d{2}-\d{2}$/.test(b.hasta)) falla(422, "validacion", "Revisa la fecha.", { campos: { hasta: "Revisa la fecha." } });
+    if (b.estado === "Activo" && f.estado === "Terminado") conflicto("estado", "Este horario fijo ya terminó: crea uno nuevo.");
+    if (b.estado === "Activo" && f.estado !== "Activo" && db.fijos.some((x) => x.id !== f.id && x.clienta === f.clienta && x.dia === f.dia && x.hora === f.hora && x.estado === "Activo")) conflicto("ya-reservada", "Ya tiene otro horario fijo activo en esa franja.");
+    const reactiva = b.estado === "Activo" && f.estado !== "Activo";
+    if (b.hasta !== undefined) f.hasta = b.hasta || "";
+    else if (reactiva && f.hasta && f.hasta < hoy()) f.hasta = "";
+    if (b.notas !== undefined) f.notas = String(b.notas).slice(0, 500);
+    if (b.estado) f.estado = b.estado;
+    if (b.estado === "Terminado" && !f.hasta) f.hasta = hoy();
+    const nota = f.estado === "Terminado" ? "Cupo fijo terminado" : f.estado === "Pausado" ? "Cupo fijo pausado" : "Cupo fijo con fecha de fin";
+    const reservasCanceladas = b.cancelarFuturas || b.estado === "Terminado" ? cancelarDelFijo(f, f.hasta || "", nota) : [];
+    const { creadas, conflictos } = reactiva ? generarFijo(f) : { creadas: [], conflictos: [] };
+    auditar("fijo-editado", f.id, JSON.stringify(b));
+    return { fijo: fijoVista(f), reservasCanceladas, reservasCreadas: creadas.map((r) => reservaClienta(r)), conflictos };
+  }));
+  ruta("DELETE", "/api/admin/fijos/:id", A(({ p }) => {
+    const f = fijo(p.id);
+    if (!f) falla(404, "no-existe", "No encontramos ese horario fijo.");
+    f.estado = "Terminado";
+    if (!f.hasta || f.hasta > hoy()) f.hasta = hoy();
+    const reservasCanceladas = cancelarDelFijo(f, "", "Cupo fijo terminado");
+    auditar("fijo-terminado", f.id, `${clienta(f.clienta)?.nombre} · ${reservasCanceladas.length} canceladas`);
+    return { fijo: fijoVista(f), reservasCanceladas };
+  }));
+
   ruta("GET", "/api/admin/clientas", A(({ q }) => {
     let lista = db.clientas.map(clientaFila);
     if (q.segmento) lista = lista.filter((c) => c.segmentos.includes(q.segmento));
@@ -937,10 +1113,12 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const elegida = elegirCompra(db.compras, db.reservas, r.clienta, clase(r.clase).fecha);
     if (!elegida) falla(422, "validacion", "No tiene clases en su plan para esta fecha. Registra el pago.", { campos: { plan: "Registra el pago." } });
     r.estado = ESTADO.CONFIRMADA; r.compra = elegida.id; r.venceApartado = "";
+    if (fijoDe(r)) r.notas = "";
+    const reservasConfirmadas = compra ? confirmarFijasPendientes(r.clienta) : [];
     const cl = clienta(r.clienta);
     emitir("pago", compra ? "Pago confirmado" : "Confirmada con su plan", `${cl.nombre}${compra ? " · " + compra.plan + " · " + dinero(compra.valor) : ""}`, { clienta: cl.id, clase: r.clase });
     auditar("confirmar", r.id, compra ? `${compra.plan} ${compra.medio} ${compra.valor}` : "con su plan");
-    return { reserva: reservaClienta(r), compra: compra ? compraVista(compra) : undefined, clase: claseEquipo(clase(r.clase)) };
+    return { reserva: reservaClienta(r), compra: compra ? compraVista(compra) : undefined, clase: claseEquipo(clase(r.clase)), reservasConfirmadas };
   }));
   ruta("POST", "/api/admin/reservas/:id/asistencia", (ctx) => { exigir(ctx, "admin"); const c = marcar(ctx); return { reserva: reservaClienta(reserva(ctx.p.id)), clase: claseEquipo(c) }; });
   ruta("POST", "/api/admin/reservas/:id/cancelar", A(({ p, b }) => {
@@ -974,9 +1152,10 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const inicio = b.inicio || hoy();
     const compra = { id: siguienteId("P", db.compras.map((x) => x.id)), fecha: hoy(), clienta: cl.id, plan: pl.nombre, clases: Number(b.clases) || pl.clases, valor: b.valor ?? pl.precio, medio: b.medio || "Nequi", inicio, vence: sumarDias(inicio, pl.vigencia - 1), notas: "" };
     db.compras.push(compra);
+    const reservasConfirmadas = confirmarFijasPendientes(cl.id);
     emitir("pago", "Pago registrado", `${cl.nombre} · ${pl.nombre} · ${dinero(compra.valor)}`, { clienta: cl.id });
     auditar("pago", compra.id, `${cl.nombre} ${pl.nombre}`);
-    return { status: 201, cuerpo: { compra: compraVista(compra), saldo: saldoDe(cl.id) } };
+    return { status: 201, cuerpo: { compra: compraVista(compra), saldo: saldoDe(cl.id), reservasConfirmadas } };
   }));
   ruta("GET", "/api/admin/espera", A(() => db.espera.filter((e) => e.estado === "Esperando" || e.estado === "Avisada").map((e) => ({ ...esperaItem(e), clase: claseVista(clase(e.clase)) }))));
   ruta("POST", "/api/admin/espera/:id/tomar", A(({ p }) => {
@@ -1123,6 +1302,7 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     const u = new URL(url, "http://demo.local");
     const q = Object.fromEntries(u.searchParams.entries());
     actorActual = { tipo: "sistema", id: "", nombre: "Casa Lotus" };
+    try { generarFijos(); } catch (e) { console.error("[demo] fijos", e); }
     for (const r of R) {
       if (r.metodo !== metodo) continue;
       const m = u.pathname.match(r.re);
@@ -1171,10 +1351,13 @@ export function crearServidorDemo({ ahora = () => Date.now(), persistir = true, 
     return () => oyentes.delete(alEvento);
   }
 
+  if (!db.fijos) db.fijos = [];
+  generarFijos();
+
   return {
     transporte, manejar, abrirStream,
     get db() { return db; },
-    reiniciar() { db = sembrar(ahora()); cerrarSesion(); guardar(); },
+    reiniciar() { db = sembrar(ahora()); generarFijos(); cerrarSesion(); guardar(); },
     /** Demo shortcut: open a session for a role without a password. */
     entrarComo(rol) {
       const id = rol === "admin" ? "U-1" : rol === "profe" ? "U-2" : "C-0001";

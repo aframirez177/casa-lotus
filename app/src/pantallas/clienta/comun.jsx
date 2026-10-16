@@ -4,6 +4,7 @@ import { CalendarClock, CalendarX2, MessageCircle, Clock, Check } from "lucide-r
 import { Boton } from "../../ui/Boton.jsx";
 import { Hoja } from "../../ui/Hoja.jsx";
 import { Columpios } from "../../ui/Columpios.jsx";
+import { TagFija } from "../../ui/Basicos.jsx";
 import { BotonesCalendario } from "../../ui/Calendario.jsx";
 import { useAvisos } from "../../ui/Avisos.jsx";
 import { useAhora } from "../../ui/useAhora.js";
@@ -40,6 +41,7 @@ export function ProximaClase({ reserva: r, onCancelar, onReagendar }) {
         <p className="mt-4 font-display text-[2.25rem] leading-[0.95] tracking-tight text-paper sm:text-[2.75rem]">{nombreClase(r.clase)}</p>
         {sinTipo(r.clase) && <p className="mt-2 text-[0.875rem] text-paper/65">{NOTA_SIN_TIPO}</p>}
         <p className="mt-3 text-lg text-paper/85 first-letter:uppercase">{dia === "hoy" || dia === "mañana" ? `${dia}, ${fechaLegible(r.clase.fecha)}` : dia} · <span className="whitespace-nowrap">{rangoHora(r.clase, duracion)}</span></p>
+        {r.fijo && <TagFija claro chica={false} className="mt-3" />}
 
         <div className="mt-6 flex items-end justify-between gap-4">
           <div aria-label={`Faltan ${d} días, ${h} horas y ${m} minutos`} role="timer">
@@ -55,7 +57,7 @@ export function ProximaClase({ reserva: r, onCancelar, onReagendar }) {
 
         {pendiente && r.pago && (
           <div className="mt-6 rounded-[22px] bg-paper/8 p-4">
-            <p className="text-[0.9375rem] text-paper/85">Paga <strong className="font-semibold text-paper">{dinero(r.pago.monto)}</strong> a la llave {r.pago.llave} y envía el comprobante. Ana confirma tu clase cuando le llega.</p>
+            <p className="text-[0.9375rem] text-paper/85">{r.fijo ? "Tu columpio de siempre te espera: renueva tu plan. " : ""}Paga <strong className="font-semibold text-paper">{dinero(r.pago.monto)}</strong> a la llave {r.pago.llave} y envía el comprobante. Ana confirma tu clase cuando le llega.</p>
             {Number.isFinite(venceMs) && <p className="mt-1 flex items-center gap-1.5 text-[0.8125rem] text-paper/65"><Clock size={14} /> Te lo guardamos {duracionCorta(venceMs - ahora)} más.</p>}
             <Boton variante="lima" tam="s" punto className="mt-3" href={r.pago.waEnlace} icono={<MessageCircle size={16} />}>Enviar comprobante</Boton>
           </div>
@@ -98,6 +100,7 @@ export function FilaReserva({ reserva: r, onCancelar, onReagendar }) {
           </div>
           <p className="texto-s mt-0.5 text-ink first-letter:uppercase">{diaRelativo(r.clase.fecha)} · <span className="whitespace-nowrap">{rangoHora(r.clase, duracion)}</span></p>
           {sinTipo(r.clase) && <p className="text-[0.8125rem] text-muted">{NOTA_SIN_TIPO}</p>}
+          {r.fijo && <TagFija className="mt-2" />}
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3 border-t border-line pt-3">

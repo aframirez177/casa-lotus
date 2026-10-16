@@ -1,7 +1,7 @@
 // /app/mi — her next class (with countdown), her balance, quick booking, waiting lists, nudges.
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowRight, ClipboardList, Hourglass, ShieldCheck, Sparkles, MessageCircle } from "lucide-react";
+import { ArrowRight, ClipboardList, Hourglass, ShieldCheck, Sparkles, MessageCircle, Repeat } from "lucide-react";
 import { useMi, useReservarMi } from "../../api/hooks/clienta.js";
 import { useDisponibilidad } from "../../api/hooks/publico.js";
 import { useYo } from "../../api/hooks/auth.js";
@@ -19,10 +19,11 @@ import { useAvisos } from "../../ui/Avisos.jsx";
 import { InstalarTarjeta } from "../../shell/Instalar.jsx";
 import { FlujoCodigo } from "../entrar/FlujoCodigo.jsx";
 import { ProximaClase, FilaReserva, HojaCancelar, HojaReagendar } from "./comun.jsx";
-import { CompletaPerfil } from "./CompletaPerfil.jsx";
+import { InvitacionPerfil } from "./CompletaPerfil.jsx";
 import { primerNombre, hoyClave, fechaLegible, horaLegible, enlaceWhatsApp } from "../../lib/reglas.js";
 import { diaRelativo } from "../../lib/fechas.js";
 import { nombreClase } from "../../lib/clases.js";
+import { estadoFijoTexto } from "../../lib/fijos.js";
 
 export default function Inicio() {
   const { data: yo } = useYo();
@@ -69,6 +70,7 @@ export default function Inicio() {
         </div>
 
         <div className="min-w-0 space-y-5">
+          {data.fijos?.length > 0 && <HorarioFijo fijos={data.fijos} whatsapp={data.pago?.whatsapp} />}
           {!clienta.limitada && <Saldo saldo={saldo} plan={plan} />}
           {!clienta.fichaCompleta && !clienta.limitada && (
             <Link to="/mi/perfil#ficha" className="tarjeta flex items-center gap-4 p-5">
@@ -77,7 +79,7 @@ export default function Inicio() {
               <ArrowRight size={18} className="shrink-0 text-navy" />
             </Link>
           )}
-          {clienta.fichaCompleta && !clienta.limitada && <CompletaPerfil perfil={clienta.perfil} />}
+          {!clienta.limitada && <InvitacionPerfil perfil={clienta.perfil} fichaCompleta={clienta.fichaCompleta} />}
           {espera.length > 0 && <Espera items={espera} />}
           <InstalarTarjeta />
         </div>
@@ -100,6 +102,39 @@ function SinClase({ saldo }) {
       <p className="mt-3 text-ink">{saldo.clases ? `Te ${saldo.clases === 1 ? "queda 1 clase" : "quedan " + saldo.clases + " clases"} en tu plan.` : "Reserva una clase y la confirmamos cuando llegue tu pago."}</p>
       <Boton a="/mi/reservar" punto className="mt-6">Reservar una clase</Boton>
     </div>
+  );
+}
+
+/** Her weekly slot: the swing books itself every week; a pause reads calmly, with Ana one tap away. */
+function HorarioFijo({ fijos, whatsapp = "573128720888" }) {
+  const hoy = hoyClave();
+  return (
+    <section className="tarjeta p-6" aria-labelledby="fijo-t">
+      <h2 id="fijo-t" className="etiqueta">Tu horario fijo</h2>
+      <ul className="mt-5 space-y-5">
+        {fijos.map((f) => {
+          const pausado = f.estado === "Pausado";
+          const desdeLuego = pausado && f.hasta && f.hasta >= hoy;
+          return (
+            <li key={f.id} className="flex items-start gap-4">
+              <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full text-navy ${pausado ? "bg-mist" : "bg-yoga"}`}><Repeat size={21} /></span>
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                  <span className={`font-display text-[1.45rem] leading-none first-letter:uppercase ${pausado ? "text-navy/60" : "text-navy"}`}>{f.slotTexto}</span>
+                  {pausado && <span className="chip chip-aviso">Pausado</span>}
+                </p>
+                <p className="texto-s mt-2 text-ink">
+                  {!pausado ? "Tu columpio se reserva solo cada semana. Si un día no puedes venir, cancela esa clase con tiempo."
+                    : desdeLuego ? `${estadoFijoTexto(f, hoy)}. Hasta entonces, tus clases siguen reservadas.`
+                      : "Por ahora no te reservamos. Cuando quieras retomarlo, escríbele a Ana."}
+                </p>
+                {pausado && !desdeLuego && <Boton tam="xs" variante="suave" className="mt-3" href={enlaceWhatsApp(whatsapp, `Hola Ana, quiero retomar mi horario fijo de los ${f.slotTexto}.`)} icono={<MessageCircle size={14} />}>Escribirle a Ana</Boton>}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
