@@ -23,7 +23,7 @@ export function destinoDe(M, idClienta, actor) {
 }
 
 /** The class as the e-mails show it: «Clase aérea» when it has no type yet, the profe only when assigned. */
-function claseParaCorreo(M, c) {
+export function claseParaCorreo(M, c) {
   const minutos = duracionDe(M);
   return {
     nombre: nombreClase(c) || CLASE_GENERICA, fechaTexto: R.fechaLegible(c.fecha), horaTexto: R.horaLegible(c.hora),
@@ -45,12 +45,13 @@ function raizDe(M, r) {
   return { id: x.id, cambios: n };
 }
 
-const venceTexto = (ms) => (ms ? R.fechaLegible(R.hoyClave(ms)) + " a las " + R.horaLegible(R.ahoraHora(ms)) : "");
+export const venceTexto = (ms) => (ms ? R.fechaLegible(R.hoyClave(ms)) + " a las " + R.horaLegible(R.ahoraHora(ms)) : "");
 
 /**
  * Queues the confirmation e-mail of a booking. Returns true when one was queued.
  * o: { para?: address (default: destinoDe), nombre?: how to greet, actor?: who acted (default tx.actor),
- *      mostrarSaldo?: false hides «te quedan N clases», plan?: the plan a held swing is for, reagendadaDe?: the old class row }
+ *      mostrarSaldo?: false hides «te quedan N clases», plan?: the plan a held swing is for, reagendadaDe?: the old class row,
+ *      fijo?: "sábados 8:00 a. m." for the first class of a new cupo fijo }
  */
 export function avisarReservaPorCorreo(tx, idReserva, o = {}) {
   const ctx = tx.ctx, M = tx.M;
@@ -89,7 +90,7 @@ export function avisarReservaPorCorreo(tx, idReserva, o = {}) {
   const m = correoClaseClienta({
     nombre, codigo: r.id, publicUrl, horasCancelar: M.ajustes["Horas mínimas para cancelar"], clase: k, confirmada, saldo, pago,
     calendario: enlaceGoogleCalendar({ titulo, descripcion, inicio, fin }),
-    reagendadaDe: antes ? R.fechaLegible(antes.fecha) + " a las " + R.horaLegible(antes.hora) : undefined,
+    reagendadaDe: antes ? R.fechaLegible(antes.fecha) + " a las " + R.horaLegible(antes.hora) : undefined, fijo: o.fijo,
   });
   const raiz = raizDe(M, r);
   const archivo = ics({

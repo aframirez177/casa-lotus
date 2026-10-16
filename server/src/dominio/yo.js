@@ -3,8 +3,9 @@
 import * as R from "../../../shared/reglas.js";
 import { modelo } from "./base.js";
 import { estudio } from "./publico.js";
-import { vistaCompra, vistaEspera, vistaReservaClienta, vistaSaldo, perfilDe, fichaDe, MEDIOS_LLAVE } from "./vistas.js";
+import { vistaCompra, vistaEspera, vistaReservaClienta, vistaSaldo, perfilDe, fichaDe, MEDIOS_LLAVE, slotTexto } from "./vistas.js";
 import { noAutenticado } from "../errores.js";
+import { esCorreo } from "./avisos.js";
 
 const fechaDe = (M, r) => M.clasePorId.get(r.clase)?.fecha || String(r.clase).slice(0, 10);
 
@@ -44,23 +45,26 @@ export async function miCuenta(ctx, actor) {
         id: c.id,
         perfil: {
           nombre: actor.nombre, whatsapp: actor.whatsapp, correo: "", nacimiento: "", barrio: "", intereses: [], salud: "", eps: "",
-          contactoEmergencia: { nombre: "", whatsapp: "" }, experiencia: "", llego: "",
+          contactoEmergencia: { nombre: "", whatsapp: "" }, experiencia: "", llego: "", recordatorios: true,
         },
         consentimientos: { datos: { acepta: true, fecha: "", version: "" }, sensibles: { acepta: false, fecha: "", version: "" }, descargo: { acepta: true, fecha: "", version: "" }, imagen: { acepta: null, fecha: "" } },
-        fichaCompleta: false,
+        fichaCompleta: false, tieneCorreo: Boolean(actor.correo),
       },
-      saldo: { clases: 0, vence: "", venceTexto: "" }, compras: [], proximas, historial, espera: [], politicas, pago: pagoGeneral(M),
+      saldo: { clases: 0, vence: "", venceTexto: "" }, compras: [], proximas, historial, espera: [], fijos: [], politicas, pago: pagoGeneral(M),
     };
   }
 
   const { proximas, historial } = separar(M, M.reservasDeClienta(c.id), ahora);
   return {
     limitada: false,
-    clienta: { id: c.id, perfil: perfilDe(c), consentimientos: c.consentimientos, fichaCompleta: fichaDe(c) },
+    clienta: { id: c.id, perfil: perfilDe(c), consentimientos: c.consentimientos, fichaCompleta: fichaDe(c), tieneCorreo: esCorreo(c.correo) },
     saldo: vistaSaldo(M, c.id, hoy),
     compras: M.comprasDeClienta(c.id).map((p) => vistaCompra(M, p, hoy)).filter((p) => p.estado === "Vigente"),
     proximas, historial,
     espera: M.espera.filter((e) => e.clienta === c.id && (e.estado === "Esperando" || e.estado === "Avisada") && String(e.clase).slice(0, 10) >= hoy).map((e) => vistaEspera(M, e)),
+    // her weekly slot, read only: she skips one date by cancelling that booking (normal policy)
+    fijos: M.fijos.filter((f) => f.clienta === c.id && f.estado !== "Terminado").sort((a, b) => (a.id < b.id ? -1 : 1))
+      .map((f) => ({ id: f.id, slotTexto: slotTexto(f.dia, f.hora), estado: f.estado, desde: f.desde, hasta: f.hasta })),
     politicas, pago: pagoGeneral(M),
   };
 }

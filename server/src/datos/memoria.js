@@ -75,6 +75,17 @@ export function crearDriverMemoria({ sinColumnas = {}, sinPestanas = [], latenci
       }
       version++;
     },
+    /** Creates a missing tab with its typed headers only, as the Sheets driver does. true when it was created. */
+    async crearPestana(pestana) {
+      await espera();
+      const def = PESTANAS[pestana];
+      if (!def) throw new Error("No conozco la pestaña «" + pestana + "».");
+      if (tablas[pestana]) return false;
+      const escritas = def.columnas.map(([h]) => h);
+      tablas[pestana] = { columnas: escritas, escritas: new Set(escritas), filas: [], filaLibre: 2 };
+      version++;
+      return true;
+    },
     async describir() {
       return { tipo: "memoria", ok: true, faltan: faltantes() };
     },

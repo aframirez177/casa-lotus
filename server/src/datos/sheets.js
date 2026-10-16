@@ -260,6 +260,48 @@ export function crearDriverSheets({ cliente, sheetId, log, ttlMs = 20000, ahora 
       vence = 0;
     },
 
+    /**
+     * Creates a tab the Sheet lacks (one the schema marks `crearSiFalta`): typed headers only (the installer
+     * adds the calculated ones and the dropdowns later), header row frozen, ids and times as plain text and
+     * dates as dates, so what the server writes reads back the same. Returns true when it was created.
+     */
+    async crearPestana(pestana) {
+      const def = PESTANAS[pestana];
+      if (!def?.crearSiFalta) throw new ErrorApp("servidor", "La pestaña «" + pestana + "» no se crea sola.", { status: 500 });
+      await cargarMeta();
+      if (meta.pestanas[pestana]) return false;
+      const columnas = def.columnas.map(([h]) => h);
+      let idHoja;
+      try {
+        const r = await cliente.spreadsheets.batchUpdate({
+          spreadsheetId: sheetId,
+          requestBody: { requests: [{ addSheet: { properties: { title: pestana, gridProperties: { rowCount: 400, columnCount: columnas.length + def.calculadas.length + 1, frozenRowCount: 1 } } } }] },
+        });
+        idHoja = r?.data?.replies?.[0]?.addSheet?.properties?.sheetId;
+      } catch (e) {
+        // a retry after a timeout may find it already made
+        await cargarMeta().catch(() => null);
+        if (!meta?.pestanas[pestana]) throw errorGoogle(e, log, "crear pestaña " + pestana);
+        return false;
+      }
+      if (idHoja === undefined) idHoja = (await cargarMeta()).pestanas[pestana]?.id;
+      const formato = (tipo) => (["id", "hora", "claseId", "plano"].includes(tipo) ? { type: "TEXT", pattern: "@" } : tipo === "fecha" ? { type: "DATE", pattern: "d mmm yyyy" } : null);
+      const requests = def.columnas.map(([, tipo], j) => [formato(tipo), j]).filter(([f]) => f && idHoja !== undefined).map(([f, j]) => ({
+        repeatCell: {
+          range: { sheetId: idHoja, startRowIndex: 1, startColumnIndex: j, endColumnIndex: j + 1 },
+          cell: { userEnteredFormat: { numberFormat: f } }, fields: "userEnteredFormat.numberFormat",
+        },
+      }));
+      if (requests.length) await conReintentos(() => cliente.spreadsheets.batchUpdate({ spreadsheetId: sheetId, requestBody: { requests } }), "formato " + pestana);
+      await conReintentos(() => cliente.spreadsheets.values.batchUpdate({
+        spreadsheetId: sheetId,
+        requestBody: { valueInputOption: "RAW", data: [{ range: citar(pestana) + "!A1:" + letraColumna(columnas.length - 1) + "1", majorDimension: "ROWS", values: [columnas] }] },
+      }), "encabezados " + pestana);
+      vence = 0;
+      log?.info("pestaña creada", { pestana });
+      return true;
+    },
+
     async describir() {
       try {
         const s = await leer();

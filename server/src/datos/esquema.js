@@ -60,7 +60,18 @@ export const PESTANAS = {
     calculadas: [],
     opcional: true, // only exists once Google Ads offline conversions are set up
   },
+  "Cupos fijos": {
+    // regulars with a weekly slot: the server books their class every week (dominio/fijos.js).
+    // Optional: when a Sheet lacks it, the server creates it (typed headers only) with the first fijo.
+    columnas: [["ID", "id"], ["Clienta", "id"], ["Día", "lista"], ["Hora", "hora"], ["Desde", "fecha"], ["Hasta", "fecha"], ["Estado", "lista"], ["Notas", "texto"]],
+    calculadas: ["Nombre"],
+    opcional: true,
+    crearSiFalta: true,
+  },
 };
+
+/** Tabs the platform runs without (reported in /api/admin/salud, never a «hoja.ok: false»). */
+export const PESTANAS_OPCIONALES = new Set(Object.entries(PESTANAS).filter(([, d]) => d.opcional).map(([n]) => n));
 
 export const NOMBRES_PESTANAS = Object.keys(PESTANAS);
 
@@ -87,12 +98,14 @@ export const AJUSTES = [
   ["Correo para avisos", "casalotusbogota@gmail.com", "Aquí llega un correo cada vez que alguien reserva en la web. Déjalo vacío para no recibirlos."],
   ["Pago por clase a profes", "", "Lo que se paga por cada clase dictada. Solo lo ve el equipo administrador. Vacío: no se muestra."],
   ["Duración de la clase (minutos)", 60, "Cuánto dura cada clase. Se usa en el calendario, la app y los correos de confirmación."],
+  ["Días de reserva de cupos fijos", 14, "Cuántos días hacia adelante se reservan solas las clases de quienes tienen cupo fijo."],
+  ["Hora del recordatorio", "18:00", "A qué hora sale, el día anterior, el recordatorio de cada clase (hora de Bogotá, como 18:00)."],
 ];
 
 export const AJUSTES_NUMERICOS = new Set([
   "Cupos por clase", "Horas para pagar una reserva web", "Horas mínimas para reservar", "Horas mínimas para cancelar",
   "Cambios permitidos clase de prueba", "Mínimo de personas", "Semanas de clases hacia adelante", "Aviso de saldo bajo (clases)",
-  "Días para avisar vencimiento", "Pago por clase a profes", "Duración de la clase (minutos)",
+  "Días para avisar vencimiento", "Pago por clase a profes", "Duración de la clase (minutos)", "Días de reserva de cupos fijos",
 ]);
 
 /** Plans of a fresh Sheet (the same seed as apps-script/sistema/Esquema.js; public prices). */
@@ -110,5 +123,6 @@ export const PLANES_BASE = [
 ];
 
 export const ESTADOS_ESPERA = ["Esperando", "Avisada", "Tomó el cupo", "Ya no"];
+export const ESTADOS_FIJO = ["Activo", "Pausado", "Terminado"];
 export const DIAS_HORARIO = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 export const TIPOS_PLAN = ["Prueba", "Mensual", "Trimestral", "Ajuste"];

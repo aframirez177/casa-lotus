@@ -36,7 +36,8 @@ export function crearApp(ctx) {
   app.use("/api/whatsapp", ctx.whatsapp.rutasWebhook);
 
   app.use(cargarSesion(ctx));
-  app.use("/api", csrf(config, { exentas: ["/whatsapp/"], sinCabecera: ["/publico/eventos"] }));
+  // no X-Casa-Lotus header possible: beacons, and the opt-out form / mail clients' one-click POST (RFC 8058)
+  app.use("/api", csrf(config, { exentas: ["/whatsapp/"], sinCabecera: ["/publico/eventos", "/publico/recordatorios/baja/"] }));
 
   // beacons: text/plain or JSON, no custom header possible (sendBeacon)
   app.post("/api/publico/eventos", ...rutaEventos(ctx));

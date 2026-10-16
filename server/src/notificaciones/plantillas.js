@@ -77,7 +77,8 @@ const quedanTexto = (n) => (n === 0 ? "Era la última clase de tu plan." : n ===
  *   clase: { nombre, fechaTexto, horaTexto, finTexto, profe },
  *   confirmada: boolean, saldo?: number | null,                       // classes left, when it may be shown
  *   pago?: { monto, llave, medios: string[], whatsappTexto, venceTexto, waEnlace },  // a held swing
- *   reagendadaDe?: "jueves 1 de octubre a las 6:00 p. m."
+ *   reagendadaDe?: "jueves 1 de octubre a las 6:00 p. m.",
+ *   fijo?: "sábados 8:00 a. m."                                       // the first class of a new cupo fijo
  * }
  */
 export function correoClaseClienta(d) {
@@ -96,12 +97,14 @@ export function correoClaseClienta(d) {
     estadoTexto = "Quedó confirmada con tu plan." + quedan;
     estadoHtml = parrafo(h(estadoTexto));
   } else {
+    // a hold with no deadline (a regular's cupo fijo) never frees itself
+    const cola = p.venceTexto ? " Si no llega a tiempo, el cupo se libera solo." : " Tu columpio queda apartado mientras tanto.";
     estadoTexto = "Para confirmarla, " + paga + " por " + mediosTexto + " a la llave " + p.llave + " y envía el comprobante al WhatsApp " +
-      conPunto(p.whatsappTexto + (p.venceTexto ? " antes del " + p.venceTexto : "")) + " Si no llega a tiempo, el cupo se libera solo.";
+      conPunto(p.whatsappTexto + (p.venceTexto ? " antes del " + p.venceTexto : "")) + cola;
     estadoHtml = parrafo("Para confirmarla, " + (p.monto > 0 ? "paga " + fuerte(dinero(p.monto)) : "paga tu clase") + " por " + h(mediosTexto) + " a la llave " + fuerte(p.llave) +
-      " y envía el comprobante al WhatsApp " + fuerte(p.whatsappTexto) + (p.venceTexto ? " antes del " + fuerte(p.venceTexto) + (/\.$/.test(p.venceTexto) ? "" : ".") : ".") +
-      " Si no llega a tiempo, el cupo se libera solo.");
+      " y envía el comprobante al WhatsApp " + fuerte(p.whatsappTexto) + (p.venceTexto ? " antes del " + fuerte(p.venceTexto) + (/\.$/.test(p.venceTexto) ? "" : ".") : ".") + cola);
   }
+  const fijoTexto = d.fijo ? "Es tu cupo fijo de los " + d.fijo + ": te apartamos esta clase cada semana." : "";
   const regla = d.confirmada
     ? "¿No puedes venir? Cancela o cambia tu clase en la app hasta " + d.horasCancelar + " horas antes y la clase vuelve a tu plan. Con menos aviso se libera tu columpio, pero la clase se descuenta."
     : "¿No puedes venir? Cancélala en la app para liberar el cupo.";
@@ -110,6 +113,7 @@ export function correoClaseClienta(d) {
     '<p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;font-weight:bold;color:#53748C">' + ojo + "</p>" +
     '<h1 style="margin:0 0 18px;font-size:26px;line-height:1.15;font-weight:normal;color:#165472">' + h(titulo) + "</h1>" +
     (d.reagendadaDe ? parrafo("Movimos tu reserva del " + h(d.reagendadaDe) + " a esta clase.") : "") +
+    (fijoTexto ? parrafo(h(fijoTexto)) : "") +
     tarjetaClase(c) + estadoHtml +
     (!d.confirmada && p.waEnlace ? boton(p.waEnlace, "Enviar el comprobante por WhatsApp", "#99E27C", "#0E3A4E") : "") +
     parrafo(h(regla), "#53748C", "4px 0 20px") +
@@ -117,11 +121,87 @@ export function correoClaseClienta(d) {
   const html = marco(d.publicUrl, cuerpo, "Casa Lotus · Bogotá. Código de tu reserva: " + h(d.codigo) +
     ". Adjuntamos la clase como archivo de calendario (.ics) por si usas otro calendario.");
   const texto = ojo.charAt(0) + ojo.slice(1).toLowerCase() + "\n\n" + titulo + "\n\n" +
-    (d.reagendadaDe ? "Movimos tu reserva del " + d.reagendadaDe + " a esta clase.\n\n" : "") +
+    (d.reagendadaDe ? "Movimos tu reserva del " + d.reagendadaDe + " a esta clase.\n\n" : "") + (fijoTexto ? fijoTexto + "\n\n" : "") +
     c.nombre + "\n" + c.fechaTexto + "\n" + c.horaTexto + (c.finTexto ? " – " + c.finTexto : "") + (c.profe ? "\nCon tu profe " + c.profe : "") +
     "\n\n" + estadoTexto + (!d.confirmada && p.waEnlace ? "\nEnviar el comprobante: " + p.waEnlace : "") + "\n\n" + regla +
     "\n\nTus clases: " + mi + "\nAgregar a Google Calendar: " + d.calendario + "\n\nCódigo de tu reserva: " + d.codigo;
   return { asunto: "Tu clase en Casa Lotus · " + cuandoAsunto, html, texto };
+}
+
+/**
+ * «Mañana tienes clase»: the reminder the day before (dominio/recordatorios.js). No address: it is not public yet.
+ * d: {
+ *   nombre, codigo, publicUrl, calendario, horasCancelar,
+ *   clase: { nombre, fechaTexto, horaTexto, finTexto, profe }, dia: "sábado", hora: "8:00 a. m.",
+ *   fijo?: "sábados",                                 // the booking came from her cupo fijo
+ *   confirmada: boolean, limiteTexto?: "sábado a las 2:00 a. m." | "" (already past),
+ *   pago?: { monto, llave, medios, whatsappTexto, venceTexto, waEnlace },   // still unpaid
+ *   noPuedoIr: URL (a session for this booking only), baja: URL («No quiero recordatorios»)
+ * }
+ */
+export function correoRecordatorio(d) {
+  const c = d.clase, primer = primerNombre(d.nombre);
+  const titulo = "¡Mañana te esperamos" + (primer ? ", " + primer : "") + "!";
+  const fijoTexto = d.fijo ? "Es tu clase fija de los " + d.fijo + "." : "";
+  const p = d.pago || {};
+  let pagoTexto = "", pagoHtml = "";
+  if (!d.confirmada) {
+    const medios = p.medios && p.medios.length ? p.medios : ["Nequi", "DaviPlata", "Bre-B"];
+    const mediosTexto = medios.length > 1 ? medios.slice(0, -1).join(", ") + " o " + medios[medios.length - 1] : medios[0];
+    const cola = p.venceTexto ? " antes del " + p.venceTexto : "";
+    pagoTexto = "Tu cupo está apartado y falta el pago: " + (p.monto > 0 ? "paga " + dinero(p.monto) : "paga tu clase") + " por " + mediosTexto +
+      " a la llave " + p.llave + " y envía el comprobante al WhatsApp " + conPunto(p.whatsappTexto + cola);
+    pagoHtml = parrafo("Tu cupo está apartado y falta el pago: " + (p.monto > 0 ? "paga " + fuerte(dinero(p.monto)) : "paga tu clase") + " por " + h(mediosTexto) +
+      " a la llave " + fuerte(p.llave) + " y envía el comprobante al WhatsApp " + fuerte(p.whatsappTexto) + h(conPunto(cola)));
+  }
+  const regla = !d.confirmada
+    ? "Si no puedes venir, cancélala para liberar el cupo: no tienes que pagar nada."
+    : d.limiteTexto
+      ? "Si no puedes venir, cancela antes del " + d.limiteTexto + " y la clase vuelve a tu plan. Con menos aviso se libera tu columpio, pero la clase se descuenta."
+      : "Si no puedes venir, cancélala igual para darle el columpio a alguien más. Como faltan menos de " + d.horasCancelar + " horas, la clase se descuenta de tu plan.";
+  const cuerpo =
+    '<p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;font-weight:bold;color:#53748C">RECORDATORIO</p>' +
+    '<h1 style="margin:0 0 18px;font-size:26px;line-height:1.15;font-weight:normal;color:#165472">' + h(titulo) + "</h1>" +
+    (fijoTexto ? parrafo(h(fijoTexto)) : "") + tarjetaClase(c) + pagoHtml +
+    (!d.confirmada && p.waEnlace ? boton(p.waEnlace, "Enviar el comprobante por WhatsApp", "#99E27C", "#0E3A4E") : "") +
+    parrafo(h(regla), "#53748C", "4px 0 18px") +
+    '<a href="' + h(d.noPuedoIr) + '" style="display:block;margin:0 0 12px;padding:16px 22px;border-radius:999px;background:#165472;color:#FFFFFF;' +
+    'text-align:center;text-decoration:none;font-weight:bold;font-size:17px">No puedo ir</a>' +
+    boton(d.calendario, "Agregar a Google Calendar", "#D2F3A2", "#0E3A4E");
+  const pie = "Casa Lotus · Bogotá. Código de tu reserva: " + h(d.codigo) + '. <a href="' + h(d.baja) + '" style="color:#53748C">No quiero recordatorios</a>';
+  const texto = "Recordatorio\n\n" + titulo + "\n\n" + (fijoTexto ? fijoTexto + "\n\n" : "") +
+    c.nombre + "\n" + c.fechaTexto + "\n" + c.horaTexto + (c.finTexto ? " – " + c.finTexto : "") + (c.profe ? "\nCon tu profe " + c.profe : "") +
+    (pagoTexto ? "\n\n" + pagoTexto + (p.waEnlace ? "\nEnviar el comprobante: " + p.waEnlace : "") : "") +
+    "\n\n" + regla + "\nNo puedo ir: " + d.noPuedoIr + "\n\nAgregar a Google Calendar: " + d.calendario +
+    "\n\nCódigo de tu reserva: " + d.codigo + "\nNo quiero recordatorios: " + d.baja;
+  return { asunto: "Mañana tienes clase en Casa Lotus · " + d.dia + " " + d.hora, html: marco(d.publicUrl, cuerpo, pie), texto };
+}
+
+/**
+ * The small page behind «No quiero recordatorios» (served by the API: no scripts, plain forms that POST to the
+ * same address). estado: "pregunta" (GET: nothing changes yet) | "hecha" (tagged) | "vuelta" (back on) | "invalido".
+ */
+export function paginaBajaRecordatorios({ estado, accion, publicUrl }) {
+  const T = {
+    pregunta: ["¿Dejamos de enviarte recordatorios?", "Son los correos del día anterior a cada clase. Tus clases y tus reservas siguen igual."],
+    hecha: ["Listo, no te enviaremos más recordatorios", "Tus clases siguen igual. Si cambias de opinión, vuelve a activarlos aquí o en tu cuenta, en «Mi perfil»."],
+    vuelta: ["Volverás a recibir tus recordatorios", "Te escribimos el día anterior a cada clase."],
+    invalido: ["Este enlace ya no funciona", "Si quieres dejar de recibir recordatorios, hazlo desde tu cuenta, en «Mi perfil», o escríbenos por WhatsApp."],
+  }[estado] || [];
+  const forma = (valor, texto, fondo, color) => '<form method="post" action="' + h(accion) + '" style="margin:0 0 12px">' +
+    (valor ? '<input type="hidden" name="accion" value="' + h(valor) + '">' : "") +
+    '<button type="submit" style="width:100%;padding:15px 22px;border:0;border-radius:999px;background:' + fondo + ";color:" + color +
+    ';font:bold 16px Arial,Helvetica,sans-serif;cursor:pointer">' + h(texto) + "</button></form>";
+  const botones = estado === "pregunta" ? forma("baja", "Sí, no quiero recordatorios", "#165472", "#FFFFFF")
+    : estado === "hecha" ? forma("volver", "Volver a recibirlos", "#D2F3A2", "#0E3A4E") : "";
+  return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta name="robots" content="noindex"><title>Casa Lotus · Recordatorios</title></head>' +
+    '<body style="margin:0;background:#EFF4F8;font-family:Arial,Helvetica,sans-serif;color:#24434C">' +
+    '<main style="max-width:460px;margin:48px auto;padding:28px 24px;background:#FFFFFF;border-radius:22px">' +
+    '<img src="' + LOGO_CORREO + '" width="44" height="44" alt="Casa Lotus" style="border-radius:12px">' +
+    '<h1 style="margin:18px 0 12px;font-size:24px;line-height:1.2;font-weight:normal;color:#165472">' + h(T[0]) + "</h1>" +
+    '<p style="margin:0 0 22px;font-size:15px;line-height:1.5">' + h(T[1]) + "</p>" + botones +
+    '<p style="margin:8px 0 0;font-size:14px"><a href="' + h(publicUrl + "/app/mi/perfil") + '" style="color:#165472">Ir a mi cuenta</a></p></main></body></html>';
 }
 
 /**

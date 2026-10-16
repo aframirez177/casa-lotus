@@ -57,7 +57,7 @@ src/
   rutas/              thin HTTP routes: validate (zod) → domain → response
   herramientas/       the domain as a typed tool catalog for an AI agent (CONTRATO §7)
   notificaciones/     e-mail (console | smtp), Web Push, templates
-  tareas/             maintenance jobs (holds every 10 min, calendar daily 03:00 Bogotá)
+  tareas/             maintenance jobs (holds and class reminders every 10 min, calendar + cupos fijos daily 03:00 Bogotá)
   whatsapp/           WhatsApp Cloud API module (separate owner), loaded by whatsapp-cargar.js
 migraciones/          ordered SQL migrations, applied at start
 scripts/              dev, crear-admin, vapid
@@ -98,6 +98,8 @@ studio's Drive and is only shared with the service account.
    the key file from your laptop.
 5. The Sheet's time zone must be **America/Bogota** (File → Settings). `GET /api/admin/salud` warns otherwise
    and lists any column the server wants but the Sheet lacks (run the installer «Instalar o reparar» to add them).
+   The one exception is the «Cupos fijos» tab: when it is missing, the server creates it (typed headers only) with
+   the first cupo fijo, and `salud.fijos.pestana` says whether it exists.
 
 ## E-mail through Resend (once)
 
@@ -108,7 +110,9 @@ studio's Drive and is only shared with the service account.
    (replies land in the studio's Gmail). `GET /api/admin/salud` → `correo.ok` must be `true`.
 
 The free plan sends 3,000 e-mails a month and 100 a day (https://resend.com/pricing): one alert per web
-booking, each student's confirmation and cancellation e-mails, login codes and resets fit easily. A failed send is logged and never fails the booking; the
+booking, each student's confirmation and cancellation e-mails, login codes and resets fit easily. Class reminders
+add one e-mail per booking the evening before (~24 seats a week ≈ 100 a month), all sent within a few minutes of
+«Hora del recordatorio», well under the daily cap. A failed send is logged and never fails the booking; the
 driver retries once on 429/5xx and never logs the key or full addresses. E-mails carry no inline images: the
 logo is the site's hosted `https://casalotus.studio/apple-touch-icon.png`.
 

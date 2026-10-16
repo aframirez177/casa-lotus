@@ -171,7 +171,8 @@ export async function sembrar(driver, { tipo = "demo", ahora = Date.now() } = {}
   const [f0, f1, f2] = futuras;
   for (const q of ["Valentina", "Daniela", "Natalia", "Paula"]) reservar(q, f0, R.ESTADO.CONFIRMADA, P[q]);
   for (const q of ["Valentina", "Carolina", "Gabriela", "Manuela", "Tatiana", "Alejandra", "Verónica", "Sofía"]) {
-    reservar(q, f1, R.ESTADO.CONFIRMADA, P[q.normalize("NFD").replace(/[̀-ͯ]/g, "")]);
+    // Valentina comes every week to this slot: her booking there is her cupo fijo's (F-0001)
+    reservar(q, f1, R.ESTADO.CONFIRMADA, P[q.normalize("NFD").replace(/[̀-ͯ]/g, "")], q === "Valentina" ? { "Origen": "Cupo fijo · F-0001" } : {});
   }
   reservar("Daniela", f2, R.ESTADO.CONFIRMADA, P.Daniela);
   reservar("Lucía", f2, R.ESTADO.CONFIRMADA, P.Lucia);
@@ -185,6 +186,12 @@ export async function sembrar(driver, { tipo = "demo", ahora = Date.now() } = {}
   // she came to the last class without a booking and without a plan: the profe registered her («vino sin plan»)
   reservar("Juliana", pasadas[0], R.ESTADO.PENDIENTE, "", { "Origen": "Profe · " + pasadas[0].profe, "Notas": "Vino sin plan", "Creada": R.inicioClase(pasadas[0]) + 600000 });
   await poner("Reservas", reservas);
+
+  // cupos fijos: Valentina every week in the full class's slot; Camila paused (the daily job books the window)
+  await poner("Cupos fijos", [
+    { "ID": "F-0001", "Clienta": ids.Valentina, "Día": f1.dia, "Hora": f1.hora, "Desde": R.sumarDias(hoy, -60), "Hasta": "", "Estado": "Activo", "Notas": "Columpio cerca de la ventana." },
+    { "ID": "F-0002", "Clienta": ids.Camila, "Día": f0.dia, "Hora": f0.hora, "Desde": R.sumarDias(hoy, -50), "Hasta": "", "Estado": "Pausado", "Notas": "De viaje este mes." },
+  ]);
 
   await poner("Espera", [
     { "ID": "E-0001", "Creada": ahora - 26 * 3600000, "Clase": f1.id, "Clienta": ids["Lucía"], "Estado": "Esperando", "Notas": "" },

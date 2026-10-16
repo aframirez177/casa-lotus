@@ -72,7 +72,7 @@ export function vistaAsistente(M, r, clase, { conSalud }) {
     primeraVez: previas.length === 0, experiencia: p.experiencia || "",
     salud: conSalud ? p.salud || "" : "",
     cumple: cumpleCerca(p.nacimiento, clase.fecha), autorizaImagen: p.consentimientos?.imagen?.acepta ?? null,
-    contactoEmergencia: textoContacto(p.contacto), origen: r.origen || "",
+    contactoEmergencia: textoContacto(p.contacto), origen: r.origen || "", fijo: fijoDeReserva(r),
   };
 }
 
@@ -135,7 +135,7 @@ export function perfilDe(c) {
   return {
     nombre: c.nombre, whatsapp: c.whatsapp, correo: c.correo, nacimiento: c.nacimiento, barrio: c.barrio, intereses: c.intereses,
     salud: c.salud, eps: c.eps, contactoEmergencia: { nombre: c.contacto?.nombre || "", whatsapp: c.contacto?.whatsapp || "" },
-    experiencia: c.experiencia, llego: c.llego, novedades: Boolean(c.novedades),
+    experiencia: c.experiencia, llego: c.llego, novedades: Boolean(c.novedades), recordatorios: c.recordatorios !== false,
   };
 }
 
@@ -222,10 +222,43 @@ export function vistaReservaClienta(M, r, ahora, { nombre, limitada = false } = 
     limiteCancelar: iso(pc.limiteMs), puedeReagendar: pr.ok && c.estado !== "Cancelada", limiteReagendar: iso(pr.limiteMs),
   };
   if (compra && !limitada) { o.compra = compra.id; o.plan = compra.plan; }
+  o.fijo = limitada ? null : fijoDeReserva(r);
   if (r.reagendadaDe) o.reagendadaDe = r.reagendadaDe;
   if (r.estado === R.ESTADO.PENDIENTE) {
     // a limited session sees only what that device asked for, never a plan suggested from her history
     o.pago = vistaPago(M, r, { nombre, plan: limitada ? r.atribucion?.plan || planDePrueba(M)?.nombre : undefined });
   }
   return o;
+}
+
+/* ── cupos fijos (a regular's weekly slot) ────────────── */
+
+const ORIGEN_FIJO = "Cupo fijo · ";
+/** Notas of a fijo's booking held without a plan. */
+export const NOTA_FIJO_SIN_PLAN = "Cupo fijo · sin plan";
+/** Origen of the bookings a fijo makes: «Cupo fijo · F-0001» (a reschedule keeps it). */
+export const origenFijo = (id) => ORIGEN_FIJO + id;
+/** "F-0001" when the booking came from a fijo, else null. */
+export const fijoDeReserva = (r) => (String(r?.origen || "").match(/^Cupo fijo · (F-\d+)/) || [])[1] || null;
+
+/** "sábados 8:00 a. m." */
+export function slotTexto(dia, hora) {
+  const d = String(dia || "").toLowerCase();
+  return (d.endsWith("s") ? d : d + "s") + " " + R.horaLegible(hora);
+}
+
+/** Fijo (CONTRATO §10): the slot, the dates and the bookings it holds from today on. */
+export function vistaFijo(M, f, ahora) {
+  const hoy = R.hoyClave(ahora);
+  const p = M.clientaPorId.get(f.clienta);
+  const proximas = M.reservasDeClienta(f.clienta)
+    .filter((r) => fijoDeReserva(r) === f.id && R.ACTIVAS.includes(r.estado))
+    .map((r) => ({ r, c: M.clasePorId.get(r.clase) }))
+    .filter(({ c }) => c && c.fecha >= hoy)
+    .sort((a, b) => (a.c.id < b.c.id ? -1 : 1))
+    .map(({ r, c }) => ({ clase: vistaClase(M, c, ahora), estado: r.estado, reserva: r.id }));
+  return {
+    id: f.id, clienta: { id: f.clienta, nombre: p?.nombre || "" }, dia: f.dia, hora: f.hora, slot: f.dia + " " + f.hora,
+    slotTexto: slotTexto(f.dia, f.hora), desde: f.desde, hasta: f.hasta, estado: f.estado, notas: f.notas, proximas,
+  };
 }

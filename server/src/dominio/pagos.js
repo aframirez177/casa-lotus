@@ -2,7 +2,7 @@
 // computed from the bookings that spend it, never typed.
 import * as R from "../../../shared/reglas.js";
 import { modelo, transaccion } from "./base.js";
-import { vistaCompra, vistaPlan, vistaSaldo } from "./vistas.js";
+import { vistaCompra, vistaPlan, vistaSaldo, vistaReservaClienta, fijoDeReserva, esPasada, NOTA_FIJO_SIN_PLAN } from "./vistas.js";
 import { filaConversion } from "../datos/conversiones.js";
 import { noExiste, validacion } from "../errores.js";
 
@@ -29,6 +29,31 @@ export async function registrarPagoEnTx(tx, { clienta, plan, medio, valor, inici
   return compra;
 }
 
+/**
+ * After a payment: her cupo fijo holds still waiting for a plan («Pendiente de pago» made by a fijo, class not
+ * started) are confirmed against the plan that covers each date, oldest class first, while classes last. No
+ * e-mail for these (the payment itself is the news). Returns the ids it confirmed.
+ */
+export async function confirmarFijosPendientesEnTx(tx, clienta, { excepto } = {}) {
+  const pendientes = tx.M.reservasDeClienta(clienta)
+    .filter((r) => r.estado === R.ESTADO.PENDIENTE && r.id !== excepto && fijoDeReserva(r))
+    .map((r) => ({ r, c: tx.M.clasePorId.get(r.clase) }))
+    .filter(({ c }) => c && c.estado === "Programada" && !esPasada(c, tx.ahora))
+    .sort((a, b) => (a.c.id < b.c.id ? -1 : 1));
+  const hechas = [];
+  for (const { r, c } of pendientes) {
+    const M = tx.M;
+    const compra = R.elegirCompra(M.compras, M.reservas, clienta, c.fecha);
+    if (!compra) continue;
+    await tx.actualizar("Reservas", r._fila, {
+      "Estado": R.ESTADO.CONFIRMADA, "Compra": compra.id, "Vence apartado": "", ...(r.notas === NOTA_FIJO_SIN_PLAN ? { "Notas": "" } : {}),
+    });
+    tx.auditar("reserva.confirmar", r.id, { compra: compra.id, fijo: fijoDeReserva(r) });
+    hechas.push(r.id);
+  }
+  return hechas;
+}
+
 export async function registrarPago(ctx, actor, input) {
   return transaccion(ctx, actor, async (tx) => {
     const c = tx.M.clientaPorId.get(input.clienta);
@@ -36,8 +61,17 @@ export async function registrarPago(ctx, actor, input) {
     const compra = await registrarPagoEnTx(tx, input);
     const hoy = R.hoyClave(tx.ahora);
     tx.auditar("pago.registrar", compra.id, { clienta: c.id, plan: compra.plan, valor: compra.valor, medio: compra.medio });
-    tx.publicar({ tipo: "pago", titulo: "Pago de " + c.nombre, detalle: compra.plan + " · " + R.dinero(compra.valor) + (compra.medio ? " · " + compra.medio : ""), clienta: c.id });
-    return { compra: vistaCompra(tx.M, compra, hoy), saldo: vistaSaldo(tx.M, c.id, hoy) };
+    const confirmadas = await confirmarFijosPendientesEnTx(tx, c.id);
+    tx.publicar({
+      tipo: "pago", titulo: "Pago de " + c.nombre, clienta: c.id,
+      detalle: compra.plan + " · " + R.dinero(compra.valor) + (compra.medio ? " · " + compra.medio : "") +
+        (confirmadas.length ? " · " + (confirmadas.length === 1 ? "1 clase fija confirmada" : confirmadas.length + " clases fijas confirmadas") : ""),
+    });
+    const M = tx.M;
+    return {
+      compra: vistaCompra(M, M.compraPorId.get(compra.id), hoy), saldo: vistaSaldo(M, c.id, hoy),
+      reservasConfirmadas: confirmadas.map((id) => vistaReservaClienta(M, M.reservaPorId.get(id), tx.ahora)),
+    };
   });
 }
 

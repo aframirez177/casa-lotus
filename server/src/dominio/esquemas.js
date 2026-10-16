@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { normalizaWhatsApp, MEDIOS } from "../../../shared/reglas.js";
 import { INTERESES, EXPERIENCIA, COMO_LLEGO } from "../../../shared/consentimientos.js";
-import { DIAS_HORARIO, ESTADOS_ESPERA, TIPOS_PLAN } from "../datos/esquema.js";
+import { DIAS_HORARIO, ESTADOS_ESPERA, ESTADOS_FIJO, TIPOS_PLAN } from "../datos/esquema.js";
 
 /** One line of clean text: control characters out, spaces collapsed, length capped. */
 export const texto = (max, { min = 0, mensaje } = {}) =>
@@ -27,6 +27,9 @@ export const claseId = z.string().regex(/^\d{4}-\d{2}-\d{2} ([01]\d|2[0-3]):[0-5
 export const idClienta = z.string().regex(/^C-\d{1,6}$/, { error: "Esa clienta no existe." });
 export const idReserva = z.string().regex(/^R-\d{1,6}$/, { error: "Esa reserva no existe." });
 export const idEspera = z.string().regex(/^E-\d{1,6}$/, { error: "Ese registro no existe." });
+export const idFijo = z.string().regex(/^F-\d{1,6}$/, { error: "Ese cupo fijo no existe." });
+/** Horario slot id: "Sábado 08:00". */
+export const idSlot = z.string().max(30).regex(new RegExp("^(" + DIAS_HORARIO.join("|") + ") ([01]\\d|2[0-3]):[0-5]\\d$"), { error: "Esa franja no existe." });
 
 const nacimiento = z.union([z.literal(""), fecha.refine((s) => s >= "1920-01-01" && s <= "2022-12-31", { error: "Revisa la fecha de nacimiento." })]);
 
@@ -45,6 +48,7 @@ export const perfilParcial = z.object({
   }),
   experiencia: z.enum(["", ...EXPERIENCIA], { error: "Elige de la lista." }),
   llego: z.enum(["", ...COMO_LLEGO], { error: "Elige de la lista." }),
+  recordatorios: z.boolean({ error: "Responde sí o no." }), // class reminders on/off (the «sin-recordatorios» tag)
 }).partial();
 
 export const perfilNuevo = perfilParcial.required({ nombre: true, whatsapp: true });
@@ -128,6 +132,17 @@ export const slotEditar = z.object({
 });
 
 export const estadoEspera = z.enum(ESTADOS_ESPERA, { error: "Elige un estado de la lista." });
+
+/** A cupo fijo: a regular's weekly slot. hasta "" (or null) = no end date. */
+const fechaOVacia = z.union([z.literal(""), z.null(), fecha]).transform((v) => v || "");
+export const fijoNuevo = z.object({
+  clienta: idClienta, dia: z.enum(DIAS_HORARIO, { error: "Elige el día." }), hora,
+  desde: fecha.optional(), hasta: fechaOVacia.optional(), notas: texto(300).optional(),
+});
+export const fijoEditar = z.object({
+  estado: z.enum(ESTADOS_FIJO, { error: "Elige Activo, Pausado o Terminado." }).optional(), hasta: fechaOVacia.optional(), notas: texto(300).optional(),
+  cancelarFuturas: z.boolean().optional(),
+});
 export const planEditar = z.object({
   nombre: texto(60, { min: 2 }), precio: z.coerce.number().int().min(0).max(20000000).optional(), clases: z.coerce.number().int().min(0).max(200).optional(),
   vigencia: z.coerce.number().int().min(1).max(400).optional(), activo: z.boolean().optional(), tipo: z.enum(TIPOS_PLAN).optional(),

@@ -3,9 +3,9 @@
 // shared/reglas.js; every write runs in one transaction (single lock, fresh read inside it).
 import * as R from "../../../shared/reglas.js";
 import { modelo, transaccion, SISTEMA } from "./base.js";
-import { registrarPagoEnTx } from "./pagos.js";
+import { registrarPagoEnTx, confirmarFijosPendientesEnTx } from "./pagos.js";
 import {
-  vistaClase, vistaClaseEquipo, vistaCompra, vistaEspera, vistaReservaClienta, cambiosDe, esDePrueba, nombreClase, esPasada,
+  vistaClase, vistaClaseEquipo, vistaCompra, vistaEspera, vistaReservaClienta, cambiosDe, esDePrueba, nombreClase, esPasada, NOTA_FIJO_SIN_PLAN, fijoDeReserva,
 } from "./vistas.js";
 import { conflictoReserva, noExiste, sinPermiso, validacion } from "../errores.js";
 import { profeDeClase, exigirPlazoAsistencia } from "./profes.js";
@@ -119,7 +119,11 @@ export async function confirmar(ctx, actor, idReserva, { pago } = {}) {
     // with classes left in her plan no payment is needed (and, no purchase, no Ads conversion);
     // someone who already came without a plan (a walk-in the profe registered) is confirmed as attended
     const vino = /Vino sin plan/.test(r.notas) && esPasada(c, tx.ahora);
-    await tx.actualizar("Reservas", r._fila, { "Estado": vino ? ESTADO.ASISTIO : ESTADO.CONFIRMADA, "Compra": compra.id, "Vence apartado": "" });
+    await tx.actualizar("Reservas", r._fila, {
+      "Estado": vino ? ESTADO.ASISTIO : ESTADO.CONFIRMADA, "Compra": compra.id, "Vence apartado": "", ...(r.notas === NOTA_FIJO_SIN_PLAN ? { "Notas": "" } : {}),
+    });
+    // a new plan also confirms her other cupo fijo holds
+    const fijas = nueva ? await confirmarFijosPendientesEnTx(tx, r.clienta, { excepto: r.id }) : [];
     M = tx.M;
     const p = M.clientaPorId.get(r.clienta);
     const hoy = R.hoyClave(tx.ahora);
@@ -133,6 +137,7 @@ export async function confirmar(ctx, actor, idReserva, { pago } = {}) {
     }
     const out = { reserva: vistaReservaClienta(M, M.reservaPorId.get(r.id), tx.ahora), clase: vistaClaseEquipo(M, c, tx.ahora) };
     if (nueva) out.compra = vistaCompra(M, M.compraPorId.get(nueva.id), hoy);
+    if (nueva) out.reservasConfirmadas = fijas.map((id) => vistaReservaClienta(M, M.reservaPorId.get(id), tx.ahora));
     return out;
   });
 }
@@ -275,7 +280,8 @@ export async function reagendar(ctx, actor, idReserva, nuevaClase) {
       "Compra": compra ? compra.id : "", "Origen": r.origen, "Reagendada de": r.id,
       "Atribución": r.atribucion && Object.keys(r.atribucion).length ? JSON.stringify(r.atribucion) : "",
     };
-    if (!compra) fila["Vence apartado"] = Math.min(r.vence || tx.ahora + M.ajustes["Horas para pagar una reserva web"] * 3600000, R.inicioClase(c1));
+    // a cupo fijo's hold never expires, and keeps not expiring when it moves
+    if (!compra && !(fijoDeReserva(r) && !r.vence)) fila["Vence apartado"] = Math.min(r.vence || tx.ahora + M.ajustes["Horas para pagar una reserva web"] * 3600000, R.inicioClase(c1));
     await tx.agregar("Reservas", fila);
     avisarReservaAProfe(tx, c1, r.clienta, r.origen);
     try {

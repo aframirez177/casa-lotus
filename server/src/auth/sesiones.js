@@ -6,14 +6,20 @@ export const COOKIE = "cl_sesion";
 export const DURACION = { admin: 30 * 86400000, profe: 30 * 86400000, clienta: 180 * 86400000 };
 const REFRESCO = 5 * 60000; // sliding expiry is written at most every 5 minutes
 
-export function crearSesion(ctx, { rol, usuario = null, clienta = null, whatsapp = null, alcance = "completa", datos = {}, ua = "", ip = "" }) {
+/**
+ * vence: a fixed end (epoch ms) instead of the role's sliding one, e.g. a reminder's «No puedo ir» session ends when
+ * the class starts. It is kept in datos.venceFijo, so it never slides.
+ */
+export function crearSesion(ctx, { rol, usuario = null, clienta = null, whatsapp = null, alcance = "completa", datos = {}, ua = "", ip = "", vence }) {
   const t = nuevoToken(32), id = idCorto(12), ahora = ctx.ahora();
+  const fin = Number.isFinite(vence) ? vence : ahora + DURACION[rol];
+  if (Number.isFinite(vence)) datos = { ...datos, venceFijo: vence };
   ctx.db.prepare(`INSERT INTO sesiones (id, token_hash, rol, usuario, clienta, whatsapp, alcance, datos, creada, ultimo_uso, vence, ua, ip)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-    id, sha256(t), rol, usuario, clienta, whatsapp, alcance, JSON.stringify(datos), ahora, ahora, ahora + DURACION[rol],
+    id, sha256(t), rol, usuario, clienta, whatsapp, alcance, JSON.stringify(datos), ahora, ahora, fin,
     String(ua).slice(0, 300), String(ip).slice(0, 64),
   );
-  return { token: t, id, maxAge: DURACION[rol] };
+  return { token: t, id, maxAge: fin - ahora };
 }
 
 /** The live session for a cookie token, or null. Staff sessions need an active account. */
@@ -34,17 +40,31 @@ export function leerSesion(ctx, t) {
       return null;
     }
   }
-  if (ahora - s.ultimo_uso > REFRESCO) {
-    ctx.db.prepare("UPDATE sesiones SET ultimo_uso = ?, vence = ? WHERE id = ?").run(ahora, ahora + DURACION[s.rol], s.id);
-    if (usuario) ctx.db.prepare("UPDATE usuarios SET ultimo_acceso = ? WHERE id = ?").run(ahora, usuario.id);
-  }
   let datos = {};
   try { datos = JSON.parse(s.datos || "{}"); } catch { datos = {}; }
+  if (ahora - s.ultimo_uso > REFRESCO) {
+    // a session with a fixed end (datos.venceFijo) never slides past it
+    const vence = Number.isFinite(datos.venceFijo) ? s.vence : ahora + DURACION[s.rol];
+    ctx.db.prepare("UPDATE sesiones SET ultimo_uso = ?, vence = ? WHERE id = ?").run(ahora, vence, s.id);
+    if (usuario) ctx.db.prepare("UPDATE usuarios SET ultimo_acceso = ? WHERE id = ?").run(ahora, usuario.id);
+  }
   return { ...s, datos, usuarioFila: usuario };
 }
 
 export function guardarDatosSesion(ctx, id, datos) {
   ctx.db.prepare("UPDATE sesiones SET datos = ? WHERE id = ?").run(JSON.stringify(datos), id);
+}
+
+/** A fixed-end session (a reminder's «No puedo ir») follows its booking to a later class. clase: { fecha, hora }. */
+export function extenderSesionFija(ctx, id, clase) {
+  const s = ctx.db.prepare("SELECT * FROM sesiones WHERE id = ?").get(id);
+  if (!s || !clase?.fecha) return;
+  const [y, m, d] = clase.fecha.split("-").map(Number), [h, mi] = String(clase.hora).split(":").map(Number);
+  const vence = Date.UTC(y, m - 1, d, h || 0, mi || 0) + 5 * 3600000; // Bogotá wall clock → epoch
+  if (!(vence > s.vence)) return;
+  let datos = {};
+  try { datos = JSON.parse(s.datos || "{}"); } catch { datos = {}; }
+  ctx.db.prepare("UPDATE sesiones SET vence = ?, datos = ? WHERE id = ?").run(vence, JSON.stringify({ ...datos, venceFijo: vence }), id);
 }
 
 export function cerrarSesion(ctx, id) {

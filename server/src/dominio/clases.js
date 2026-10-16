@@ -10,6 +10,7 @@ import { cuandoTexto } from "./reservas.js";
 import { resolverProfe, profeCambiado, avisarProfe, sinProfe } from "./asignacion.js";
 import { sinTilde } from "../datos/modelo.js";
 import { avisarCancelacionPorCorreo } from "./avisos.js";
+import { aplicarFijosSinFallar, ordenarFijos } from "./fijos.js";
 
 export async function agenda(ctx, { desde, hasta } = {}) {
   const M = await modelo(ctx), ahora = ctx.ahora(), hoy = R.hoyClave(ahora);
@@ -90,10 +91,12 @@ export async function editarClase(ctx, actor, id, cambios) {
     if (cambios.notas !== undefined) fila["Notas"] = cambios.notas;
     if (Object.keys(fila).length) await tx.actualizar("Clases", c._fila, fila);
     tx.auditar("clase.editar", id, fila);
-    return tx.M.clasePorId.get(id);
+    return { ...tx.M.clasePorId.get(id), masCupos: cambios.cupos !== undefined && cambios.cupos > c.cupos };
   });
   // a new profe closes the substitute request, tells Ana's feed and pushes to the new profe
   if (cambioProfe) profeCambiado(ctx, actor, out, cambioProfe.antes, cambioProfe.ahora);
+  // more swings may let a cupo fijo in
+  if (out.masCupos) await aplicarFijosSinFallar(ctx, actor);
   const M = await modelo(ctx);
   return vistaClaseEquipo(M, M.clasePorId.get(id) || out, ctx.ahora());
 }
@@ -135,7 +138,13 @@ const claseDeSlot = (s) => (c) => c.tipo !== "Extra" && c.dia === s.dia && c.hor
 
 function vistaSlot(M, s, ahora) {
   const proximas = M.clases.filter(claseDeSlot(s)).filter((c) => c.estado === "Programada" && !esPasada(c, ahora)).length;
-  return { id: s.id, dia: s.dia, hora: s.hora, clase: s.clase, profe: s.profe, cupos: s.cupos, activa: s.activa, proximas };
+  // the regulars who hold this slot every week (Activo and Pausado; Terminado is history)
+  const fijos = M.fijos.filter((f) => f.dia === s.dia && f.hora === s.hora && f.estado !== "Terminado").sort(ordenarFijos(M))
+    .map((f) => ({ id: f.id, clienta: { id: f.clienta, nombre: M.clientaPorId.get(f.clienta)?.nombre || "" }, estado: f.estado }));
+  return {
+    id: s.id, dia: s.dia, hora: s.hora, clase: s.clase, profe: s.profe, cupos: s.cupos, activa: s.activa, proximas,
+    fijos, cuposFijos: fijos.filter((f) => f.estado === "Activo").length,
+  };
 }
 
 export async function horario(ctx) {
@@ -165,7 +174,7 @@ async function generarEnTx(tx, slots, desde) {
 
 export async function crearSlot(ctx, actor, { dia, hora, clase, profe: profeTexto, cupos, activa = true, desde }) {
   const profe = resolverProfe(ctx, profeTexto);
-  return transaccion(ctx, actor, async (tx) => {
+  const out = await transaccion(ctx, actor, async (tx) => {
     const id = dia + " " + hora;
     if (tx.M.horario.some((s) => s.id === id)) throw conflicto("estado", "Ya existe la franja del " + dia.toLowerCase() + " a las " + R.horaLegible(hora) + ".");
     await tx.agregar("Horario", { "Día": dia, "Hora": hora, "Clase": clase, "Profe": profe, "Cupos": cupos, "Activa": activa ? "Sí" : "No" });
@@ -178,6 +187,8 @@ export async function crearSlot(ctx, actor, { dia, hora, clase, profe: profeText
     }
     return { slot: vistaSlot(tx.M, s, tx.ahora), clasesCreadas: nuevas.length };
   });
+  if (out.clasesCreadas) await aplicarFijosSinFallar(ctx, actor);
+  return out;
 }
 
 export async function editarSlot(ctx, actor, id, { clase, profe: profeTexto, cupos, activa, aplicarAFuturas = false }) {
@@ -206,7 +217,10 @@ export async function editarSlot(ctx, actor, id, { clase, profe: profeTexto, cup
     let creadas = 0;
     if (activa === true && !s.activa) creadas = (await generarEnTx(tx, [tx.M.horario.find((x) => x.id === id)])).length;
     tx.auditar("horario.editar", id, { ...fila, aplicarAFuturas, clasesActualizadas: actualizadas, clasesCreadas: creadas });
-    return { slot: vistaSlot(tx.M, tx.M.horario.find((x) => x.id === id), tx.ahora), clasesActualizadas: actualizadas + creadas, dia: tx.M.horario.find((x) => x.id === id) };
+    return {
+      slot: vistaSlot(tx.M, tx.M.horario.find((x) => x.id === id), tx.ahora), clasesActualizadas: actualizadas + creadas, dia: tx.M.horario.find((x) => x.id === id),
+      abrioLugar: creadas > 0 || (aplicarAFuturas && cupos !== undefined && cupos > s.cupos),
+    };
   });
   if (reasignadas.length) {
     for (const r of reasignadas) ctx.db.prepare("DELETE FROM reemplazos WHERE clase = ?").run(r.clase.id);
@@ -216,6 +230,13 @@ export async function editarSlot(ctx, actor, id, { clase, profe: profeTexto, cup
       detalle: reasignadas.length + (reasignadas.length === 1 ? " clase actualizada." : " clases actualizadas."), ruta: "/app/admin/horario",
     });
     if (!sinProfe(profe)) avisarProfe(ctx, profe, { titulo: "Te asignaron las clases de los " + s.dia.toLowerCase() + " a las " + R.horaLegible(s.hora), cuerpo: s.clase || "Casa Lotus", ruta: "/app/profe" });
+  }
+  // new classes or more swings: the regulars of this slot get theirs
+  if (out.abrioLugar) {
+    await aplicarFijosSinFallar(ctx, actor);
+    const M = await modelo(ctx);
+    const s = M.horario.find((x) => x.id === id);
+    if (s) out.slot = vistaSlot(M, s, ctx.ahora());
   }
   return { slot: out.slot, clasesActualizadas: out.clasesActualizadas };
 }

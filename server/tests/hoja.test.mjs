@@ -51,13 +51,32 @@ function hojaFalsa(pestanas) {
       async get() {
         return { data: { properties: { timeZone: "America/Bogota" }, sheets: Object.entries(pestanas).map(([title, t], i) => ({ properties: { sheetId: i, title, gridProperties: { rowCount: t.filasMax || 1000, columnCount: 26 } } })) } };
       },
-      async batchUpdate({ requestBody }) { llamadas.push(["estructura", requestBody]); return { data: {} }; },
+      async batchUpdate({ requestBody }) {
+        llamadas.push(["estructura", requestBody]);
+        // a new tab answers like Sheets does, with its sheetId
+        const replies = (requestBody.requests || []).map((r) => {
+          if (!r.addSheet) return {};
+          const title = r.addSheet.properties.title;
+          pestanas[title] = { valores: [[]], formulas: [] };
+          return { addSheet: { properties: { sheetId: Object.keys(pestanas).length - 1, title } } };
+        });
+        return { data: { replies } };
+      },
       values: {
         async batchGet({ ranges, valueRenderOption, dateTimeRenderOption }) {
           llamadas.push(["leer", valueRenderOption, dateTimeRenderOption]);
           return { data: { valueRanges: ranges.map((r) => ({ range: r, values: valueRenderOption === "FORMULA" ? [pestanas[titulo(r)].formulas] : pestanas[titulo(r)].valores })) } };
         },
-        async batchUpdate({ requestBody }) { llamadas.push(["escribir", requestBody]); return { data: {} }; },
+        async batchUpdate({ requestBody }) {
+          llamadas.push(["escribir", requestBody]);
+          // header rows land in the fake, so the next read sees the new tab's columns
+          for (const d of requestBody.data || []) {
+            if (!/!A1:/.test(d.range)) continue;
+            const t = pestanas[titulo(d.range)];
+            if (t) { t.valores[0] = d.values[0]; t.formulas = d.values[0]; }
+          }
+          return { data: {} };
+        },
       },
     },
   };
@@ -92,7 +111,7 @@ test("the driver reads every tab in one batch and the model understands serials"
   const lecturas = cliente.llamadas.filter((l) => l[0] === "leer");
   assert.equal(lecturas.length, 2, "one batchGet for values, one for header formulas");
   assert.deepEqual(lecturas[0].slice(1), ["UNFORMATTED_VALUE", "SERIAL_NUMBER"]);
-  assert.deepEqual(snap.faltan, ["Conversiones Ads"], "the optional tab is reported, nothing else");
+  assert.deepEqual(snap.faltan, ["Conversiones Ads", "Cupos fijos"], "the optional tabs are reported, nothing else");
   const M = construirModelo(snap);
   assert.equal(M.clases[0].id, "2026-10-03 08:00");
   assert.equal(M.clases[0].fecha, "2026-10-03");
@@ -146,4 +165,25 @@ test("a column missing in the Sheet is skipped on write and reported", async () 
   assert.match(w.data[0].range, /^'Clientas'!H2:H2$/);
   assert.deepEqual(w.data[0].values, [["Hola"]]);
   assert.ok((await d.describir()).faltan.includes("Clientas.Barrio"));
+});
+
+test("a missing «Cupos fijos» tab is created with its typed headers, ids and times as text, dates as dates", async () => {
+  const cliente = hojaFalsa(hojaBase());
+  const d = crearDriverSheets({ cliente, sheetId: "x".repeat(30) });
+  await d.leer({ fresco: true });
+  assert.equal(await d.crearPestana("Cupos fijos"), true);
+  const [alta, formatos] = cliente.llamadas.filter((l) => l[0] === "estructura").map((l) => l[1].requests);
+  assert.equal(alta[0].addSheet.properties.title, "Cupos fijos");
+  assert.equal(alta[0].addSheet.properties.gridProperties.frozenRowCount, 1);
+  const patron = (col) => formatos.find((r) => r.repeatCell.range.startColumnIndex === col)?.repeatCell.cell.userEnteredFormat.numberFormat.pattern;
+  assert.deepEqual([patron(0), patron(1), patron(3), patron(4), patron(5)], ["@", "@", "@", "d mmm yyyy", "d mmm yyyy"], "ID, Clienta, Hora as text; Desde, Hasta as dates");
+  const enc = cliente.llamadas.filter((l) => l[0] === "escribir").pop()[1];
+  assert.equal(enc.valueInputOption, "RAW");
+  assert.equal(enc.data[0].range, "'Cupos fijos'!A1:H1");
+  assert.deepEqual(enc.data[0].values[0], ["ID", "Clienta", "Día", "Hora", "Desde", "Hasta", "Estado", "Notas"], "typed columns only: «Nombre» comes with the installer");
+  const snap = await d.leer({ fresco: true });
+  assert.ok(!snap.faltan.includes("Cupos fijos"));
+  assert.ok(snap.faltan.includes("Conversiones Ads"));
+  assert.equal(await d.crearPestana("Cupos fijos"), false, "never twice");
+  await assert.rejects(d.crearPestana("Clientas"), /no se crea sola/, "only tabs marked to be created on their own");
 });

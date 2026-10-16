@@ -15,6 +15,9 @@ import { entrarConGoogle, aceptarInvitacionConGoogle } from "../auth/google.js";
 import { nombreDeSesion } from "../dominio/yo.js";
 import { noAutenticado, noExiste, validacion } from "../errores.js";
 import { consumir, HORA } from "../auth/limites.js";
+import { usarEnlaceReserva } from "../dominio/recordatorios.js";
+import { esCorreo } from "../dominio/avisos.js";
+import { guardarDatosSesion } from "../auth/sesiones.js";
 
 const BOTS = /(WhatsApp|facebookexternalhit|Facebot|TelegramBot|Slackbot|Twitterbot|Discordbot|LinkedInBot|Googlebot|bingbot|Applebot|SkypeUriPreview|preview)/i;
 
@@ -100,6 +103,37 @@ export function rutasAuth(ctx) {
     if (!c) return res.redirect(302, "/app/entrar?enlace=vencido");
     abrirSesionClienta(ctx, req, res, c);
     res.redirect(302, "/app/mi");
+  });
+
+  // «No puedo ir» in a class reminder: a session that sees only that booking until the class starts.
+  // Someone already signed in as her keeps her full session; staff keep theirs.
+  r.get("/reserva/:token", async (req, res) => {
+    if (BOTS.test(req.get("user-agent") || "")) {
+      return res.status(200).type("html").set("Cache-Control", "no-store").send("<!doctype html><meta name=robots content=noindex><title>Casa Lotus</title>");
+    }
+    try {
+      consumir(ctx, "enlace-ip:" + req.ip, 20, HORA);
+    } catch {
+      return res.redirect(302, "/app/entrar?enlace=limite");
+    }
+    const e = await usarEnlaceReserva(ctx, req.params.token);
+    if (!e) return res.redirect(302, "/app/entrar?enlace=vencido");
+    const destino = "/app/mi/clases?reserva=" + encodeURIComponent(e.reserva) + "&accion=cancelar";
+    const s = req.sesion;
+    if (s && s.rol !== "clienta") return res.redirect(302, destino);
+    if (s && s.clienta === e.clienta.id && s.alcance === "completa") return res.redirect(302, destino);
+    if (s && s.clienta === e.clienta.id && s.alcance === "reserva" && !Number.isFinite(s.datos?.venceFijo)) {
+      guardarDatosSesion(ctx, s.id, { ...s.datos, reservas: [...new Set([...(s.datos.reservas || []), e.reserva])].slice(-20) });
+      return res.redirect(302, destino);
+    }
+    if (s) cerrarSesion(ctx, s.id);
+    const nueva = crearSesion(ctx, {
+      rol: "clienta", clienta: e.clienta.id, whatsapp: e.clienta.whatsapp, alcance: "reserva", vence: e.vence,
+      datos: { nombre: e.clienta.nombre, reservas: [e.reserva], recordatorio: true, ...(esCorreo(e.clienta.correo) ? { correo: e.clienta.correo.trim() } : {}) },
+      ua: req.get("user-agent") || "", ip: req.ip,
+    });
+    ponerCookie(ctx, req, res, nueva);
+    res.redirect(302, destino);
   });
 
   r.post("/salir", (req, res) => {

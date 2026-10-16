@@ -9,6 +9,8 @@ import { planes } from "../dominio/pagos.js";
 import { estudio, reservaPublica, esperaPublica, eventoPublico, identificar } from "../dominio/publico.js";
 import { consumir, HORA } from "../auth/limites.js";
 import { crearSesion, ponerCookie, guardarDatosSesion, leerCookie, leerSesion } from "../auth/sesiones.js";
+import { bajaRecordatorios, enlaceBajaVivo } from "../dominio/recordatorios.js";
+import { paginaBajaRecordatorios } from "../notificaciones/plantillas.js";
 
 const cachePublica = (res) => res.set("Cache-Control", "public, max-age=20, stale-while-revalidate=40");
 
@@ -89,6 +91,32 @@ export function rutasPublicas(ctx) {
       ponerCookie(ctx, req, res, s);
     }
     res.status(201).json(cuerpo);
+  });
+
+  // «No quiero recordatorios» (footer and List-Unsubscribe of a reminder). A GET only asks (link scanners
+  // open links); the POST to the same address acts: the page's buttons (accion=baja | volver, form-encoded) or a
+  // mail client's RFC 8058 one-click (body «List-Unsubscribe=One-Click», no CSRF header: see app.js)
+  const paginaBaja = (req, res, estado, status = 200) => {
+    res.set({
+      "Content-Security-Policy": "default-src 'none'; img-src https:; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+      "Cache-Control": "no-store",
+    });
+    res.status(status).type("html").send(paginaBajaRecordatorios({ estado, accion: req.originalUrl.split("?")[0], publicUrl: ctx.config.publicUrl }));
+  };
+  r.get("/recordatorios/baja/:token", (req, res) => {
+    const vivo = enlaceBajaVivo(ctx, req.params.token);
+    paginaBaja(req, res, vivo ? "pregunta" : "invalido", vivo ? 200 : 404);
+  });
+  r.post("/recordatorios/baja/:token", express.urlencoded({ extended: false, limit: "1kb" }), async (req, res) => {
+    const volver = req.body?.accion === "volver";
+    let ok = false;
+    try {
+      consumir(ctx, "baja-ip:" + req.ip, 30, HORA);
+      ok = await bajaRecordatorios(ctx, req.params.token, { activar: volver, origen: req.body?.["List-Unsubscribe"] === "One-Click" ? "un-clic" : "correo" });
+    } catch (e) {
+      if (e?.codigo !== "limite") ctx.log.error("baja de recordatorios falló", { error: e });
+    }
+    paginaBaja(req, res, !ok ? "invalido" : volver ? "vuelta" : "hecha", ok ? 200 : 404);
   });
 
   r.post("/espera", async (req, res) => {

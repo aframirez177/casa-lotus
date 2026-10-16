@@ -9,6 +9,7 @@ import { reservar, cancelar, reagendar, confirmar, listarEspera, unirseEspera, t
 import { listarProfes } from "../dominio/asignacion.js";
 import { registrarPago, planes } from "../dominio/pagos.js";
 import { tablero } from "../dominio/tablero.js";
+import { listarFijos, crearFijo, editarFijo } from "../dominio/fijos.js";
 import { anotarRegistro } from "../dominio/registro.js";
 import { validar } from "../rutas/validar.js";
 import { sinPermiso, validacion } from "../errores.js";
@@ -126,6 +127,30 @@ export const HERRAMIENTAS = [
     nombre: "dar_cupo_de_espera", rol: "admin", soloLectura: false, entrada: z.object({ espera: E.idEspera }),
     descripcion: "La persona de la lista de espera toma el cupo libre: se crea su reserva (confirmada si tiene plan, si no pendiente de pago).",
     manejar: (ctx, a, i) => tomarCupo(ctx, a, i.espera),
+  },
+  {
+    nombre: "listar_fijos", rol: "admin", soloLectura: true,
+    entrada: z.object({
+      clienta: E.idClienta.optional().describe("solo los de esta clienta, como C-0003"),
+      slot: E.idSlot.optional().describe("solo los de esta franja del horario, como «Sábado 08:00»"),
+    }),
+    descripcion: "Cupos fijos: las clientas que vienen cada semana a la misma clase y a quienes el sistema les reserva solo esa clase. Muestra la franja, desde y hasta cuándo, el estado (Activo, Pausado, Terminado) y sus próximas reservas.",
+    manejar: (ctx, _a, i) => listarFijos(ctx, i),
+  },
+  {
+    nombre: "crear_fijo", rol: "admin", soloLectura: false, entrada: E.fijoNuevo,
+    descripcion: "Le da a una clienta un cupo fijo en una franja activa del horario (día y hora, como Sábado 08:00). Desde ese momento el sistema le reserva esa clase cada semana: confirmada si tiene plan, si no apartada sin vencer hasta que pague. Devuelve las reservas creadas y las clases que estaban llenas.",
+    manejar: (ctx, a, i) => crearFijo(ctx, a, i),
+  },
+  {
+    nombre: "pausar_fijo", rol: "admin", soloLectura: false,
+    entrada: z.object({
+      fijo: E.idFijo,
+      hasta: E.fijoEditar.shape.hasta.describe("opcional: la última fecha a la que todavía viene (aaaa-mm-dd)"),
+      cancelarFuturas: z.boolean().optional().describe("cancela sin costo sus reservas futuras de ese cupo fijo (después de «hasta»); la clase vuelve a su plan"),
+    }),
+    descripcion: "Pone en pausa un cupo fijo (por ejemplo, viaje o lesión): el sistema deja de reservarle la clase cada semana. Con cancelarFuturas también libera los columpios que ya tenía reservados.",
+    manejar: (ctx, a, i) => editarFijo(ctx, a, i.fijo, { estado: "Pausado", hasta: i.hasta, cancelarFuturas: i.cancelarFuturas }),
   },
 ];
 

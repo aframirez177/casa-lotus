@@ -7,7 +7,7 @@ import { miCuenta } from "../dominio/yo.js";
 import { actualizarMiPerfil, actualizarMisConsentimientos } from "../dominio/clientas.js";
 import { reservar, cancelar, reagendar, unirseEspera, salirEspera } from "../dominio/reservas.js";
 import { sinPermiso } from "../errores.js";
-import { guardarDatosSesion } from "../auth/sesiones.js";
+import { guardarDatosSesion, extenderSesionFija } from "../auth/sesiones.js";
 
 /** A limited session (public booking with a known number) may only see and change what it booked. */
 const soloCompleta = (req, _res, next) => next(req.actor.limitada ? sinPermiso("Confirma tu WhatsApp con un código para ver toda tu cuenta.") : undefined);
@@ -42,8 +42,9 @@ export function rutasYo(ctx) {
     const { clase } = validar(z.object({ clase: claseId }), req.body);
     const out = await reagendar(ctx, req.actor, req.params.id, clase);
     if (req.actor.limitada) {
-      // the moved booking stays reachable from this device
+      // the moved booking stays reachable from this device (a reminder's session now lasts until the new class)
       guardarDatosSesion(ctx, req.sesion.id, { ...req.sesion.datos, reservas: [...(req.sesion.datos.reservas || []), out.nueva.id].slice(-20) });
+      if (Number.isFinite(req.sesion.datos?.venceFijo)) extenderSesionFija(ctx, req.sesion.id, out.nueva.clase);
     }
     res.json(out);
   });

@@ -16,6 +16,7 @@ import { enlaceDeAcceso } from "../auth/clientas.js";
 import { crearUsuario, nuevaInvitacion, editarEquipo } from "../auth/usuarios.js";
 import { rutasPush } from "./push.js";
 import { listarProfes } from "../dominio/asignacion.js";
+import { listarFijos, crearFijo, editarFijo, terminarFijo } from "../dominio/fijos.js";
 
 const { z } = E;
 const MAX_STREAMS = 20;
@@ -76,6 +77,21 @@ export function rutasAdmin(ctx) {
   r.post("/horario", async (req, res) => res.status(201).json(await crearSlot(ctx, req.actor, validar(E.slot, req.body))));
   r.patch("/horario/:id", async (req, res) => res.json(await editarSlot(ctx, req.actor, req.params.id, validar(E.slotEditar, req.body))));
   r.delete("/horario/:id", async (req, res) => res.json(await desactivarSlot(ctx, req.actor, req.params.id)));
+
+  /* ── cupos fijos (a regular's weekly slot, booked by the system) ── */
+  r.get("/fijos", async (req, res) => {
+    const q = validar(z.object({ clienta: E.idClienta.optional(), slot: E.idSlot.optional() }), req.query);
+    res.json(await listarFijos(ctx, q));
+  });
+  r.post("/fijos", async (req, res) => res.status(201).json(await crearFijo(ctx, req.actor, validar(E.fijoNuevo, req.body))));
+  r.patch("/fijos/:id", async (req, res) => {
+    validar(z.object({ id: E.idFijo }), req.params);
+    res.json(await editarFijo(ctx, req.actor, req.params.id, validar(E.fijoEditar, req.body)));
+  });
+  r.delete("/fijos/:id", async (req, res) => {
+    validar(z.object({ id: E.idFijo }), req.params);
+    res.json(await terminarFijo(ctx, req.actor, req.params.id));
+  });
 
   /* ── clientas ── */
   r.get("/clientas", async (req, res) => {

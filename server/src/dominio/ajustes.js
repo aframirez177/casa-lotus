@@ -7,6 +7,8 @@ import { validacion } from "../errores.js";
 
 const AYUDA = Object.fromEntries(AJUSTES.map(([k, , a]) => [k, a]));
 const DURACION = "Duración de la clase (minutos)";
+const DIAS_FIJOS = "Días de reserva de cupos fijos";
+const HORA_RECORDATORIO = "Hora del recordatorio";
 
 export async function asegurarAjustes(ctx) {
   const M = await modelo(ctx, { fresco: true });
@@ -41,6 +43,16 @@ function normalizar(k, v) {
   if (k === DURACION) {
     const n = Number(v);
     if (!Number.isInteger(n) || n < 15 || n > 240) throw validacion("Revisa la duración de la clase.", { [k]: "Escribe los minutos, entre 15 y 240." });
+    return n;
+  }
+  if (k === HORA_RECORDATORIO) {
+    const m = String(v ?? "").trim().match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+    if (!m) throw validacion("Revisa la hora del recordatorio.", { [k]: "Escribe la hora como 18:00." });
+    return m[1].padStart(2, "0") + ":" + m[2];
+  }
+  if (k === DIAS_FIJOS) {
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 1 || n > 60) throw validacion("Revisa los días de reserva de cupos fijos.", { [k]: "Escribe los días, entre 1 y 60." });
     return n;
   }
   if (AJUSTES_NUMERICOS.has(k)) {

@@ -3,9 +3,9 @@
 import * as R from "../../../shared/reglas.js";
 import { CONSENTIMIENTOS, SALUD_SIN_DATOS } from "../../../shared/consentimientos.js";
 import { modelo, transaccion } from "./base.js";
-import { textoConsentimiento, textoContacto, sinTilde, textoEtiquetas } from "../datos/modelo.js";
+import { textoConsentimiento, textoContacto, sinTilde, textoEtiquetas, etiquetasConRecordatorios } from "../datos/modelo.js";
 import {
-  iso, vistaClase, vistaCompra, vistaEspera, vistaReservaClienta, vistaSaldo, perfilDe, fichaDe,
+  iso, vistaClase, vistaCompra, vistaEspera, vistaReservaClienta, vistaSaldo, perfilDe, fichaDe, vistaFijo,
 } from "./vistas.js";
 import { conflicto, noExiste, validacion } from "../errores.js";
 
@@ -22,6 +22,7 @@ export const SEGMENTOS = [
   { id: "cumple", nombre: "Cumpleaños", descripcion: "Cumplen años en los próximos 7 días." },
   { id: "ficha-incompleta", nombre: "Ficha incompleta", descripcion: "Les falta la respuesta de salud, el contacto de emergencia o aceptar el descargo." },
   { id: "leads", nombre: "Interesadas", descripcion: "Nunca han comprado ni venido a clase." },
+  { id: "con-cupo-fijo", nombre: "Con horario fijo", descripcion: "Tienen un cupo fijo activo: el sistema les reserva su clase cada semana." },
 ];
 
 const fechaDeReserva = (M, r) => M.clasePorId.get(r.clase)?.fecha || String(r.clase).slice(0, 10);
@@ -57,6 +58,7 @@ export function analizar(M, c, ahora) {
   if (dc !== null && dc <= 7) s.add("cumple");
   if (!fichaDe(c)) s.add("ficha-incompleta");
   if (!compras.length && !asistidas.length) s.add("leads");
+  if (M.fijos.some((f) => f.clienta === c.id && f.estado === "Activo")) s.add("con-cupo-fijo");
 
   let etapa = "activa";
   if (s.has("leads")) etapa = "lead";
@@ -160,6 +162,10 @@ export function atribucionReserva(r) {
   return { ref, utm, clic };
 }
 
+/** Her cupos fijos: Activo, Pausado, Terminado; then by F id. */
+const ORDEN_FIJO = { Activo: 0, Pausado: 1, Terminado: 2 };
+const ordenFijos = (a, b) => (ORDEN_FIJO[a.estado] - ORDEN_FIJO[b.estado]) || (a.id < b.id ? -1 : 1);
+
 export function detalleClienta(ctx, M, c) {
   const ahora = ctx.ahora(), hoy = R.hoyClave(ahora);
   const f = filaClienta(M, c, ahora);
@@ -169,6 +175,7 @@ export function detalleClienta(ctx, M, c) {
     ...f, perfil: perfilDe(c), consentimientos: c.consentimientos, notas: c.notas,
     compras: M.comprasDeClienta(c.id).slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1)).map((p) => vistaCompra(M, p, hoy)),
     reservas, espera: M.espera.filter((e) => e.clienta === c.id && (e.estado === "Esperando" || e.estado === "Avisada")).map((e) => vistaEspera(M, e)),
+    fijos: M.fijos.filter((x) => x.clienta === c.id).sort(ordenFijos).map((x) => vistaFijo(M, x, ahora)),
     linea: linea(ctx, M, c),
   };
   try {
@@ -283,8 +290,10 @@ export async function editarClienta(ctx, actor, id, input) {
     const { notas, etiquetas, consentimientos: cons, ...perfil } = input;
     const cambios = { ...columnasPerfil(perfil), ...columnasConsentimientos(cons, R.hoyClave(tx.ahora)) };
     if (notas !== undefined) cambios["Notas"] = notas;
-    if (etiquetas !== undefined || cons?.novedades) {
-      cambios["Etiquetas"] = textoEtiquetas(etiquetas ?? c.etiquetas, cons?.novedades ? cons.novedades.acepta === true : c.novedades);
+    if (etiquetas !== undefined || cons?.novedades || typeof perfil.recordatorios === "boolean") {
+      let visibles = etiquetas ?? c.etiquetas;
+      if (typeof perfil.recordatorios === "boolean") visibles = etiquetasConRecordatorios(visibles, perfil.recordatorios);
+      cambios["Etiquetas"] = textoEtiquetas(visibles, cons?.novedades ? cons.novedades.acepta === true : c.novedades);
     }
     if (Object.keys(cambios).length) await tx.actualizar("Clientas", c._fila, cambios);
     tx.auditar("clienta.editar", id, { campos: Object.keys(cambios).filter((k) => k !== "Salud") });
@@ -300,8 +309,12 @@ export async function actualizarMiPerfil(ctx, actor, parcial) {
     if (!c) throw noExiste("No encontramos tu ficha.");
     if ("salud" in parcial) exigirConsentimientoSalud(parcial.salud, c.consentimientos.sensibles.acepta);
     const cambios = columnasPerfil(parcial);
+    // class reminders on/off live in «Etiquetas» as «sin-recordatorios»
+    if (typeof parcial.recordatorios === "boolean" && parcial.recordatorios !== c.recordatorios) {
+      cambios["Etiquetas"] = textoEtiquetas(etiquetasConRecordatorios(c.etiquetas, parcial.recordatorios), c.novedades);
+    }
     if (Object.keys(cambios).length) await tx.actualizar("Clientas", c._fila, cambios);
-    tx.auditar("perfil.editar", c.id, { campos: Object.keys(cambios).filter((k) => k !== "Salud") });
+    tx.auditar("perfil.editar", c.id, { campos: Object.keys(cambios).filter((k) => k !== "Salud"), ...(typeof parcial.recordatorios === "boolean" ? { recordatorios: parcial.recordatorios } : {}) });
     const n = tx.M.clientaPorId.get(c.id);
     return { perfil: perfilDe(n), fichaCompleta: fichaDe(n) };
   });

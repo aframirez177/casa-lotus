@@ -7,6 +7,7 @@ import { sinProfe } from "./asignacion.js";
 import { NOTA_SIN_PLAN } from "./asistencia.js";
 import { analizar, SEGMENTOS } from "./clientas.js";
 import { porMarcar, dictada } from "./profes.js";
+import { alertasFijos } from "./fijos.js";
 
 function saludo(ahora) {
   const h = Number(R.ahoraHora(ahora).slice(0, 2));
@@ -198,6 +199,8 @@ export async function tablero(ctx) {
         accion: { tipo: "abrir", ruta: "/app/admin/clientas/" + p.id } });
     }
   }
+  // cupos fijos: a regular's class without a plan, or without a swing
+  for (const a of alertasFijos(M, ahora)) add(a);
   alertas.sort((a, b) => a.prioridad - b.prioridad);
 
   const totales = Object.fromEntries(SEGMENTOS.map((s) => [s.id, 0]));
@@ -213,6 +216,7 @@ export async function tablero(ctx) {
         pagoProfes: pago ? dictadas.length * pago : null, asistentes,
       },
       clientasActivas: activas, pendientesPago: pendientesR.length, enEspera: futurasEspera.filter((e) => e.estado === "Esperando").length,
+      fijosActivos: M.fijos.filter((f) => f.estado === "Activo").length,
     },
     hoyClases, manana: mananaClases, porMarcar: marcar,
     pendientes: pendientesR.map((r) => pendientePago(M, r, ahora)),

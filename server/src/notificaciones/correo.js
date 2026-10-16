@@ -24,6 +24,11 @@ const adjuntosResend = (adjuntos) => adjuntos.map((a) => ({
   filename: a.nombre, content: Buffer.from(String(a.contenido), "utf8").toString("base64"), ...(a.tipo ? { content_type: a.tipo } : {}),
 }));
 
+/** Extra headers a message may carry (e.g. RFC 8058 List-Unsubscribe on reminders): only these, values on one line. */
+const CABECERAS = new Set(["List-Unsubscribe", "List-Unsubscribe-Post"]);
+const cabecerasLimpias = (c) => Object.fromEntries(Object.entries(c || {})
+  .filter(([k, v]) => CABECERAS.has(k) && typeof v === "string" && v).map(([k, v]) => [k, v.replace(/[\r\n]+/g, " ").slice(0, 500)]));
+
 /** POST to Resend with a timeout; one retry on 429 / 5xx / network errors. */
 async function enviarResend({ clave, fetchImpl, log }, cuerpo) {
   let ultimo;
@@ -62,12 +67,14 @@ export function crearCorreo(config, log, { fetch: fetchImpl = globalThis.fetch }
     const listo = Boolean(c.resend.clave);
     return {
       ...base, driver: "resend", activo: listo,
-      async enviar({ para, asunto, html, texto, nombreRemitente, adjuntos }) {
+      async enviar({ para, asunto, html, texto, nombreRemitente, adjuntos, cabeceras }) {
         if (!listo) { log.warn("correo sin configurar (falta RESEND_API_KEY)", { asunto }); return false; }
+        const extra = cabecerasLimpias(cabeceras);
         const r = await enviarResend({ clave: c.resend.clave, fetchImpl, log }, {
           from: remitenteCon(c.remitente, nombreRemitente), to: [para], subject: asunto, html, text: texto,
           ...(c.responderA ? { reply_to: c.responderA } : {}),
           ...(adjuntos?.length ? { attachments: adjuntosResend(adjuntos) } : {}),
+          ...(Object.keys(extra).length ? { headers: extra } : {}),
         });
         log.info("correo enviado", { para: enmascarar(para), asunto, id: r?.id });
         return true;
@@ -80,7 +87,7 @@ export function crearCorreo(config, log, { fetch: fetchImpl = globalThis.fetch }
     const listo = Boolean(c.smtp.host && c.smtp.user && c.smtp.pass);
     return {
       ...base, driver: "smtp", activo: listo,
-      async enviar({ para, asunto, html, texto, nombreRemitente, adjuntos }) {
+      async enviar({ para, asunto, html, texto, nombreRemitente, adjuntos, cabeceras }) {
         if (!listo) { log.warn("correo sin configurar", { asunto }); return false; }
         if (!transporte) {
           const nodemailer = (await import("nodemailer")).default;
@@ -92,6 +99,7 @@ export function crearCorreo(config, log, { fetch: fetchImpl = globalThis.fetch }
         await transporte.sendMail({
           from: remitenteCon(c.remitente, nombreRemitente), to: para, replyTo: c.responderA || undefined, subject: asunto, html, text: texto,
           attachments: (adjuntos || []).map((a) => ({ filename: a.nombre, content: String(a.contenido), contentType: a.tipo })),
+          headers: cabecerasLimpias(cabeceras),
         });
         log.info("correo enviado", { para: enmascarar(para), asunto });
         return true;
@@ -102,7 +110,7 @@ export function crearCorreo(config, log, { fetch: fetchImpl = globalThis.fetch }
   return {
     ...base, driver: "console", activo: true,
     async enviar(m) {
-      buzon.push({ ...m, de: remitenteCon(c.remitente, m.nombreRemitente), responderA: c.responderA, ts: Date.now() });
+      buzon.push({ ...m, cabeceras: cabecerasLimpias(m.cabeceras), de: remitenteCon(c.remitente, m.nombreRemitente), responderA: c.responderA, ts: Date.now() });
       if (buzon.length > 50) buzon.shift();
       if (config.dev) {
         const adj = (m.adjuntos || []).map((a) => "\nAdjunto: " + a.nombre).join("");

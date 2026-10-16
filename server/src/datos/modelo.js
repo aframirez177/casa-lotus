@@ -74,6 +74,15 @@ const lista = (v) => String(v ?? "").split(",").map((s) => s.trim()).filter(Bool
 
 /** Marketing opt-in lives as this tag in «Etiquetas» until the Sheet has its own column. */
 export const ETIQUETA_NOVEDADES = "novedades-whatsapp";
+/** She asked for no class reminders (a visible tag: Ana sees it in the CRM). */
+export const ETIQUETA_SIN_RECORDATORIOS = "sin-recordatorios";
+
+/** Visible tags with «sin-recordatorios» added (reminders off) or removed (on). */
+export function etiquetasConRecordatorios(visibles, recordatorios) {
+  const t = (visibles || []).filter((e) => e && e !== ETIQUETA_SIN_RECORDATORIOS);
+  if (!recordatorios) t.push(ETIQUETA_SIN_RECORDATORIOS);
+  return t;
+}
 
 /** «Etiquetas» cell from the visible tags plus the opt-in tag. */
 export function textoEtiquetas(visibles, novedades) {
@@ -150,7 +159,7 @@ export function construirModelo(snap) {
       imagen: leerConsentimiento(c["Autoriza imagen"], { imagen: true }),
       novedades: { acepta: novedades, fecha: "", version: novedades ? CONSENTIMIENTOS.novedades.version : "" },
     },
-    novedades, etiquetas: tags.filter((t) => t !== ETIQUETA_NOVEDADES), _fila: c._fila,
+    novedades, recordatorios: !tags.includes(ETIQUETA_SIN_RECORDATORIOS), etiquetas: tags.filter((t) => t !== ETIQUETA_NOVEDADES), _fila: c._fila,
     };
   });
 
@@ -171,6 +180,11 @@ export function construirModelo(snap) {
   const horario = filasDe(snap, "Horario").map((f) => leerFila("Horario", f)).filter((h) => h["Día"] && h["Hora"]).map((h) => ({
     id: h["Día"] + " " + horaTexto(h["Hora"]), dia: h["Día"], hora: horaTexto(h["Hora"]), clase: h["Clase"] || "", profe: h["Profe"] || "",
     cupos: h["Cupos"] || ajustes["Cupos por clase"], activa: String(h["Activa"]).trim() === "Sí", _fila: h._fila,
+  }));
+
+  const fijos = filasDe(snap, "Cupos fijos").map((f) => leerFila("Cupos fijos", f)).filter((f) => f["ID"]).map((f) => ({
+    id: f["ID"], clienta: f["Clienta"], dia: f["Día"] || "", hora: horaTexto(f["Hora"]), desde: f["Desde"] || "", hasta: f["Hasta"] || "",
+    estado: ["Activo", "Pausado", "Terminado"].includes(f["Estado"]) ? f["Estado"] : "Activo", notas: f["Notas"] || "", _fila: f._fila,
   }));
 
   // indexes
@@ -198,7 +212,8 @@ export function construirModelo(snap) {
 
   return {
     version: snap.version, ajustes, ajustesPresentes: aj.presentes, ajustesCrudo: aj.crudo,
-    planes, planPorNombre, clases, reservas, clientas, compras, espera, horario,
+    planes, planPorNombre, clases, reservas, clientas, compras, espera, horario, fijos,
+    fijoPorId: new Map(fijos.map((f) => [f.id, f])),
     clasePorId, clientaPorId, clientaPorWa, reservaPorId, compraPorId,
     reservasDeClase: (id) => porClase.get(id) || [],
     reservasDeClienta: (id) => porClienta.get(id) || [],
